@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getCatalogItems, saveCatalogItem } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
@@ -41,9 +42,17 @@ export async function POST(request: NextRequest) {
     }
 
     const newItem = await saveCatalogItem(body);
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin/items', 'page');
+    } catch {
+      // safe fallback
+    }
+
     return NextResponse.json({ success: true, data: newItem }, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/items:", error);
     return NextResponse.json({ success: false, error: "Failed to create item" }, { status: 500 });
   }
 }
+

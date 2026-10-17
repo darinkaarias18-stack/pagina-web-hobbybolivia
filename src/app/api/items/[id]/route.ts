@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getCatalogItemById, saveCatalogItem, deleteCatalogItem } from '@/lib/db';
 
 export async function GET(
@@ -37,6 +38,14 @@ export async function PUT(
 
     const body = await request.json();
     const updated = await saveCatalogItem({ ...body, id: numId });
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin/items', 'page');
+    } catch {
+      // safe fallback
+    }
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Error in PUT /api/items/[id]:", error);
@@ -56,9 +65,18 @@ export async function DELETE(
     }
 
     await deleteCatalogItem(numId);
+
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/admin/items', 'page');
+    } catch {
+      // safe fallback
+    }
+
     return NextResponse.json({ success: true, message: "Item deleted successfully" });
   } catch (error) {
     console.error("Error in DELETE /api/items/[id]:", error);
     return NextResponse.json({ success: false, error: "Failed to delete item" }, { status: 500 });
   }
 }
+

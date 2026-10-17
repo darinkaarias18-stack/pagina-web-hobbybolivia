@@ -17,7 +17,9 @@ import type {
   QuoteOrder,
   ClaimRecord,
   OrderStatus,
-  ClaimStatus
+  ClaimStatus,
+  User,
+  UserRole
 } from './types';
 
 // Global Prisma instance for Next.js
@@ -28,6 +30,17 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
 
+export const DEFAULT_SUPERADMIN: User = {
+  id: 1,
+  name: "Super Administrador",
+  username: "superadmin",
+  email: "superadmin@hobbybolivia.com",
+  password: "superhobby2026*",
+  role: "SUPERADMIN",
+  isActive: true,
+  createdAt: "2026-01-01T00:00:00.000Z"
+};
+
 interface LocalDatabase {
   siteConfig: SiteConfig;
   categories: Category[];
@@ -36,6 +49,7 @@ interface LocalDatabase {
   items: CatalogItem[];
   quotes: QuoteOrder[];
   claims: ClaimRecord[];
+  users: User[];
 }
 
 function initDefaultDatabase(): LocalDatabase {
@@ -125,7 +139,8 @@ function initDefaultDatabase(): LocalDatabase {
         createdAt: new Date().toISOString()
       }
     ],
-    claims: []
+    claims: [],
+    users: [DEFAULT_SUPERADMIN]
   };
 }
 
@@ -140,7 +155,30 @@ function getLocalStore(): LocalDatabase {
       return initial;
     }
     const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const parsed: LocalDatabase = JSON.parse(raw);
+
+    // Ensure users array and default superadmin exist
+    if (!parsed.users || !Array.isArray(parsed.users) || parsed.users.length === 0) {
+      parsed.users = [DEFAULT_SUPERADMIN];
+      saveLocalStore(parsed);
+    } else {
+      const superIndex = parsed.users.findIndex((u) => u.username === 'superadmin');
+      if (superIndex === -1) {
+        parsed.users.unshift(DEFAULT_SUPERADMIN);
+        saveLocalStore(parsed);
+      } else {
+        // Guarantee credentials for superadmin match required credentials
+        parsed.users[superIndex] = {
+          ...parsed.users[superIndex],
+          username: 'superadmin',
+          password: 'superhobby2026*',
+          role: 'SUPERADMIN',
+          isActive: true
+        };
+      }
+    }
+
+    return parsed;
   } catch (err) {
     console.warn("Using in-memory database fallback:", err);
     return initDefaultDatabase();
@@ -971,3 +1009,135 @@ export async function updateClaimStatus(trackingCode: string, status: ClaimStatu
 
   return claim;
 }
+
+/* ========================================================
+   8. USERS MANAGEMENT (SUPERADMIN & ADMIN)
+======================================================== */
+export async function getUsers(): Promise<User[]> {
+  const store = getLocalStore();
+  if (await isMySQLConnected()) {
+    try {
+      const dbUsers = await prisma.user.findMany({ orderBy: { id: 'asc' } });
+      if (dbUsers.length > 0) {
+        return dbUsers.map((u) => ({
+          id: u.id,
+          name: u.name,
+          username: u.email,
+          password: u.passwordHash,
+          role: (u.role as UserRole) || 'ADMIN',
+          isActive: true,
+          createdAt: u.createdAt
+        }));
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return store.users || [DEFAULT_SUPERADMIN];
+}
+
+export async function getUserByUsername(username: string): Promise<User | null> {
+  const clean = username.trim().toLowerCase();
+  const users = await getUsers();
+  const user = users.find((u) => u.username.toLowerCase() === clean);
+  return user || null;
+}
+
+export async function getUserById(id: number): Promise<User | null> {
+  const users = await getUsers();
+  const user = users.find((u) => u.id === id);
+  return user || null;
+}
+
+export async function saveUser(data: Partial<User>): Promise<User> {
+  const store = getLocalStore();
+  let saved: User;
+
+  if (data.id) {
+    const idx = store.users.findIndex((u) => u.id === data.id);
+    if (idx >= 0) {
+      const isMaster = store.users[idx].username === 'superadmin';
+      store.users[idx] = {
+        ...store.users[idx],
+        ...data,
+        name: data.name !== undefined ? data.name : store.users[idx].name,
+        password: data.password ? data.password : store.users[idx].password,
+        role: isMaster ? 'SUPERADMIN' : (data.role || store.users[idx].role),
+        isActive: isMaster ? true : (data.isActive ?? store.users[idx].isActive),
+        updatedAt: new Date().toISOString()
+      };
+      saved = store.users[idx];
+    } else {
+      saved = {
+        id: data.id,
+        name: data.name || '',
+        username: data.username || '',
+        password: data.password || '',
+        role: (data.role as UserRole) || 'ADMIN',
+        isActive: data.isActive ?? true,
+        createdAt: new Date().toISOString()
+      };
+      store.users.push(saved);
+    }
+  } else {
+    const newId = store.users.length > 0 ? Math.max(...store.users.map((u) => u.id)) + 1 : 1;
+    saved = {
+      id: newId,
+      name: data.name || '',
+      username: data.username || '',
+      password: data.password || '',
+      role: (data.role as UserRole) || 'ADMIN',
+      isActive: data.isActive ?? true,
+      createdAt: new Date().toISOString()
+    };
+    store.users.push(saved);
+  }
+
+  saveLocalStore(store);
+
+  // Sync to MySQL if available
+  if (await isMySQLConnected()) {
+    try {
+      await prisma.user.upsert({
+        where: { email: saved.username },
+        update: {
+          name: saved.name,
+          passwordHash: saved.password || '',
+          role: saved.role
+        },
+        create: {
+          name: saved.name,
+          email: saved.username,
+          passwordHash: saved.password || '',
+          role: saved.role
+        }
+      });
+    } catch (e) {
+      console.warn("Failed user sync to MySQL:", e);
+    }
+  }
+
+  return saved;
+}
+
+export async function deleteUser(id: number): Promise<boolean> {
+  const store = getLocalStore();
+  const target = store.users.find((u) => u.id === id);
+  if (!target || target.username === 'superadmin') {
+    return false; // Cannot delete master superadmin
+  }
+
+  store.users = store.users.filter((u) => u.id !== id);
+  saveLocalStore(store);
+
+  if (await isMySQLConnected()) {
+    try {
+      await prisma.user.delete({ where: { email: target.username } });
+    } catch {
+      // ignore
+    }
+  }
+
+  return true;
+}
+

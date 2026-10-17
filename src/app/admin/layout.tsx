@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Plane,
   ShoppingBag,
@@ -11,24 +11,100 @@ import {
   ExternalLink,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Users,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const router = useRouter();
 
-  // If on login page, render clean full screen
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [userRole, setUserRole] = useState<'SUPERADMIN' | 'ADMIN'>('ADMIN');
+  const [username, setUsername] = useState<string>('superadmin');
+  const [displayName, setDisplayName] = useState<string>('Administrador');
+
+  // Verify authentication and role permissions
+  useEffect(() => {
+    if (pathname === '/admin/login') {
+      setCheckingAuth(false);
+      return;
+    }
+
+    const checkSession = () => {
+      const logged =
+        localStorage.getItem('hb_admin_logged') === 'true' ||
+        document.cookie.includes('hb_admin_auth=authenticated');
+
+      if (!logged) {
+        router.replace('/login');
+        return;
+      }
+
+      const role = (localStorage.getItem('hb_user_role') as 'SUPERADMIN' | 'ADMIN') || 'ADMIN';
+      const user = localStorage.getItem('hb_user_username') || 'admin';
+      const name = localStorage.getItem('hb_user_name') || 'Administrador';
+
+      setUserRole(role);
+      setUsername(user);
+      setDisplayName(name);
+
+      // Access control: Only SUPERADMIN can access /admin/users and /admin/settings
+      if (role !== 'SUPERADMIN' && (pathname.startsWith('/admin/users') || pathname.startsWith('/admin/settings'))) {
+        router.replace('/admin/items');
+        return;
+      }
+
+      setCheckingAuth(false);
+    };
+
+    checkSession();
+  }, [pathname, router]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error(e);
+    }
+
+    localStorage.removeItem('hb_admin_logged');
+    localStorage.removeItem('hb_user_role');
+    localStorage.removeItem('hb_user_username');
+    localStorage.removeItem('hb_user_name');
+
+    router.push('/');
+    router.refresh();
+  };
+
+  // If on login redirect, render clean
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
 
-  const navItems = [
-    { label: 'Productos & Repuestos', href: '/admin/items', icon: Plane },
-    { label: 'Categorías', href: '/admin/categories', icon: Layers },
-    { label: 'Pedidos / Cotizaciones', href: '/admin/quotes', icon: ShoppingBag },
-    { label: 'Configuración Tienda', href: '/admin/settings', icon: Settings }
+  // Prevent flicker while verifying authentication
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-[#10202f] flex flex-col items-center justify-center text-white gap-3">
+        <div className="w-8 h-8 border-3 border-[#f2b705] border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs text-[#c9c4b6] font-mono">Verificando sesión...</span>
+      </div>
+    );
+  }
+
+  // Define nav items with role requirements
+  const allNavItems = [
+    { label: 'Productos & Repuestos', href: '/admin/items', icon: Plane, superadminOnly: false },
+    { label: 'Categorías', href: '/admin/categories', icon: Layers, superadminOnly: false },
+    { label: 'Pedidos / Cotizaciones', href: '/admin/quotes', icon: ShoppingBag, superadminOnly: false },
+    { label: 'Configuración Tienda', href: '/admin/settings', icon: Settings, superadminOnly: true },
+    { label: 'Usuarios / Accesos', href: '/admin/users', icon: Users, superadminOnly: true }
   ];
+
+  const visibleNavItems = allNavItems.filter((item) => !item.superadminOnly || userRole === 'SUPERADMIN');
 
   return (
     <div className="min-h-screen bg-[#f5f1e8] text-[#10202f] flex flex-col md:flex-row">
@@ -36,7 +112,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="md:hidden bg-[#10202f] text-white p-4 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <span className="font-serif italic font-bold text-xl text-[#f5f1e8]">Hobby Bolivia</span>
-          <span className="text-[10px] bg-[#f2b705] text-[#10202f] px-2 py-0.5 rounded font-extrabold">Admin</span>
+          <span className="text-[10px] bg-[#f2b705] text-[#10202f] px-2 py-0.5 rounded font-extrabold uppercase">
+            {userRole}
+          </span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -66,7 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <nav className="space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
@@ -90,27 +168,49 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Bottom store link & user info */}
         <div className="pt-4 border-t border-white/10 space-y-2">
-          <div className="px-3 py-2 rounded-lg bg-black/20 text-xs">
-            <div className="text-[10px] text-[#6b7480] uppercase tracking-wider">Sesión Activa</div>
-            <div className="font-bold text-white truncate">dariasdigital_hobbybolivia</div>
+          {/* Active User Card */}
+          <div className="px-3 py-2.5 rounded-xl bg-black/25 text-xs border border-white/5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-[#9ca3af] uppercase tracking-wider font-semibold">
+                Sesión Activa
+              </span>
+              <span
+                className={`text-[9px] px-1.5 py-0.5 rounded font-extrabold tracking-wide uppercase ${
+                  userRole === 'SUPERADMIN'
+                    ? 'bg-[#f2b705] text-[#10202f]'
+                    : 'bg-blue-600 text-white'
+                }`}
+              >
+                {userRole}
+              </span>
+            </div>
+            <div className="font-bold text-white truncate flex items-center gap-1.5">
+              {userRole === 'SUPERADMIN' ? (
+                <ShieldCheck className="w-3.5 h-3.5 text-[#f2b705] flex-shrink-0" />
+              ) : (
+                <UserCheck className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+              )}
+              <span className="truncate">{username}</span>
+            </div>
           </div>
 
           <Link
             href="/"
-            target="_blank"
             className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-[#f2b705] hover:bg-[#1b3248] transition-colors"
           >
-            <span>Ver Catálogo Web</span>
+            <span>Ver Catálogo Público</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
 
-          <Link
-            href="/admin/login"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#b3261e] hover:bg-[#1b3248] transition-colors"
+          <button
+            type="button"
+            onClick={handleLogout}
+            id="btn-admin-logout"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-rose-400 hover:text-white hover:bg-rose-900/30 transition-colors cursor-pointer text-left"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar Sesión</span>
-          </Link>
+          </button>
         </div>
       </aside>
 

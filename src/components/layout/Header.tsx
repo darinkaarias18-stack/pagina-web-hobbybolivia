@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import type { SiteConfig, Category } from '@/lib/types';
 import Link from 'next/link';
+import { ShieldCheck, User as UserIcon } from 'lucide-react';
 
 interface HeaderProps {
   config?: SiteConfig | null;
@@ -30,6 +31,17 @@ export function Header({
   const [searchTerm, setSearchTerm] = useState(searchQuery);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const logged =
+        localStorage.getItem('hb_admin_logged') === 'true' ||
+        document.cookie.includes('hb_admin_auth=authenticated');
+      setIsLoggedIn(logged);
+    };
+    checkAuth();
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,207 +51,212 @@ export function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-[#e2e8f0] shadow-sm transition-all">
-      {/* 1. Main White Header: Logo, Central Search, Cart Widget */}
-      <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-3.5">
-        <div className="flex items-center justify-between gap-4 md:gap-8">
-          {/* Brand Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 flex-shrink-0 group"
-          >
-            {config?.logoUrl ? (
-              <img
-                src={config.logoUrl}
-                alt={config.companyName || 'Logo'}
-                className="h-10 w-auto max-w-[140px] object-contain group-hover:scale-105 transition-transform"
-              />
-            ) : (
-              /* Stylized Aero Mark fallback */
-              <div
-                className="w-10 h-10 rounded-lg p-0.5 shadow-md flex items-center justify-center"
-                style={{ backgroundColor: config?.secondaryColor || '#162544' }}
-              >
-                <div className="w-full h-full rounded-[7px] flex items-center justify-center text-white" style={{ backgroundColor: config?.secondaryColor || '#162544' }}>
-                  <svg
-                    className="w-6 h-6 group-hover:scale-110 transition-transform"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    style={{ color: config?.primaryColor || '#e04f26' }}
-                  >
-                    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-                  </svg>
+    <header className="sticky top-0 z-40 shadow-md transition-all">
+      {/* 1. Main Golden Yellow Bar matching reference image */}
+      <div className="w-full bg-[#f59e0b] text-[#0f172a] border-b border-[#d97706]/40">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between gap-4 md:gap-8">
+            {/* Brand Logo */}
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 flex-shrink-0 group"
+            >
+              {config?.logoUrl ? (
+                <img
+                  src={config.logoUrl}
+                  alt={config.companyName || 'Logo'}
+                  className="h-10 w-auto max-w-[140px] object-contain group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-lg p-0.5 shadow-md flex items-center justify-center bg-[#0f172a]">
+                  <div className="w-full h-full rounded-[7px] flex items-center justify-center bg-[#0f172a]">
+                    <svg
+                      className="w-6 h-6 group-hover:scale-110 transition-transform text-[#f59e0b]"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                    </svg>
+                  </div>
                 </div>
+              )}
+
+              <div className="flex flex-col">
+                <span className="font-extrabold text-[22px] tracking-tight leading-none text-[#0f172a]">
+                  {config?.companyName ? (
+                    config.companyName
+                  ) : (
+                    <>Hobby<span className="text-[#0f172a]">Bolivia</span></>
+                  )}
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#0f172a]/75 leading-tight">
+                  {config?.subtitle || 'Aeromodelismo & R/C'}
+                </span>
               </div>
-            )}
+            </Link>
 
-            <div className="flex flex-col">
-              <span className="font-extrabold text-[22px] tracking-tight leading-none text-[#162544]">
-                {config?.companyName ? (
-                  config.companyName
-                ) : (
-                  <>Hobby<span className="text-[#e04f26]">Bolivia</span></>
-                )}
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-[#64748b] leading-tight">
-                {config?.subtitle || 'Aeromodelismo & R/C'}
-              </span>
+            {/* Central Wide Search Bar (White background matching reference image) */}
+            <form
+              onSubmit={handleSearchSubmit}
+              className="hidden md:flex items-center flex-1 max-w-2xl mx-4 relative"
+              role="search"
+            >
+              <div className="w-full relative flex items-center">
+                <input
+                  type="search"
+                  placeholder="Buscar repuestos, marcas, códigos SKU..."
+                  aria-label="Buscar productos"
+                  autoComplete="off"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    if (onSearch) onSearch(e.target.value, selectedCategory);
+                  }}
+                  className="w-full h-11 pl-5 pr-14 text-sm bg-white border border-[#d97706]/30 rounded-full text-[#0f172a] placeholder-[#64748b] outline-none transition-all focus:border-[#0f172a] focus:ring-2 focus:ring-[#0f172a]/20 shadow-inner"
+                />
+                <button
+                  type="submit"
+                  aria-label="Buscar"
+                  className="absolute right-1 top-1 bottom-1 px-4 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white flex items-center justify-center transition-colors shadow-sm"
+                >
+                  <svg
+                    className="w-4 h-4 stroke-current fill-none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+
+            {/* Right: Cart Widget & Iniciar sesión / Panel Admin button */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {isLoggedIn ? (
+                <Link
+                  href="/admin"
+                  id="header-admin-link"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-[#facc15] font-bold text-xs transition-all shadow-sm shrink-0 border border-black/15"
+                  title="Ir al Panel de Administración"
+                >
+                  <ShieldCheck className="w-4 h-4 text-[#facc15] shrink-0" />
+                  <span className="font-bold text-[#facc15] whitespace-nowrap">Panel Admin</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  id="header-login-link"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-[#0f172a] text-[#0f172a] hover:text-white font-bold text-xs transition-all shadow-xs shrink-0 border border-black/15 group"
+                  title="Iniciar sesión en la tienda"
+                >
+                  <UserIcon className="w-4 h-4 text-[#e04f26] group-hover:text-white transition-colors shrink-0" />
+                  <span className="font-bold whitespace-nowrap">Iniciar sesión</span>
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={openDrawer}
+                aria-label="Carrito de compras"
+                id="btn-cart-toggle"
+                className="flex items-center gap-2.5 py-1.5 px-3 rounded-full bg-white hover:bg-slate-50 transition-all text-[#0f172a] border border-black/10 shadow-xs"
+              >
+                <div className="relative">
+                  <svg
+                    className="w-6 h-6 text-[#0f172a]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M6 7h13l-1.5 9.5a2 2 0 0 1-2 1.5H9.6a2 2 0 0 1-2-1.6L5.2 4.6A1 1 0 0 0 4.2 4H3" />
+                    <circle cx="10" cy="21" r="1.2" />
+                    <circle cx="17" cy="21" r="1.2" />
+                  </svg>
+                  {/* Count Badge */}
+                  <span className="absolute -top-1 -right-2 min-w-[19px] h-[19px] px-1 bg-[#0f172a] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center border-2 border-white">
+                    {totalCount}
+                  </span>
+                </div>
+                <div className="text-left font-bold text-xs hidden sm:block">
+                  <span className="text-[10px] text-[#475569] block font-semibold leading-tight">Carrito</span>
+                  <span className="text-[#0f172a] leading-tight font-extrabold">
+                    {config?.currency || '$us'} {subtotal.toFixed(2)}
+                  </span>
+                </div>
+              </button>
+
+              {/* Mobile menu toggle */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 text-[#0f172a] hover:bg-black/10 rounded-lg"
+                aria-label="Menú móvil"
+              >
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
             </div>
-          </Link>
+          </div>
 
-          {/* Central Wide Search Bar (Galba pill style) */}
-          <form
-            onSubmit={handleSearchSubmit}
-            className="hidden md:flex items-center flex-1 max-w-2xl mx-4 relative"
-            role="search"
-          >
-            <div className="w-full relative flex items-center">
+          {/* Mobile Search Bar */}
+          <div className="md:hidden mt-3">
+            <form onSubmit={handleSearchSubmit} className="relative flex items-center">
               <input
                 type="search"
-                placeholder="Buscar repuestos, marcas, códigos SKU..."
-                aria-label="Buscar productos"
-                autoComplete="off"
+                placeholder="Buscar repuestos, marcas..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
                   if (onSearch) onSearch(e.target.value, selectedCategory);
                 }}
-                className="w-full h-11 pl-5 pr-14 text-sm bg-white border border-[#cbd5e1] rounded-full text-[#162544] placeholder-[#94a3b8] outline-none transition-all focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                className="w-full h-10 pl-4 pr-12 text-sm bg-white border border-[#d97706]/40 rounded-full text-[#0f172a] outline-none"
               />
               <button
                 type="submit"
-                aria-label="Buscar"
-                className="absolute right-1 top-1 bottom-1 px-4 rounded-full bg-[#162544] hover:bg-[#1d2b53] text-white flex items-center justify-center transition-colors shadow-sm"
+                className="absolute right-1 top-1 bottom-1 px-3 rounded-full text-white bg-[#0f172a] flex items-center justify-center"
               >
-                <svg
-                  className="w-4 h-4 stroke-current fill-none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="7" />
                   <path d="m20 20-3.5-3.5" />
                 </svg>
               </button>
-            </div>
-          </form>
-
-          {/* Right: Cart Widget (Galba style) */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={openDrawer}
-              aria-label="Carrito de compras"
-              id="btn-cart-toggle"
-              className="flex items-center gap-2.5 py-1 px-2.5 rounded-lg hover:bg-slate-50 transition-colors text-[#162544]"
-            >
-              <div className="relative">
-                <svg
-                  className="w-7 h-7 text-[#162544]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M6 7h13l-1.5 9.5a2 2 0 0 1-2 1.5H9.6a2 2 0 0 1-2-1.6L5.2 4.6A1 1 0 0 0 4.2 4H3" />
-                  <circle cx="10" cy="21" r="1.2" />
-                  <circle cx="17" cy="21" r="1.2" />
-                </svg>
-                {/* Count Badge */}
-                <span className="absolute -top-1 -right-2 min-w-[19px] h-[19px] px-1 bg-[#162544] text-white text-[11px] font-extrabold rounded-full flex items-center justify-center border-2 border-white">
-                  {totalCount}
-                </span>
-              </div>
-              <div className="text-left font-bold text-sm hidden sm:block">
-                <span className="text-xs text-[#64748b] block font-normal leading-tight">Carrito</span>
-                <span className="text-[#162544] leading-tight font-extrabold">
-                  {config?.currency || '$us'} {subtotal.toFixed(2)}
-                </span>
-              </div>
-            </button>
-
-            {/* Mobile menu toggle */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-[#162544] hover:bg-slate-100 rounded-lg"
-              aria-label="Menú móvil"
-            >
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            </form>
           </div>
-        </div>
-
-        {/* Mobile Search Bar */}
-        <div className="md:hidden mt-3">
-          <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-            <input
-              type="search"
-              placeholder="Buscar repuestos, marcas..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                if (onSearch) onSearch(e.target.value, selectedCategory);
-              }}
-              className="w-full h-10 pl-4 pr-12 text-sm bg-slate-50 border border-[#cbd5e1] rounded-full text-[#162544] outline-none"
-            />
-            <button
-              type="submit"
-              className="absolute right-1 top-1 bottom-1 px-3 rounded-full text-white flex items-center justify-center"
-              style={{ backgroundColor: config?.secondaryColor || '#162544' }}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
-            </button>
-          </form>
         </div>
       </div>
 
-      {/* 2. Navy Blue Navigation Ribbon (Exact Galba style) */}
+      {/* 2. Navy Blue Navigation Ribbon matching reference image */}
       <nav
-        className="text-white border-t transition-colors"
-        style={{
-          backgroundColor: config?.secondaryColor || '#162544',
-          borderColor: config?.secondaryColor || '#1d2b53'
-        }}
+        className="bg-[#162544] text-white border-b border-[#0f172a] transition-colors"
         aria-label="Menú Principal"
       >
-        <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 flex items-center justify-between">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 flex items-center justify-between">
           {/* Main Links */}
-          <div className="hidden md:flex items-center">
-            {/* Inicio (Active Tab) */}
-            <Link
-              href="/"
-              onClick={() => {
-                if (onSelectCategory) onSelectCategory('all');
-              }}
-              className="px-5 py-3 text-[13.5px] font-bold text-white transition-colors flex items-center gap-1.5"
-              style={{ backgroundColor: config?.primaryColor || '#e04f26' }}
-            >
-              <span>Inicio</span>
-            </Link>
-
-            {/* Productos Dropdown */}
+          <div className="hidden md:flex items-center gap-1">
+            {/* Green Categories Button matching reference image */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setCategoriesOpen(!categoriesOpen)}
-                className="px-4 py-3 text-[13.5px] font-semibold text-white/90 hover:bg-[#1d2b53] hover:text-white transition-colors flex items-center gap-1"
+                className="bg-[#16a34a] hover:bg-[#15803d] text-white font-extrabold text-xs uppercase px-4 py-3 flex items-center gap-2 tracking-wide transition-colors rounded-l-md"
               >
-                <span>Productos</span>
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M3 12h18M3 6h18M3 18h18" />
+                </svg>
+                <span>TODAS LAS CATEGORÍAS</span>
                 <span className="text-[10px]">▼</span>
               </button>
 
               {categoriesOpen && (
                 <div
-                  className="absolute left-0 top-full w-64 bg-white text-[#162544] border border-[#e2e8f0] rounded-b-md shadow-xl py-2 z-50"
+                  className="absolute left-0 top-full w-64 bg-white text-[#162544] border border-[#e2e8f0] rounded-b-md shadow-2xl py-2 z-50 animate-fade-in"
                   onMouseLeave={() => setCategoriesOpen(false)}
                 >
                   <button
@@ -247,9 +264,10 @@ export function Header({
                       if (onSelectCategory) onSelectCategory('all');
                       setCategoriesOpen(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-100 text-[#162544]"
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-slate-100 text-[#162544] flex items-center justify-between"
                   >
-                    Todos los productos
+                    <span>Todos los productos</span>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">Ver todo</span>
                   </button>
                   {categories.map((c) => (
                     <button
@@ -270,53 +288,83 @@ export function Header({
               )}
             </div>
 
-            {/* Marcas */}
-            <a
-              href="#marcas"
-              className="px-4 py-3 text-[13.5px] font-semibold text-white/90 hover:bg-[#1d2b53] hover:text-white transition-colors flex items-center gap-1"
+            {/* Menu Navigation Links */}
+            <Link
+              href="/"
+              onClick={() => {
+                if (onSelectCategory) onSelectCategory('all');
+              }}
+              className="px-4 py-3 text-[13px] font-bold text-white hover:bg-white/10 transition-colors"
             >
-              <span>Marcas</span>
-              <span className="text-[10px]">▼</span>
+              Inicio
+            </Link>
+
+            <a
+              href="#tienda-productos"
+              className="px-4 py-3 text-[13px] font-bold text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              Productos
             </a>
 
-            {/* Cómo comprar */}
+            <a
+              href="#marcas"
+              className="px-4 py-3 text-[13px] font-bold text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              Marcas
+            </a>
+
             <a
               href="#como-comprar"
-              className="px-4 py-3 text-[13.5px] font-semibold text-white/90 hover:bg-[#1d2b53] hover:text-white transition-colors"
+              className="px-4 py-3 text-[13px] font-bold text-white/90 hover:bg-white/10 hover:text-white transition-colors"
             >
               Cómo comprar
             </a>
 
-            {/* Ofertas */}
             <button
               type="button"
               onClick={() => onFilterOferta && onFilterOferta()}
-              className="px-4 py-3 text-[13.5px] font-semibold text-white/90 hover:bg-[#1d2b53] hover:text-white transition-colors"
+              className="px-4 py-3 text-[13px] font-bold text-amber-300 hover:bg-white/10 transition-colors flex items-center gap-1"
             >
-              Ofertas
+              <span>🔥</span>
+              <span>Ofertas</span>
             </button>
 
-            {/* Contacto */}
             <a
               href="#contacto"
-              className="px-4 py-3 text-[13.5px] font-semibold text-white/90 hover:bg-[#1d2b53] hover:text-white transition-colors"
+              className="px-4 py-3 text-[13px] font-bold text-white/90 hover:bg-white/10 hover:text-white transition-colors"
             >
               Contacto
             </a>
           </div>
 
-          {/* Right Side: Admin Link */}
-          <div className="hidden md:flex items-center py-2">
-            <Link
-              href="/admin"
-              className="text-xs font-semibold px-3 py-1 rounded bg-[#1d2b53] text-[#f8fafc] hover:bg-[#e04f26] transition-colors flex items-center gap-1.5"
+          {/* Right Side: Quick WhatsApp & Admin / Login Link */}
+          <div className="hidden md:flex items-center gap-2 py-1.5">
+            <a
+              href={`https://wa.me/${(config?.whatsappNumber || '59178000000').replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-bold px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 shadow-xs"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
-              </svg>
-              <span>Panel Admin</span>
-            </Link>
+              <span>WhatsApp Directo</span>
+            </a>
+
+            {isLoggedIn ? (
+              <Link
+                href="/admin"
+                className="text-xs font-semibold px-3 py-1.5 rounded bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-1.5"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#facc15]" />
+                <span>Panel Admin</span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="text-xs font-semibold px-3 py-1.5 rounded bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-1.5"
+              >
+                <UserIcon className="w-3.5 h-3.5 text-white" />
+                <span>Iniciar sesión</span>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -385,13 +433,25 @@ export function Header({
             >
               Contacto
             </a>
-            <Link
-              href="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-sm font-bold text-[#e04f26]"
-            >
-              Acceso Administrativo →
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 py-2 text-sm font-bold text-[#f2b705]"
+              >
+                <ShieldCheck className="w-4 h-4 text-[#f2b705]" />
+                <span>Panel Admin</span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 py-2 text-sm font-bold text-[#e04f26]"
+              >
+                <UserIcon className="w-4 h-4 text-[#e04f26]" />
+                <span>Iniciar sesión</span>
+              </Link>
+            )}
           </div>
         )}
       </nav>

@@ -5,6 +5,20 @@ export type BannerPlacement = "HERO" | "CATEGORY_PROMO" | "SIDEBAR";
 export type OrderStatus = "PENDING" | "IN_PREPARATION" | "DELIVERED" | "CANCELLED";
 export type ClaimType = "RECLAMO" | "QUEJA";
 export type ClaimStatus = "PENDIENTE" | "EN_PROCESO" | "RESUELTO";
+export type UserRole = "SUPERADMIN" | "ADMIN";
+
+export interface User {
+  id: number;
+  name: string;
+  username: string;
+  email?: string;
+  password?: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
 
 export interface SiteConfig {
   id: number;

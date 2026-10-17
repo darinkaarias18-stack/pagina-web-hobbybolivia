@@ -65,8 +65,8 @@ function AdminItemsContent() {
     setLoading(true);
     try {
       const [itemsRes, catsRes] = await Promise.all([
-        fetch('/api/items'),
-        fetch('/api/categories')
+        fetch(`/api/items?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/categories?t=${Date.now()}`, { cache: 'no-store' })
       ]);
 
       const itemsJson = await itemsRes.json();
@@ -112,7 +112,7 @@ function AdminItemsContent() {
     setAvailability('IN_STOCK');
     setStockQuantity('15');
     setCategoryId(categories[0]?.id || 1);
-    setImageUrl('https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp');
+    setImageUrl('');
     setFormError('');
     setIsModalOpen(true);
   };
@@ -130,7 +130,7 @@ function AdminItemsContent() {
     setAvailability(item.availability);
     setStockQuantity(item.stockQuantity.toString());
     setCategoryId(item.categoryId);
-    setImageUrl(item.images?.[0] || 'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp');
+    setImageUrl(item.images?.[0] || '');
     setFormError('');
     setIsModalOpen(true);
   };
@@ -210,6 +210,7 @@ function AdminItemsContent() {
 
     setFormSaving(true);
     try {
+      const finalImage = imageUrl.trim() || 'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp';
       const payload = {
         sku: sku.trim() || `HB-${Date.now().toString().slice(-4)}`,
         title: title.trim(),
@@ -223,7 +224,7 @@ function AdminItemsContent() {
         stockQuantity: parseInt(stockQuantity, 10) || 0,
         actionType: 'ADD_TO_CART' as ActionType,
         categoryId: Number(categoryId),
-        images: imageUrl ? [imageUrl] : ['https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp']
+        images: [finalImage]
       };
 
       const url = editingItem ? `/api/items/${editingItem.id}` : '/api/items';
@@ -240,9 +241,18 @@ function AdminItemsContent() {
         throw new Error(data.error || 'Error al guardar el producto');
       }
 
+      // Reflect change immediately in local state
+      if (editingItem) {
+        setItems((prev) =>
+          prev.map((i) => (i.id === editingItem.id ? { ...i, ...data.data, images: [finalImage] } : i))
+        );
+      } else if (data.data) {
+        setItems((prev) => [{ ...data.data, images: [finalImage] }, ...prev]);
+      }
+
       setIsModalOpen(false);
-      showToast(editingItem ? 'Producto actualizado con éxito.' : 'Producto creado con éxito.');
-      loadData();
+      showToast(editingItem ? 'Fotografía y datos actualizados con éxito.' : 'Producto creado con éxito.');
+      await loadData();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
@@ -484,7 +494,7 @@ function AdminItemsContent() {
                   label="Fotografía del Producto (Sube de tu PC o pega un link)"
                   value={imageUrl}
                   onChange={setImageUrl}
-                  recommendedSize="Sube una foto clara en fondo blanco o transparente (PNG, JPG, WebP)."
+                  recommendedSize="Solo se pueden subir imágenes en formato PNG y JPG hasta 3 megas"
                 />
               </div>
 

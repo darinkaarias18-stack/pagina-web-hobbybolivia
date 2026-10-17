@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { SiteConfig } from '@/lib/types';
 
@@ -13,9 +13,21 @@ export function TopBar({ config }: TopBarProps) {
   const email = config?.contactEmail || "contacto@hobbybolivia.com";
   const cleanPhone = whatsapp.replace(/[^0-9]/g, '');
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const logged =
+        localStorage.getItem('hb_admin_logged') === 'true' ||
+        document.cookie.includes('hb_admin_auth=authenticated');
+      setIsLoggedIn(logged);
+    };
+    checkAuth();
+  }, []);
+
   return (
-    <div className="bg-[#f8fafc] text-[#64748b] text-[12px] py-1.5 px-4 border-b border-[#e2e8f0] transition-colors">
-      <div className="w-full max-w-[1280px] mx-auto flex items-center justify-between gap-4">
+    <div className="bg-[#0f172a] text-slate-300 text-[12px] py-1.5 px-4 border-b border-black/20 transition-colors">
+      <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between gap-4">
         {/* Left: Social media icons and names */}
         <div className="flex items-center gap-4 text-[11.5px]">
           <a
@@ -92,18 +104,30 @@ export function TopBar({ config }: TopBarProps) {
             <span>{whatsapp.replace('+591', '').trim() || '78000000'}</span>
           </a>
 
-          <span className="text-gray-300">|</span>
+          <span className="text-white/30">|</span>
 
-          <Link
-            href="/admin"
-            className="flex items-center gap-1.5 font-semibold text-[#162544] hover:text-[#e04f26] transition-colors"
-          >
-            <svg className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span>Mi Cuenta</span>
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 font-bold text-[#facc15] hover:text-white transition-colors"
+            >
+              <svg className="w-3.5 h-3.5 stroke-current fill-none text-[#facc15]" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>Panel Admin</span>
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 font-semibold text-white hover:text-[#facc15] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5 stroke-current fill-none text-[#facc15]" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Iniciar sesión</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

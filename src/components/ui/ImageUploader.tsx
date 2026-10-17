@@ -15,7 +15,7 @@ export function ImageUploader({
   value = '',
   onChange,
   label = 'Fotografía del Producto',
-  recommendedSize = 'Recomendado: 800x800 px o proporción 1:1 (PNG, JPG, WebP)',
+  recommendedSize = 'Solo se pueden subir imágenes en formato PNG y JPG hasta 3 megas',
   className = ''
 }: ImageUploaderProps) {
   const [mode, setMode] = useState<'upload' | 'url'>('upload');
@@ -29,11 +29,28 @@ export function ImageUploader({
     setUrlInput(value || '');
   }, [value]);
 
+  const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB (3 * 1024 * 1024 bytes)
+  const RESTRICTION_ERROR = 'Solo se permiten imágenes en formato PNG o JPG de hasta 3MB';
+  const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg'];
+  const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
+
   const handleFile = async (file: File) => {
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Por favor selecciona un archivo de imagen válido (JPG, PNG, WebP, etc.).');
+    const fileName = file.name || '';
+    const fileExt = fileName.includes('.')
+      ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase()
+      : '';
+
+    const isMimeValid = ALLOWED_MIME_TYPES.includes(file.type);
+    const isExtValid = ALLOWED_EXTENSIONS.includes(fileExt);
+
+    if ((!isMimeValid && !isExtValid) || file.size > MAX_FILE_SIZE || file.size <= 0) {
+      setUploadError(RESTRICTION_ERROR);
+      alert(RESTRICTION_ERROR);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
 
@@ -51,17 +68,24 @@ export function ImageUploader({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al subir la imagen');
+        const errorMsg = data.error || RESTRICTION_ERROR;
+        throw new Error(errorMsg);
       }
 
       onChange(data.url);
       setUrlInput(data.url);
     } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : 'Error al subir');
+      const errorMsg = err instanceof Error ? err.message : 'Error al subir la imagen';
+      setUploadError(errorMsg);
+      alert(errorMsg);
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
+
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -156,7 +180,7 @@ export function ImageUploader({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/png, image/jpeg"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
                     handleFile(e.target.files[0]);
@@ -180,8 +204,8 @@ export function ImageUploader({
                     <span className="text-xs font-bold text-[#162544] hover:underline block">
                       Haz clic para buscar o arrastra una foto aquí
                     </span>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">
-                      JPG, PNG, WebP o GIF (hasta 10MB)
+                    <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                      Solo se pueden subir imágenes en formato PNG y JPG hasta 3 megas
                     </span>
                   </div>
                 </div>

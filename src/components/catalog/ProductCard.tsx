@@ -34,48 +34,55 @@ export function ProductCard({ item, cardStyle = 'with_button', currency = '$us' 
   const brandName = item.brand || (item.title.toLowerCase().includes('great planes') ? 'Great Planes' : 'Dubro');
 
   return (
-    <article className="group flex flex-col bg-white border border-[#e2e8f0] rounded-lg p-3.5 transition-all duration-300 hover:shadow-lg hover:border-[#cbd5e1] relative">
-      {/* Discount badge */}
+    <article className="group flex flex-col bg-white border border-[#e2e8f0] rounded-xl p-3.5 transition-all duration-300 hover:shadow-xl hover:border-[#cbd5e1] hover:-translate-y-0.5 relative">
+      {/* Top badges (Oferta / Agotado) matching reference image */}
       {item.discountPercent && !isOutOfStock && (
-        <span className="absolute left-3 top-3 px-2 py-0.5 rounded text-[11px] font-extrabold bg-[#e04f26] text-white z-10 shadow-sm">
-          -{item.discountPercent}%
+        <span className="absolute left-3 top-3 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-[#be185d] text-white z-10 shadow-sm">
+          Oferta -{item.discountPercent}%
         </span>
       )}
       {isOutOfStock && (
-        <span className="absolute left-3 top-3 px-2 py-0.5 rounded text-[11px] font-extrabold bg-slate-500 text-white z-10">
+        <span className="absolute left-3 top-3 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-slate-500 text-white z-10">
           Agotado
         </span>
       )}
 
-      {/* Top: Product Title in Blue (Galba style) & SKU */}
-      <div className="mb-2">
-        <h3 className="text-xs sm:text-[13.5px] font-bold text-[#1d4ed8] group-hover:text-[#1e40af] line-clamp-2 min-h-[2.5em] leading-snug cursor-pointer" onClick={handleQuickAdd}>
-          {item.title}
-        </h3>
-        <span className="text-[11px] text-[#94a3b8] font-mono tracking-wide block mt-0.5">
-          {item.sku || brandName}
-        </span>
-      </div>
-
-      {/* Product Image Container */}
-      <div className="relative aspect-square w-full my-2 flex items-center justify-center overflow-hidden rounded bg-[#fafafa]">
+      {/* 1. Product Image at Top */}
+      <div
+        className="relative aspect-square w-full mb-3 flex items-center justify-center overflow-hidden rounded-lg bg-[#f8fafc] cursor-pointer group-hover:bg-white transition-colors"
+        onClick={handleQuickAdd}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={mainImage}
           alt={item.title}
-          className={`max-w-[85%] max-h-[85%] object-contain transition-transform duration-500 group-hover:scale-110 drop-shadow-sm ${
+          className={`max-w-[88%] max-h-[88%] object-contain transition-transform duration-500 group-hover:scale-108 drop-shadow-xs ${
             isOutOfStock ? 'grayscale opacity-60' : ''
           }`}
           loading="lazy"
         />
       </div>
 
-      {/* Card Bottom: Price & Quick Action */}
-      <div className="mt-auto pt-2 border-t border-[#f1f5f9] flex items-center justify-between gap-2">
-        <div>
-          <div className="text-xs text-[#64748b] leading-none mb-0.5">Precio</div>
+      {/* 2. Brand & SKU Code */}
+      <div className="flex items-center justify-between text-[11px] text-[#64748b] font-medium mb-1">
+        <span className="uppercase tracking-wider font-semibold text-[#0f172a]/70 truncate">{brandName}</span>
+        {item.sku && <span className="font-mono text-[#94a3b8] text-[10px]">{item.sku}</span>}
+      </div>
+
+      {/* 3. Product Title */}
+      <h3
+        className="text-[13px] sm:text-[14px] font-bold text-[#0f172a] group-hover:text-[#2563eb] line-clamp-2 min-h-[2.6em] leading-snug cursor-pointer transition-colors mb-2"
+        onClick={handleQuickAdd}
+        title={item.title}
+      >
+        {item.title}
+      </h3>
+
+      {/* 4. Stock status & Price */}
+      <div className="mt-auto pt-2 border-t border-[#f1f5f9] flex flex-col gap-1">
+        <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-sm sm:text-base font-extrabold text-[#162544] font-mono">
+            <span className="text-base sm:text-lg font-black text-[#0f172a]">
               {currency} {Number(item.price).toFixed(2)}
             </span>
             {item.compareAtPrice && Number(item.compareAtPrice) > Number(item.price) && (
@@ -84,19 +91,25 @@ export function ProductCard({ item, cardStyle = 'with_button', currency = '$us' 
               </span>
             )}
           </div>
+          <span className={`text-[11px] font-bold flex items-center gap-1 ${isOutOfStock ? 'text-slate-400' : 'text-emerald-600'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isOutOfStock ? 'bg-slate-400' : 'bg-emerald-500'}`} />
+            {isOutOfStock ? 'Agotado' : 'En stock'}
+          </span>
         </div>
 
-        {/* Add Button - only when cardStyle is with_button */}
+        {/* 5. Full width dark action button matching reference image */}
         {cardStyle !== 'catalog_only' && (
           <button
             type="button"
             onClick={handleQuickAdd}
             disabled={isOutOfStock}
             aria-label={`Añadir ${item.title}`}
-            className="h-8 px-3 rounded bg-[#162544] hover:bg-[#e04f26] text-white text-xs font-bold transition-colors flex items-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full mt-2 py-2 px-3 rounded-full bg-[#162544] hover:bg-[#e04f26] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed group/btn cursor-pointer"
           >
-            <span className="text-sm font-black">+</span>
-            <span className="hidden sm:inline">{hasOptions ? 'Opciones' : 'Añadir'}</span>
+            <svg className="w-3.5 h-3.5 stroke-current fill-none" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span>{hasOptions ? 'Ver Opciones' : 'Añadir al carrito'}</span>
           </button>
         )}
       </div>

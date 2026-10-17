@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Store,
   Palette,
@@ -18,6 +19,7 @@ import { ImageUploader } from '@/components/ui/ImageUploader';
 import type { SiteConfig } from '@/lib/types';
 
 export default function AdminSettingsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -93,6 +95,12 @@ export default function AdminSettingsPage() {
   ];
 
   useEffect(() => {
+    const role = localStorage.getItem('hb_user_role') || 'ADMIN';
+    if (role !== 'SUPERADMIN') {
+      router.replace('/admin/items');
+      return;
+    }
+
     fetch('/api/settings')
       .then((res) => res.json())
       .then((data) => {
