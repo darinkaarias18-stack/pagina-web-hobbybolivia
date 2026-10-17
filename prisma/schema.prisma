@@ -1,0 +1,186 @@
+// Prisma schema for Hobby Bolivia (MySQL)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model SiteConfig {
+  id              Int      @id @default(autoincrement())
+  companyName     String   @default("Hobby Bolivia")
+  domain          String   @default("https://hobbybolivia.com")
+  logoUrl         String?  @db.VarChar(500)
+  primaryColor    String   @default("#E11D48")
+  secondaryColor  String   @default("#064E3B")
+  currency        String   @default("Bs.")
+  whatsappNumber  String   @default("+59178000000")
+  topBarText      String   @default("Envíos en el día en toda la ciudad | Flores 100% frescas garantizadas")
+  contactEmail    String   @default("contacto@hobbybolivia.com")
+  termsPolicy     String?  @db.LongText
+  privacyPolicy   String?  @db.LongText
+  shippingPolicy  String?  @db.LongText
+  returnsPolicy   String?  @db.LongText
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+}
+
+model Category {
+  id            Int           @id @default(autoincrement())
+  name          String
+  slug          String        @unique
+  parentId      Int?
+  parent        Category?     @relation("CategorySubcategories", fields: [parentId], references: [id], onDelete: SetNull)
+  subcategories Category[]    @relation("CategorySubcategories")
+  imageUrl      String?       @db.VarChar(500)
+  description   String?       @db.Text
+  isActive      Boolean       @default(true)
+  order         Int           @default(0)
+  items         CatalogItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Occasion {
+  id        Int                   @id @default(autoincrement())
+  name      String
+  slug      String                @unique
+  iconName  String?
+  isActive  Boolean               @default(true)
+  items     CatalogItemOccasion[]
+  createdAt DateTime              @default(now())
+}
+
+enum ItemType {
+  PRODUCT
+  SERVICE
+}
+
+enum Availability {
+  IN_STOCK
+  OUT_OF_STOCK
+  ON_QUOTATION
+}
+
+enum ActionType {
+  ADD_TO_CART
+  SELECT_OPTIONS
+  QUOTE_ONLY
+}
+
+model CatalogItem {
+  id              Int                   @id @default(autoincrement())
+  sku             String                @unique
+  title           String
+  slug            String                @unique
+  brand           String?
+  description     String                @db.LongText
+  itemType        ItemType              @default(PRODUCT)
+  price           Decimal               @db.Decimal(10, 2)
+  compareAtPrice  Decimal?              @db.Decimal(10, 2)
+  discountPercent Int?
+  availability    Availability          @default(IN_STOCK)
+  stockQuantity   Int                   @default(10)
+  actionType      ActionType            @default(ADD_TO_CART)
+  flowerTypes     Json?                 // ["Rosas", "Girasoles", "Liliums"]
+  specifications  Json?                 // {"Cantidad de tallos": "24 rosas", "Altura": "50 cm", "Incluye": "Tarjeta + Moño"}
+  variants        Json?                 // [{"name": "Color", "options": ["Rojas", "Blancas", "Rosadas"]}]
+  images          Json                  // ["url1", "url2"]
+  categoryId      Int
+  category        Category              @relation(fields: [categoryId], references: [id])
+  occasions       CatalogItemOccasion[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+}
+
+model CatalogItemOccasion {
+  itemId     Int
+  occasionId Int
+  item       CatalogItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  occasion   Occasion    @relation(fields: [occasionId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, occasionId])
+}
+
+enum BannerPlacement {
+  HERO
+  CATEGORY_PROMO
+  SIDEBAR
+}
+
+model Banner {
+  id         Int             @id @default(autoincrement())
+  title      String
+  subtitle   String?
+  imageUrl   String          @db.VarChar(500)
+  buttonText String?
+  buttonUrl  String?
+  placement  BannerPlacement @default(HERO)
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PREPARATION
+  DELIVERED
+  CANCELLED
+}
+
+model QuoteOrder {
+  id               Int         @id @default(autoincrement())
+  orderCode        String      @unique
+  customerName     String
+  customerPhone    String
+  recipientName    String
+  deliveryDate     String
+  deliveryTimeSlot String
+  deliveryAddress  String      @db.Text
+  cardMessage      String?     @db.Text
+  items            Json
+  total            Decimal     @db.Decimal(10, 2)
+  status           OrderStatus @default(PENDING)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+enum ClaimType {
+  RECLAMO
+  QUEJA
+}
+
+enum ClaimStatus {
+  PENDIENTE
+  EN_PROCESO
+  RESUELTO
+}
+
+model ClaimRecord {
+  id              Int         @id @default(autoincrement())
+  trackingCode    String      @unique
+  fullName        String
+  documentId      String
+  phone           String
+  email           String
+  contractedItem  String
+  orderCode       String?
+  amount          Decimal?    @db.Decimal(10, 2)
+  type            ClaimType   @default(RECLAMO)
+  detail          String      @db.LongText
+  customerRequest String      @db.LongText
+  status          ClaimStatus @default(PENDIENTE)
+  adminNotes      String?     @db.LongText
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
