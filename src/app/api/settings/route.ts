@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSiteConfig, updateSiteConfig } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
   try {
@@ -13,6 +14,9 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     const updated = await updateSiteConfig(body);
     return NextResponse.json({ success: true, data: updated });

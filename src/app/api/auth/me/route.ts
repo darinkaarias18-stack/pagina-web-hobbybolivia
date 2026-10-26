@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
-  const authCookie = request.cookies.get('hb_admin_auth');
-  const roleCookie = request.cookies.get('hb_user_role');
-  const usernameCookie = request.cookies.get('hb_user_username');
-  const nameCookie = request.cookies.get('hb_user_name');
+  const user = await getSessionUser(request);
 
-  if (authCookie && authCookie.value === 'authenticated') {
+  if (user) {
     return NextResponse.json({
       authenticated: true,
       user: {
-        username: usernameCookie?.value || 'admin',
-        role: roleCookie?.value || 'ADMIN',
-        name: nameCookie?.value ? decodeURIComponent(nameCookie.value) : 'Usuario'
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        name: user.name
       }
     });
   }

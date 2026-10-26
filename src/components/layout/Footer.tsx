@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { Plane, Phone, Mail, MapPin, ArrowRight, ArrowUp } from 'lucide-react';
 import type { SiteConfig } from '@/lib/types';
 
 interface FooterProps {
@@ -9,209 +10,215 @@ interface FooterProps {
 }
 
 export function Footer({ config }: FooterProps) {
-  const whatsapp = config?.whatsappNumber || "+59178000000";
+  const whatsapp = config?.whatsappNumber || "+591 77293446";
   const email = config?.contactEmail || "contacto@hobbybolivia.com";
-  const cleanPhone = whatsapp.replace(/[^0-9]/g, '');
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const keywords = [
+    "Conectores E/Z Dubro",
+    "Alambres Push-Rod 2-56",
+    "Clevises de Precisión",
+    "Hélices Eléctricas APC",
+    "Motores Brushless Outrunner",
+    "Variadores ESC con BEC",
+    "Micro Servos Piñonería Metálica",
+    "Tubos de Fibra de Carbono",
+    "Trenes de Aterrizaje Escala",
+    "Baterías LiPo Alta Descarga",
+    "Envíos Blindados a Toda Bolivia"
+  ];
 
   return (
-    <footer className="bg-white text-[#64748b] pt-12 pb-6 border-t border-[#e2e8f0]">
-      <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10">
-          {/* Column 1: Brand & Contacts */}
-          <div className="md:col-span-5 space-y-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              {config?.logoUrl ? (
-                <img
-                  src={config.logoUrl}
-                  alt={config.companyName || 'Logo'}
-                  className="h-10 w-auto max-w-[130px] object-contain group-hover:scale-105 transition-transform"
-                />
-              ) : (
-                <div
-                  className="w-10 h-10 rounded-lg p-0.5 flex items-center justify-center text-white"
-                  style={{ backgroundColor: config?.secondaryColor || '#162544' }}
-                >
-                  <svg
-                    className="w-6 h-6"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    style={{ color: config?.primaryColor || '#e04f26' }}
-                  >
-                    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-                  </svg>
-                </div>
-              )}
-              <div className="flex flex-col">
-                <span className="font-extrabold text-[22px] tracking-tight leading-none text-[#162544]">
-                  {config?.companyName || 'Hobby Bolivia'}
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-[#94a3b8]">
-                  {config?.subtitle || 'Aeromodelismo & R/C'}
-                </span>
-              </div>
-            </Link>
-
-            {/* Phone */}
-            <div className="flex items-center gap-2 text-sm text-[#334155] font-medium pt-1">
-              <svg className="w-4 h-4 text-[#64748b] stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-              </svg>
-              <span>{whatsapp.replace('+591', '').trim() || '78000000'}</span>
+    <footer className="bg-[#161311] text-[#A89F91] text-xs border-t border-[#2D2622]">
+      
+      {/* 1. Barra CTA Superior (Carbón #1E1916 con Botón Dorado Arena) */}
+      <div className="bg-[#1E1916] py-6 border-b border-[#2D2622]">
+        <div className="w-full max-w-[1320px] mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-[#211E1C] border border-[#D4A359]/30 text-[#D4A359] flex items-center justify-center shrink-0">
+              <Plane className="w-5 h-5 -rotate-45" />
             </div>
-
-            {/* Email */}
-            <div className="flex items-center gap-2 text-sm text-[#334155]">
-              <svg className="w-4 h-4 text-[#64748b] stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-              <span>{email}</span>
-            </div>
-
-            {/* Social Icons row (Galba colors) */}
-            <div className="flex items-center gap-2.5 pt-2">
-              {/* WhatsApp */}
-              <a
-                href={`https://wa.me/${cleanPhone}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="WhatsApp"
-                className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654z"/>
-                </svg>
-              </a>
-
-              {/* Facebook */}
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="w-8 h-8 rounded-full bg-[#1877F2] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
-                </svg>
-              </a>
-
-              {/* Instagram */}
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
-              >
-                <svg className="w-4 h-4 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                </svg>
-              </a>
-
-              {/* LinkedIn */}
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="LinkedIn"
-                className="w-8 h-8 rounded-full bg-[#0A66C2] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                </svg>
-              </a>
+            <div>
+              <h4 className="text-sm font-black text-[#FAF8F5] uppercase tracking-wide">
+                ¿Necesitas asesoría técnica sobre roscas o compatibilidad?
+              </h4>
+              <p className="text-[#A89F91] text-xs mt-0.5">
+                Te asistimos de inmediato con diagramas de paso, diámetros de varilla y brazos de servo.
+              </p>
             </div>
           </div>
 
-          {/* Column 2: Servicio al cliente */}
-          <div className="md:col-span-4 space-y-3">
-            <h4 className="text-sm font-bold text-[#162544] tracking-tight">
-              Servicio al cliente
-            </h4>
-            <ul className="space-y-2 text-xs">
-              <li>
-                <a href="#catalogo" className="hover:text-[#162544] hover:underline transition-colors">
-                  Condiciones generales
-                </a>
-              </li>
-              <li>
-                <a href="#como-comprar" className="hover:text-[#162544] hover:underline transition-colors">
-                  Cómo comprar
-                </a>
-              </li>
-              <li>
-                <a href="#catalogo" className="hover:text-[#162544] hover:underline transition-colors">
-                  Preguntas frecuentes
-                </a>
-              </li>
-              <li>
-                <a href="#contacto" className="hover:text-[#162544] hover:underline transition-colors">
-                  Reclamos y sugerencias
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Mi cuenta */}
-          <div className="md:col-span-3 space-y-3">
-            <h4 className="text-sm font-bold text-[#162544] tracking-tight">
-              Mi cuenta
-            </h4>
-            <ul className="space-y-2 text-xs">
-              <li>
-                <Link href="/admin" className="hover:text-[#162544] hover:underline transition-colors">
-                  Mi cuenta
-                </Link>
-              </li>
-              <li>
-                <Link href="/admin" className="hover:text-[#162544] hover:underline transition-colors">
-                  Actualizar datos
-                </Link>
-              </li>
-              <li>
-                <a href="#catalogo" className="hover:text-[#162544] hover:underline transition-colors">
-                  Mis pedidos
-                </a>
-              </li>
-              <li>
-                <Link href="/admin" className="text-[#e04f26] font-bold hover:underline transition-colors">
-                  Panel de Administración →
-                </Link>
-              </li>
-            </ul>
-          </div>
+          <a
+            href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}?text=Hola%20Hobby%20Bolivia,%20necesito%20asesoría%20sobre%20un%20repuesto.`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-extrabold text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#D4A359]/20 flex items-center gap-2 hover:scale-[1.02]"
+          >
+            <span>Consultar con un Técnico</span>
+            <ArrowRight className="w-4 h-4 text-[#161311]" />
+          </a>
         </div>
+      </div>
 
-        {/* Bottom Bar: Copyright on left, Payment icons on right */}
-        <div className="pt-6 border-t border-[#f1f5f9] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#94a3b8]">
-          <div>
-            © Hobby Bolivia - Todos los derechos reservados
+      {/* 2. Main Footer Links */}
+      <div className="w-full max-w-[1320px] mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
+          
+          {/* Brand Info */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#F85606] flex items-center justify-center text-white">
+                <Plane className="w-4 h-4 -rotate-45" />
+              </div>
+              <span className="font-black text-xl tracking-tight text-[#F85606]">
+                HOBBY <span className="text-[#FAF8F5]">BOLIVIA</span>
+              </span>
+            </div>
+
+            <p className="text-[#A89F91] text-xs leading-relaxed max-w-sm">
+              Plataforma especializada en la distribución de repuestos, componentes mecánicos, electrónica y accesorios para aviones a escala y aeromodelismo en toda Bolivia.
+            </p>
+
+            <div className="space-y-2 text-[#A89F91] text-xs pt-1">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-[#D4A359] shrink-0" />
+                <span>Santa Cruz de la Sierra, Bolivia (Despachos a los 9 Departamentos)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-[#D4A359] shrink-0" />
+                <span>{whatsapp} (Atención y Cotizaciones)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-[#A89F91] shrink-0" />
+                <span>{email}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Payment Badges (VISA, Mastercard, QR Simple, Transferencia) */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-1 rounded bg-[#f1f5f9] text-[10px] font-black text-[#1e293b] tracking-wider border border-[#e2e8f0]">
-              VISA
-            </span>
-            <span className="px-2 py-1 rounded bg-[#f1f5f9] text-[10px] font-black text-[#1e293b] tracking-wider border border-[#e2e8f0]">
-              MASTERCARD
-            </span>
-            <span className="px-2 py-1 rounded bg-[#f1f5f9] text-[10px] font-black text-[#2563eb] tracking-wider border border-[#e2e8f0]">
-              QR SIMPLE
-            </span>
-            <span className="px-2 py-1 rounded bg-[#f1f5f9] text-[10px] font-bold text-[#1e293b] tracking-tight border border-[#e2e8f0]">
-              Transferencia
-            </span>
-            <span className="px-2 py-1 rounded bg-[#f1f5f9] text-[10px] font-bold text-[#16a34a] tracking-tight border border-[#e2e8f0]">
-              Efectivo
-            </span>
+          {/* Categorías Principales */}
+          <div>
+            <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
+              Sistemas
+            </h5>
+            <ul className="space-y-2.5 text-[#A89F91]">
+              <li>
+                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Conectores E/Z & Mandos</a>
+              </li>
+              <li>
+                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Varillaje Push-Rod & Clevises</a>
+              </li>
+              <li>
+                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Motores Brushless & ESC</a>
+              </li>
+              <li>
+                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Hélices APC & Spinners CNC</a>
+              </li>
+              <li>
+                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Micro Servos MG90S</a>
+              </li>
+              <li>
+                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Trenes en Fibra de Carbono</a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Políticas & Soporte */}
+          <div>
+            <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
+              Garantía & Ayuda
+            </h5>
+            <ul className="space-y-2.5 text-[#A89F91]">
+              <li>
+                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Envíos y Embalaje Frágil</a>
+              </li>
+              <li>
+                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Garantía de Repuestos</a>
+              </li>
+              <li>
+                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Cambios por Compatibilidad</a>
+              </li>
+              <li>
+                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Privacidad de Clientes</a>
+              </li>
+              <li>
+                <Link href="/libro-de-reclamaciones" className="hover:text-[#D4A359] transition-colors">Libro de Reclamaciones</Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Medios de Pago & Enlace Admin */}
+          <div>
+            <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
+              Pagos en Bolivia
+            </h5>
+            <p className="text-[#A89F91] text-xs mb-3">
+              Transferencias seguras y pagos digitales autorizados:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="px-2.5 py-1 bg-[#211E1C] border border-[#2D2622] text-[#FAF8F5] rounded-full font-bold text-[10px]">
+                QR Simple
+              </span>
+              <span className="px-2.5 py-1 bg-[#211E1C] border border-[#2D2622] text-[#FAF8F5] rounded-full font-bold text-[10px]">
+                BCP / BNB / Mercantil
+              </span>
+              <span className="px-2.5 py-1 bg-[#211E1C] border border-[#2D2622] text-[#FAF8F5] rounded-full font-bold text-[10px]">
+                Tigo Money
+              </span>
+              <span className="px-2.5 py-1 bg-[#211E1C] border border-[#2D2622] text-[#FAF8F5] rounded-full font-bold text-[10px]">
+                Efectivo Contraentrega
+              </span>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-[#2D2622]">
+              <Link
+                href="/admin"
+                className="text-[11px] font-bold text-[#D4A359] hover:text-[#C69755] transition-colors flex items-center gap-1"
+              >
+                <span>Acceso al Panel Administrativo</span>
+                <span>→</span>
+              </Link>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* 3. Franja Inferior en Crema con Palabras Clave separadas por Puntos (•) */}
+      <div className="bg-[#F5F2EB] py-3.5 px-4 border-t border-[#E2DCD3] text-[#5C5650] text-[11px]">
+        <div className="w-full max-w-[1320px] mx-auto flex flex-wrap items-center justify-center gap-2 text-center font-medium">
+          {keywords.map((kw, i) => (
+            <React.Fragment key={kw}>
+              <span className="hover:text-[#1A1817] transition-colors">{kw}</span>
+              {i < keywords.length - 1 && <span className="text-[#D4A359] font-bold">•</span>}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Bottom Copyright Strip */}
+      <div className="bg-[#100D0B] py-3 px-4 border-t border-[#241F1C]">
+        <div className="w-full max-w-[1320px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[#8C827A] text-[11px]">
+          <div>
+            © 2026 <strong className="text-[#FAF8F5]">Hobby Bolivia</strong>. Todos los derechos reservados. Repuestos de precisión para aeromodelismo.
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-[#D4A359] font-mono">Precios en Bolivianos (Bs.)</span>
+            <button
+              onClick={scrollToTop}
+              type="button"
+              className="p-1.5 rounded-lg bg-[#211E1C] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] transition-colors cursor-pointer"
+              title="Volver arriba"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
+
     </footer>
   );
 }

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getQuoteOrders, createQuoteOrder, updateQuoteOrderStatus } from '@/lib/db';
 import type { OrderStatus } from '@/lib/types';
+import { requireAdmin } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const orders = await getQuoteOrders();
     return NextResponse.json({ success: true, count: orders.length, data: orders });
   } catch (error) {
@@ -61,6 +65,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     const { orderCode, status } = body;
 

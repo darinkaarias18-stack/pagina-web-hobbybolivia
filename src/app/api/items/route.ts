@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getCatalogItems, saveCatalogItem } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,6 +37,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     if (!body.title || !body.price) {
       return NextResponse.json({ success: false, error: "Title and price are required" }, { status: 400 });
@@ -55,4 +59,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Failed to create item" }, { status: 500 });
   }
 }
-

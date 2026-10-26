@@ -1,31 +1,26 @@
-import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import mysql from 'mysql2/promise';
 import {
   initialSiteConfig,
   initialCategories,
   initialOccasions,
   initialBanners,
-  initialItems
+  initialProducts,
+  initialPolicies
 } from './initial-data';
 import type {
   SiteConfig,
   Category,
   Occasion,
-  CatalogItem,
+  Product,
   Banner,
   QuoteOrder,
   ClaimRecord,
   OrderStatus,
-  ClaimStatus,
   User,
-  UserRole
+  Policy
 } from './types';
-
-// Global Prisma instance for Next.js
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
@@ -41,100 +36,421 @@ export const DEFAULT_SUPERADMIN: User = {
   createdAt: "2026-01-01T00:00:00.000Z"
 };
 
-interface LocalDatabase {
+// ============================================================================
+// 1. POOL DE CONEXIÓN A MYSQL (HOSTING / CPANEL)
+// ============================================================================
+
+let mysqlPool: mysql.Pool | null = null;
+let mysqlUnavailable = false;
+let lastMysqlCheck = 0;
+
+export function getMysqlConfig() {
+  let host = process.env.MYSQL_HOST;
+  let port = Number(process.env.MYSQL_PORT) || 3306;
+  let user = process.env.MYSQL_USER;
+  let password = process.env.MYSQL_PASSWORD || '';
+  let database = process.env.MYSQL_DATABASE;
+  const ssl = process.env.MYSQL_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
+
+  // Fallback a DATABASE_URL si las variables individuales no están definidas
+  if ((!host || !user || !database) && process.env.DATABASE_URL) {
+    try {
+      const parsed = new URL(process.env.DATABASE_URL.replace(/^mysql:\/\//, 'http://'));
+      host = host || parsed.hostname;
+      if (parsed.port && !process.env.MYSQL_PORT) port = Number(parsed.port);
+      user = user || decodeURIComponent(parsed.username);
+      password = password || decodeURIComponent(parsed.password);
+      database = database || parsed.pathname.replace(/^\//, '');
+    } catch {
+      // Ignorar error de parsing si el formato es inválido
+    }
+  }
+
+  return { host, port, user, password, database, ssl };
+}
+
+export function markMysqlUnavailable(err?: any) {
+  if (!mysqlUnavailable) {
+    console.warn('[MySQL Fallback]: Conexión no disponible, usando almacenamiento local (.data/db.json).', err?.message || '');
+  }
+  mysqlUnavailable = true;
+  lastMysqlCheck = Date.now();
+}
+
+export function isMysqlConfigured(): boolean {
+  const cfg = getMysqlConfig();
+  return Boolean(cfg.host && cfg.user && cfg.database);
+}
+
+export function getMysqlPool(): mysql.Pool | null {
+  const cfg = getMysqlConfig();
+  if (!cfg.host || !cfg.user || !cfg.database) return null;
+  if (mysqlUnavailable && Date.now() - lastMysqlCheck < 60000) {
+    return null;
+  }
+
+  if (!mysqlPool) {
+    try {
+      mysqlPool = mysql.createPool({
+        host: cfg.host,
+        port: cfg.port,
+        user: cfg.user,
+        password: cfg.password,
+        database: cfg.database,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        ssl: cfg.ssl,
+        connectTimeout: 3000
+      });
+
+      (mysqlPool as any).on('error', (err: any) => {
+        markMysqlUnavailable(err);
+      });
+    } catch (err) {
+      markMysqlUnavailable(err);
+      mysqlPool = null;
+    }
+  }
+
+  return mysqlPool;
+}
+
+export async function testMysqlConnection(): Promise<{
+  configured: boolean;
+  connected: boolean;
+  latencyMs?: number;
+  host?: string;
+  database?: string;
+  tables?: string[];
+  productCount?: number;
+  categoryCount?: number;
+  policyCount?: number;
+  error?: string;
+}> {
+  const cfg = getMysqlConfig();
+  if (!isMysqlConfigured()) {
+    return {
+      configured: false,
+      connected: false,
+      error: 'Variables MYSQL_HOST, MYSQL_USER o MYSQL_DATABASE (o DATABASE_URL) no configuradas en el entorno.'
+    };
+  }
+
+  mysqlUnavailable = false;
+  const pool = getMysqlPool();
+  if (!pool) {
+    return {
+      configured: true,
+      connected: false,
+      error: 'No se pudo instanciar el pool de conexiones MySQL.'
+    };
+  }
+
+  const startTime = Date.now();
+  try {
+    const conn = await pool.getConnection();
+    try {
+      await conn.query('SELECT 1');
+      const latencyMs = Date.now() - startTime;
+
+      // Obtener lista de tablas
+      const [tableRows]: any = await conn.query('SHOW TABLES');
+      const tables: string[] = tableRows.map((r: any) => Object.values(r)[0]);
+
+      let productCount = 0;
+      let categoryCount = 0;
+      let policyCount = 0;
+
+      if (tables.includes('products')) {
+        const [prodRows]: any = await conn.query('SELECT COUNT(*) as cnt FROM products');
+        productCount = prodRows[0]?.cnt || 0;
+      }
+
+      if (tables.includes('categories')) {
+        const [catRows]: any = await conn.query('SELECT COUNT(*) as cnt FROM categories');
+        categoryCount = catRows[0]?.cnt || 0;
+      }
+
+      if (tables.includes('policies')) {
+        const [polRows]: any = await conn.query('SELECT COUNT(*) as cnt FROM policies');
+        policyCount = polRows[0]?.cnt || 0;
+      }
+
+      return {
+        configured: true,
+        connected: true,
+        latencyMs,
+        host: cfg.host,
+        database: cfg.database,
+        tables,
+        productCount,
+        categoryCount,
+        policyCount
+      };
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    return {
+      configured: true,
+      connected: false,
+      host: cfg.host,
+      database: cfg.database,
+      error: err instanceof Error ? err.message : String(err)
+    };
+  }
+}
+
+// ============================================================================
+// 2. SINCRONIZACIÓN Y CREACIÓN DE TABLAS EN EL HOSTING
+// ============================================================================
+
+export async function syncMysqlTables(forceSeed = false): Promise<{
+  success: boolean;
+  message: string;
+  tablesCreated?: string[];
+  productsInserted?: number;
+  categoriesInserted?: number;
+  policiesInserted?: number;
+  error?: string;
+}> {
+  const pool = getMysqlPool();
+  if (!pool) {
+    return {
+      success: false,
+      message: 'No hay conexión activa a MySQL. Verifica tus credenciales de hosting en .env.'
+    };
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    // 1. Crear tablas si no existen
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL UNIQUE,
+        description TEXT NULL,
+        image_url VARCHAR(500) NULL,
+        display_order INT NOT NULL DEFAULT 0,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_categories_slug (slug)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        sku VARCHAR(100) NOT NULL UNIQUE,
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL,
+        category_id INT UNSIGNED NOT NULL,
+        scale VARCHAR(100) DEFAULT 'RC Estándar',
+        material VARCHAR(100) DEFAULT 'Compuesto',
+        specs_line VARCHAR(255) NOT NULL,
+        compatible_models TEXT NULL,
+        price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        old_price DECIMAL(10,2) NULL,
+        stock INT NOT NULL DEFAULT 0,
+        badge VARCHAR(100) NULL,
+        image_url VARCHAR(500) NOT NULL,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        brand VARCHAR(100) DEFAULT 'Hobby Bolivia',
+        description TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_products_category (category_id),
+        INDEX idx_products_sku (sku),
+        INDEX idx_products_active (is_active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS policies (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        slug VARCHAR(100) NOT NULL UNIQUE,
+        title VARCHAR(255) NOT NULL,
+        content MEDIUMTEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) NOT NULL UNIQUE,
+        email VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'ADMIN',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS quote_orders (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        customer_name VARCHAR(255) NOT NULL,
+        customer_phone VARCHAR(50) NOT NULL,
+        customer_city VARCHAR(100) NOT NULL,
+        customer_notes TEXT NULL,
+        items_json LONGTEXT NOT NULL,
+        total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 2. Verificar datos existentes
+    const [catCountRows]: any = await conn.query('SELECT COUNT(*) as cnt FROM categories');
+    const existingCats = catCountRows[0]?.cnt || 0;
+
+    let catInserted = 0;
+    let prodInserted = 0;
+    let polInserted = 0;
+
+    if (existingCats === 0 || forceSeed) {
+      if (forceSeed) {
+        await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+        await conn.query('TRUNCATE TABLE products');
+        await conn.query('TRUNCATE TABLE categories');
+        await conn.query('TRUNCATE TABLE policies');
+        await conn.query('TRUNCATE TABLE admin_users');
+        await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+      }
+
+      // Insertar Categorías
+      for (const cat of initialCategories) {
+        await conn.query(
+          `INSERT INTO categories (id, name, slug, description, image_url, display_order, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), image_url=VALUES(image_url)`,
+          [
+            cat.id,
+            cat.name,
+            cat.slug,
+            cat.description || '',
+            cat.image_url || cat.imageUrl || '',
+            cat.order || cat.id,
+            cat.isActive ? 1 : 0
+          ]
+        );
+        catInserted++;
+      }
+
+      // Insertar Productos (18 productos con imágenes intactas)
+      for (const prod of initialProducts) {
+        await conn.query(
+          `INSERT INTO products (
+            id, sku, name, slug, category_id, scale, material, specs_line,
+            compatible_models, price, old_price, stock, badge, image_url,
+            is_active, brand, description
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            name=VALUES(name), price=VALUES(price), stock=VALUES(stock),
+            specs_line=VALUES(specs_line), image_url=VALUES(image_url)`,
+          [
+            prod.id,
+            prod.sku,
+            prod.name,
+            prod.slug,
+            prod.category_id || prod.categoryId || 1,
+            prod.scale || 'RC Estándar',
+            prod.material || 'Compuesto',
+            prod.specs_line || '',
+            prod.compatible_models || '',
+            prod.price || 0,
+            prod.old_price || null,
+            prod.stock || 0,
+            prod.badge || null,
+            prod.image_url || (prod.images && prod.images[0]) || '',
+            prod.is_active ? 1 : 0,
+            prod.brand || 'Hobby Bolivia',
+            prod.description || ''
+          ]
+        );
+        prodInserted++;
+      }
+
+      // Insertar Políticas
+      for (const pol of initialPolicies) {
+        await conn.query(
+          `INSERT INTO policies (id, slug, title, content)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE title=VALUES(title), content=VALUES(content)`,
+          [pol.id, pol.slug, pol.title, pol.content]
+        );
+        polInserted++;
+      }
+
+      // Insertar Administradores
+      await conn.query(`
+        INSERT INTO admin_users (id, username, email, password_hash, role)
+        VALUES (1, 'superadmin', 'superadmin@hobbybolivia.com', 'superhobby2026*', 'SUPERADMIN'),
+               (2, 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN')
+        ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash)
+      `);
+    }
+
+    return {
+      success: true,
+      message: 'Tablas sincronizadas e inicializadas exitosamente en el MySQL de tu Hosting.',
+      tablesCreated: ['categories', 'products', 'policies', 'admin_users', 'quote_orders'],
+      productsInserted: prodInserted,
+      categoriesInserted: catInserted,
+      policiesInserted: polInserted
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: 'Error al sincronizar tablas en MySQL.',
+      error: err instanceof Error ? err.message : String(err)
+    };
+  } finally {
+    conn.release();
+  }
+}
+
+// ============================================================================
+// 3. ALMACENAMIENTO LOCAL REACTIVO (FALLBACK SEGURO)
+// ============================================================================
+
+export interface LocalDatabase {
   siteConfig: SiteConfig;
   categories: Category[];
   occasions: Occasion[];
   banners: Banner[];
-  items: CatalogItem[];
+  items: Product[];
+  policies: Policy[];
   quotes: QuoteOrder[];
   claims: ClaimRecord[];
   users: User[];
 }
 
-function initDefaultDatabase(): LocalDatabase {
-  const categories: Category[] = initialCategories.map((c, idx) => ({
-    id: idx + 1,
-    name: c.name,
-    slug: c.slug,
-    order: c.order,
-    imageUrl: c.imageUrl,
-    description: c.description,
-    isActive: true
-  }));
-
-  const occasions: Occasion[] = initialOccasions.map((o, idx) => ({
-    id: idx + 1,
-    name: o.name,
-    slug: o.slug,
-    iconName: o.iconName,
-    isActive: true
-  }));
-
-  const banners: Banner[] = initialBanners.map((b, idx) => ({
-    id: idx + 1,
-    title: b.title,
-    subtitle: b.subtitle,
-    imageUrl: b.imageUrl,
-    buttonText: b.buttonText,
-    buttonUrl: b.buttonUrl,
-    placement: b.placement,
-    isActive: b.isActive
-  }));
-
-  const items: CatalogItem[] = initialItems.map((item, idx) => {
-    const cat = categories.find((c) => c.slug === item.categorySlug);
-    return {
-      id: idx + 1,
-      sku: item.sku,
-      title: item.title,
-      slug: item.slug,
-      brand: item.brand || null,
-      description: item.description,
-      itemType: item.itemType,
-      price: item.price,
-      compareAtPrice: (item as any).compareAtPrice ?? null,
-      discountPercent: (item as any).discountPercent ?? null,
-      availability: item.availability,
-      stockQuantity: item.stockQuantity,
-      actionType: item.actionType,
-      flowerTypes: (item as any).flowerTypes ?? [],
-      specifications: item.specifications,
-      variants: (item as any).variants ?? [],
-      images: item.images,
-      categoryId: cat ? cat.id : 1,
-      occasionSlugs: item.occasionSlugs
-    };
-  });
-
+export function initDefaultDatabase(): LocalDatabase {
   return {
-    siteConfig: {
-      id: 1,
-      ...initialSiteConfig
-    },
-    categories,
-    occasions,
-    banners,
-    items,
+    siteConfig: { ...initialSiteConfig },
+    categories: [...initialCategories],
+    occasions: [...initialOccasions],
+    banners: [...initialBanners],
+    items: [...initialProducts],
+    policies: [...initialPolicies],
     quotes: [
       {
         id: 1,
-        orderCode: "HB-20261016-001",
-        customerName: "Carlos Méndez",
-        customerPhone: "+59177654321",
-        recipientName: "Valeria Suárez",
-        deliveryDate: "2026-10-17",
-        deliveryTimeSlot: "Mañana (09:00 - 13:00)",
-        deliveryAddress: "Av. San Martín #450, Equipetrol, Santa Cruz",
-        cardMessage: "¡Feliz Aniversario mi amor! Gracias por cada sonrisa y por iluminar mis días. Te amo.",
+        orderCode: "HB-20261025-001",
+        customerName: "Ing. Jorge Villagómez",
+        customerPhone: "+59177012345",
+        deliveryCity: "Santa Cruz",
+        deliveryAddress: "Av. Bush #420, Condominio Los Sauces",
+        customerNotes: "Por favor embalar en tubo rígido de PVC las varillas de control.",
         items: [
-          {
-            item: items[0],
-            quantity: 1,
-            selectedOptions: { "Color del Papel": "Vino Tinto y Dorado" }
-          }
+          { item: initialProducts[0], quantity: 2 },
+          { item: initialProducts[3], quantity: 1 }
         ],
-        total: 240.00,
+        total: 470.00,
         status: "IN_PREPARATION" as OrderStatus,
         createdAt: new Date().toISOString()
       }
@@ -144,7 +460,7 @@ function initDefaultDatabase(): LocalDatabase {
   };
 }
 
-function getLocalStore(): LocalDatabase {
+export function getLocalStore(): LocalDatabase {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -157,987 +473,966 @@ function getLocalStore(): LocalDatabase {
     const raw = fs.readFileSync(DATA_FILE, 'utf-8');
     const parsed: LocalDatabase = JSON.parse(raw);
 
-    // Ensure users array and default superadmin exist
-    if (!parsed.users || !Array.isArray(parsed.users) || parsed.users.length === 0) {
-      parsed.users = [DEFAULT_SUPERADMIN];
+    if (!parsed.policies || parsed.policies.length === 0) {
+      parsed.policies = [...initialPolicies];
       saveLocalStore(parsed);
-    } else {
-      const superIndex = parsed.users.findIndex((u) => u.username === 'superadmin');
-      if (superIndex === -1) {
-        parsed.users.unshift(DEFAULT_SUPERADMIN);
-        saveLocalStore(parsed);
-      } else {
-        // Guarantee credentials for superadmin match required credentials
-        parsed.users[superIndex] = {
-          ...parsed.users[superIndex],
-          username: 'superadmin',
-          password: 'superhobby2026*',
-          role: 'SUPERADMIN',
-          isActive: true
-        };
-      }
+    }
+    if (!parsed.items || parsed.items.length === 0) {
+      parsed.items = [...initialProducts];
+      saveLocalStore(parsed);
+    }
+    if (!parsed.categories || parsed.categories.length === 0) {
+      parsed.categories = [...initialCategories];
+      saveLocalStore(parsed);
     }
 
     return parsed;
-  } catch (err) {
-    console.warn("Using in-memory database fallback:", err);
+  } catch (error) {
+    console.error('Error al leer localStore:', error);
     return initDefaultDatabase();
   }
 }
 
-function saveLocalStore(data: LocalDatabase) {
+export function saveLocalStore(data: LocalDatabase): void {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error("Failed to write local database file:", err);
+  } catch (error) {
+    console.error('Error al guardar localStore:', error);
   }
 }
 
-// Check if Prisma MySQL is currently reachable
-let mysqlReachable: boolean | null = null;
-async function isMySQLConnected(): Promise<boolean> {
-  if (mysqlReachable !== null) return mysqlReachable;
-  try {
-    // 1-second timeout probe
-    await Promise.race([
-      prisma.$queryRaw`SELECT 1`,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000))
-    ]);
-    mysqlReachable = true;
-    return true;
-  } catch {
-    mysqlReachable = false;
-    return false;
-  }
+// ============================================================================
+// 4. REPOSITORIO DE PRODUCTOS (MYSQL PRIORITARIO CON FALLBACK)
+// ============================================================================
+
+export interface ProductFilters {
+  q?: string;
+  category?: string | number;
+  scale?: string;
+  material?: string;
+  search?: string;
+  badge?: string;
+  brand?: string;
+  occasion?: string;
+  inStock?: boolean;
+  inStockOnly?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: 'price_asc' | 'price_desc' | 'name_asc' | 'newest' | string;
+  [key: string]: any;
 }
 
-/* ========================================================
-   1. SITE CONFIGURATION
-======================================================== */
-export async function getSiteConfig(): Promise<SiteConfig> {
-  if (await isMySQLConnected()) {
+function mapMysqlRowToProduct(row: any): Product {
+  return {
+    id: Number(row.id),
+    sku: row.sku,
+    name: row.name,
+    title: row.name,
+    slug: row.slug,
+    category_id: Number(row.category_id),
+    categoryId: Number(row.category_id),
+    scale: row.scale,
+    material: row.material,
+    specs_line: row.specs_line,
+    compatible_models: row.compatible_models,
+    price: Number(row.price),
+    old_price: row.old_price ? Number(row.old_price) : undefined,
+    compareAtPrice: row.old_price ? Number(row.old_price) : undefined,
+    discountPercent: row.old_price && Number(row.old_price) > Number(row.price)
+      ? Math.round(((Number(row.old_price) - Number(row.price)) / Number(row.old_price)) * 100)
+      : undefined,
+    stock: Number(row.stock),
+    stockQuantity: Number(row.stock),
+    badge: row.badge || undefined,
+    image_url: row.image_url,
+    imageUrl: row.image_url,
+    images: [row.image_url],
+    is_active: Boolean(row.is_active),
+    isActive: Boolean(row.is_active),
+    brand: row.brand || 'Hobby Bolivia',
+    description: row.description || '',
+    itemType: 'PRODUCT',
+    actionType: 'ADD_TO_CART',
+    availability: Number(row.stock) > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK',
+    updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
+  };
+}
+
+export async function getProducts(filters: ProductFilters = {}): Promise<Product[]> {
+  const pool = getMysqlPool();
+  if (pool) {
     try {
-      const cfg = await prisma.siteConfig.findFirst();
-      if (cfg) return cfg as unknown as SiteConfig;
-    } catch {
-      // fallback
+      let query = 'SELECT * FROM products WHERE is_active = 1';
+      const params: any[] = [];
+
+      if (filters.category) {
+        if (typeof filters.category === 'number' || !isNaN(Number(filters.category))) {
+          query += ' AND category_id = ?';
+          params.push(Number(filters.category));
+        } else {
+          query += ' AND category_id IN (SELECT id FROM categories WHERE slug = ?)';
+          params.push(filters.category);
+        }
+      }
+
+      if (filters.scale && filters.scale !== 'all') {
+        query += ' AND scale = ?';
+        params.push(filters.scale);
+      }
+
+      if (filters.material && filters.material !== 'all') {
+        query += ' AND material = ?';
+        params.push(filters.material);
+      }
+
+      if (filters.badge && filters.badge !== 'all') {
+        query += ' AND badge = ?';
+        params.push(filters.badge);
+      }
+
+      if (filters.inStockOnly) {
+        query += ' AND stock > 0';
+      }
+
+      if (filters.minPrice !== undefined) {
+        query += ' AND price >= ?';
+        params.push(filters.minPrice);
+      }
+
+      if (filters.maxPrice !== undefined) {
+        query += ' AND price <= ?';
+        params.push(filters.maxPrice);
+      }
+
+      if (filters.search) {
+        const term = `%${filters.search.trim()}%`;
+        query += ' AND (name LIKE ? OR sku LIKE ? OR specs_line LIKE ? OR compatible_models LIKE ?)';
+        params.push(term, term, term, term);
+      }
+
+      if (filters.sort === 'price_asc') {
+        query += ' ORDER BY price ASC';
+      } else if (filters.sort === 'price_desc') {
+        query += ' ORDER BY price DESC';
+      } else if (filters.sort === 'name_asc') {
+        query += ' ORDER BY name ASC';
+      } else {
+        query += ' ORDER BY id ASC';
+      }
+
+      const [rows]: any = await pool.query(query, params);
+      if (rows && rows.length > 0) {
+        return rows.map(mapMysqlRowToProduct);
+      }
+    } catch (err) {
+      console.warn('[MySQL Query Warning, using local fallback]:', err);
     }
   }
+
+  // Fallback Local
+  const store = getLocalStore();
+  let list = store.items.filter(p => p.is_active !== false);
+
+  if (filters.category) {
+    list = list.filter(p => {
+      const catId = p.category_id || p.categoryId;
+      if (typeof filters.category === 'number' || !isNaN(Number(filters.category))) {
+        return catId === Number(filters.category);
+      }
+      const cat = store.categories.find(c => c.slug === filters.category);
+      return cat ? catId === cat.id : false;
+    });
+  }
+
+  if (filters.scale && filters.scale !== 'all') {
+    list = list.filter(p => p.scale === filters.scale);
+  }
+
+  if (filters.material && filters.material !== 'all') {
+    list = list.filter(p => p.material === filters.material);
+  }
+
+  if (filters.badge && filters.badge !== 'all') {
+    list = list.filter(p => p.badge === filters.badge);
+  }
+
+  if (filters.inStockOnly) {
+    list = list.filter(p => (p.stock || p.stockQuantity || 0) > 0);
+  }
+
+  if (filters.minPrice !== undefined) {
+    list = list.filter(p => p.price >= filters.minPrice!);
+  }
+
+  if (filters.maxPrice !== undefined) {
+    list = list.filter(p => p.price <= filters.maxPrice!);
+  }
+
+  if (filters.search) {
+    const term = filters.search.toLowerCase().trim();
+    list = list.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.sku.toLowerCase().includes(term) ||
+      (p.specs_line && p.specs_line.toLowerCase().includes(term)) ||
+      (p.compatible_models && p.compatible_models.toLowerCase().includes(term))
+    );
+  }
+
+  if (filters.sort === 'price_asc') {
+    list.sort((a, b) => a.price - b.price);
+  } else if (filters.sort === 'price_desc') {
+    list.sort((a, b) => b.price - a.price);
+  } else if (filters.sort === 'name_asc') {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    list.sort((a, b) => a.id - b.id);
+  }
+
+  return list;
+}
+
+export async function getAllProductsAdmin(): Promise<Product[]> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM products ORDER BY id ASC');
+      if (rows && rows.length > 0) {
+        return rows.map(mapMysqlRowToProduct);
+      }
+    } catch (e) {
+      console.warn('[MySQL Admin Query Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  return store.items;
+}
+
+export async function getProductById(id: number): Promise<Product | null> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+      if (rows && rows.length > 0) {
+        return mapMysqlRowToProduct(rows[0]);
+      }
+    } catch (e) {
+      console.warn('[MySQL getProductById Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  const product = store.items.find(p => p.id === id);
+  return product || null;
+}
+
+export async function getProductBySku(sku: string): Promise<Product | null> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM products WHERE sku = ?', [sku]);
+      if (rows && rows.length > 0) {
+        return mapMysqlRowToProduct(rows[0]);
+      }
+    } catch (e) {
+      console.warn('[MySQL getProductBySku Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  return store.items.find(p => p.sku?.toLowerCase() === sku.toLowerCase()) || null;
+}
+
+export async function createProduct(data: Partial<Product>): Promise<Product> {
+  const store = getLocalStore();
+  const newId = store.items.length > 0 ? Math.max(...store.items.map(p => p.id)) + 1 : 1;
+  const sku = data.sku || `HB-${newId.toString().padStart(4, '0')}`;
+  const slug = data.slug || (data.name || `producto-${newId}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const imageUrl = data.image_url || (data.images && data.images[0]) || data.imageUrl || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
+
+  const newProduct: Product = {
+    id: newId,
+    sku,
+    name: data.name || "Nuevo Repuesto",
+    title: data.name || "Nuevo Repuesto",
+    slug,
+    category_id: data.category_id || data.categoryId || 1,
+    categoryId: data.category_id || data.categoryId || 1,
+    scale: data.scale || "RC Estándar",
+    material: data.material || "Compuesto",
+    specs_line: data.specs_line || "Componente mecánico original Hobby Bolivia",
+    compatible_models: data.compatible_models || "Aviones a escala y radiocontrol",
+    price: Number(data.price) || 0,
+    old_price: data.old_price ? Number(data.old_price) : undefined,
+    compareAtPrice: data.old_price ? Number(data.old_price) : undefined,
+    stock: data.stock !== undefined ? Number(data.stock) : 10,
+    stockQuantity: data.stock !== undefined ? Number(data.stock) : 10,
+    badge: data.badge,
+    image_url: imageUrl,
+    imageUrl,
+    images: [imageUrl],
+    is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
+    isActive: data.is_active !== undefined ? Boolean(data.is_active) : true,
+    brand: data.brand || "Hobby Bolivia",
+    description: data.description || "Componente de alta precisión para aeromodelismo.",
+    itemType: "PRODUCT",
+    actionType: "ADD_TO_CART",
+    availability: "IN_STOCK",
+    updated_at: new Date().toISOString()
+  };
+
+  // 1. Guardar en MySQL si está disponible
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        `INSERT INTO products (
+          id, sku, name, slug, category_id, scale, material, specs_line,
+          compatible_models, price, old_price, stock, badge, image_url,
+          is_active, brand, description
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          newProduct.id,
+          newProduct.sku,
+          newProduct.name,
+          newProduct.slug,
+          newProduct.category_id,
+          newProduct.scale,
+          newProduct.material,
+          newProduct.specs_line,
+          newProduct.compatible_models,
+          newProduct.price,
+          newProduct.old_price || null,
+          newProduct.stock,
+          newProduct.badge || null,
+          newProduct.image_url,
+          newProduct.is_active ? 1 : 0,
+          newProduct.brand,
+          newProduct.description
+        ]
+      );
+    } catch (e) {
+      console.warn('[MySQL createProduct Warning]:', e);
+    }
+  }
+
+  // 2. Guardar en localStore
+  store.items.unshift(newProduct);
+  saveLocalStore(store);
+
+  return newProduct;
+}
+
+export async function updateProduct(id: number, data: Partial<Product>): Promise<Product | null> {
+  const store = getLocalStore();
+  const index = store.items.findIndex(p => p.id === id);
+  if (index === -1) return null;
+
+  const current = store.items[index];
+  const updated: Product = {
+    ...current,
+    ...data,
+    id,
+    sku: data.sku || current.sku,
+    name: data.name || current.name,
+    title: data.name || current.title || current.name,
+    price: data.price !== undefined ? Number(data.price) : current.price,
+    stock: data.stock !== undefined ? Number(data.stock) : current.stock,
+    stockQuantity: data.stock !== undefined ? Number(data.stock) : (current.stockQuantity || current.stock),
+    specs_line: data.specs_line || current.specs_line,
+    material: data.material || current.material,
+    scale: data.scale || current.scale,
+    badge: data.badge !== undefined ? data.badge : current.badge,
+    image_url: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.image_url,
+    imageUrl: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.imageUrl,
+    is_active: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.is_active),
+    isActive: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive),
+    updated_at: new Date().toISOString()
+  };
+
+  // 1. Actualizar en MySQL
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        `UPDATE products SET
+          sku = ?, name = ?, price = ?, old_price = ?, stock = ?,
+          specs_line = ?, material = ?, scale = ?, badge = ?,
+          image_url = ?, is_active = ?, description = ?
+         WHERE id = ?`,
+        [
+          updated.sku,
+          updated.name,
+          updated.price,
+          updated.old_price || null,
+          updated.stock,
+          updated.specs_line,
+          updated.material,
+          updated.scale,
+          updated.badge || null,
+          updated.image_url,
+          updated.is_active ? 1 : 0,
+          updated.description || '',
+          id
+        ]
+      );
+    } catch (e) {
+      console.warn('[MySQL updateProduct Warning]:', e);
+    }
+  }
+
+  // 2. Actualizar en localStore
+  store.items[index] = updated;
+  saveLocalStore(store);
+
+  return updated;
+}
+
+export async function deleteProduct(id: number): Promise<boolean> {
+  const store = getLocalStore();
+  const initCount = store.items.length;
+  store.items = store.items.filter(p => p.id !== id);
+
+  if (store.items.length !== initCount) {
+    saveLocalStore(store);
+
+    const pool = getMysqlPool();
+    if (pool) {
+      try {
+        await pool.query('DELETE FROM products WHERE id = ?', [id]);
+      } catch (e) {
+        console.warn('[MySQL deleteProduct Warning]:', e);
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+// ============================================================================
+// 5. REPOSITORIO DE CATEGORÍAS (MYSQL PRIORITARIO CON FALLBACK)
+// ============================================================================
+
+export async function getCategories(): Promise<Category[]> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query(`
+        SELECT c.*, COUNT(p.id) as item_count
+        FROM categories c
+        LEFT JOIN products p ON p.category_id = c.id AND p.is_active = 1
+        WHERE c.is_active = 1
+        GROUP BY c.id
+        ORDER BY c.display_order ASC, c.id ASC
+      `);
+
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: Number(r.id),
+          name: r.name,
+          slug: r.slug,
+          description: r.description || '',
+          imageUrl: r.image_url,
+          image_url: r.image_url,
+          order: Number(r.display_order || r.id),
+          isActive: Boolean(r.is_active),
+          itemCount: Number(r.item_count || 0)
+        }));
+      }
+    } catch (e) {
+      console.warn('[MySQL getCategories Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  return store.categories.map(cat => {
+    const count = store.items.filter(i => (i.category_id === cat.id || i.categoryId === cat.id) && i.is_active !== false).length;
+    return { ...cat, itemCount: count };
+  });
+}
+
+export async function saveCategory(data: Partial<Category>): Promise<Category> {
+  const store = getLocalStore();
+
+  if (data.id) {
+    const index = store.categories.findIndex(c => c.id === data.id);
+    if (index !== -1) {
+      store.categories[index] = { ...store.categories[index], ...data } as Category;
+      saveLocalStore(store);
+
+      const pool = getMysqlPool();
+      if (pool) {
+        try {
+          await pool.query(
+            'UPDATE categories SET name = ?, slug = ?, description = ?, image_url = ?, is_active = ? WHERE id = ?',
+            [
+              data.name,
+              data.slug,
+              data.description || '',
+              data.image_url || data.imageUrl || '',
+              data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1,
+              data.id
+            ]
+          );
+        } catch (e) {
+          console.warn('[MySQL saveCategory Update Warning]:', e);
+        }
+      }
+      return store.categories[index];
+    }
+  }
+
+  const newId = store.categories.length > 0 ? Math.max(...store.categories.map(c => c.id)) + 1 : 1;
+  const slug = data.slug || (data.name || `categoria-${newId}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  const newCat: Category = {
+    id: newId,
+    name: data.name || "Nueva Categoría",
+    slug,
+    imageUrl: data.imageUrl || data.image_url || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
+    image_url: data.image_url || data.imageUrl || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
+    description: data.description || "",
+    isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+    order: data.order !== undefined ? Number(data.order) : newId,
+    itemCount: 0
+  };
+
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        'INSERT INTO categories (id, name, slug, description, image_url, display_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [newCat.id, newCat.name, newCat.slug, newCat.description, newCat.image_url, newCat.order, newCat.isActive ? 1 : 0]
+      );
+    } catch (e) {
+      console.warn('[MySQL saveCategory Insert Warning]:', e);
+    }
+  }
+
+  store.categories.push(newCat);
+  saveLocalStore(store);
+  return newCat;
+}
+
+export async function createCategory(data: Partial<Category>): Promise<Category> {
+  return saveCategory({ ...data, id: undefined });
+}
+
+export async function deleteCategory(id: number): Promise<boolean> {
+  const store = getLocalStore();
+  const initCount = store.categories.length;
+  store.categories = store.categories.filter(c => c.id !== id);
+  if (store.categories.length !== initCount) {
+    saveLocalStore(store);
+
+    const pool = getMysqlPool();
+    if (pool) {
+      try {
+        await pool.query('DELETE FROM categories WHERE id = ?', [id]);
+      } catch (e) {
+        console.warn('[MySQL deleteCategory Warning]:', e);
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+// ============================================================================
+// 6. REPOSITORIO DE POLÍTICAS (MYSQL PRIORITARIO CON FALLBACK)
+// ============================================================================
+
+export async function getPolicies(): Promise<Policy[]> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM policies ORDER BY id ASC');
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: Number(r.id),
+          slug: r.slug,
+          title: r.title,
+          content: r.content,
+          updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString()
+        }));
+      }
+    } catch (e) {
+      markMysqlUnavailable(e);
+      console.warn('[MySQL getPolicies Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  return store.policies || initialPolicies;
+}
+
+export async function getPolicyBySlug(slug: string): Promise<Policy | null> {
+  const policies = await getPolicies();
+  return policies.find(p => p.slug === slug) || null;
+}
+
+export async function savePolicy(slug: string, data: { title?: string; content?: string }): Promise<Policy | null> {
+  const store = getLocalStore();
+  const index = store.policies.findIndex(p => p.slug === slug);
+  if (index === -1) return null;
+
+  store.policies[index] = {
+    ...store.policies[index],
+    ...(data.title ? { title: data.title } : {}),
+    ...(data.content ? { content: data.content } : {}),
+    updatedAt: new Date().toISOString()
+  };
+  saveLocalStore(store);
+
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        'UPDATE policies SET title = COALESCE(?, title), content = COALESCE(?, content) WHERE slug = ?',
+        [data.title || null, data.content || null, slug]
+      );
+    } catch (e) {
+      console.warn('[MySQL savePolicy Warning]:', e);
+    }
+  }
+
+  return store.policies[index];
+}
+
+// ============================================================================
+// 7. COTIZACIONES Y PEDIDOS
+// ============================================================================
+
+export async function getQuotes(): Promise<QuoteOrder[]> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM quote_orders ORDER BY id DESC');
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: Number(r.id),
+          orderCode: `HB-${r.id.toString().padStart(4, '0')}`,
+          customerName: r.customer_name,
+          customerPhone: r.customer_phone,
+          deliveryCity: r.customer_city,
+          customerNotes: r.customer_notes,
+          items: JSON.parse(r.items_json || '[]'),
+          total: Number(r.total),
+          status: r.status as OrderStatus,
+          createdAt: new Date(r.created_at).toISOString()
+        }));
+      }
+    } catch (e) {
+      console.warn('[MySQL getQuotes Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  return store.quotes;
+}
+
+export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<QuoteOrder> {
+  const store = getLocalStore();
+  const newId = store.quotes.length > 0 ? Math.max(...store.quotes.map(q => q.id || 0)) + 1 : 1;
+  const orderCode = `HB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${newId.toString().padStart(3, '0')}`;
+
+  const newOrder: QuoteOrder = {
+    id: newId,
+    orderCode,
+    customerName: data.customerName || "Cliente",
+    customerPhone: data.customerPhone || "",
+    deliveryCity: data.deliveryCity || "Santa Cruz",
+    deliveryAddress: data.deliveryAddress || "",
+    customerNotes: data.customerNotes,
+    items: data.items || [],
+    total: Number(data.total) || 0,
+    status: "PENDING",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        `INSERT INTO quote_orders (id, customer_name, customer_phone, customer_city, customer_notes, items_json, total, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          newOrder.id,
+          newOrder.customerName,
+          newOrder.customerPhone,
+          newOrder.deliveryCity,
+          newOrder.customerNotes || '',
+          JSON.stringify(newOrder.items),
+          newOrder.total,
+          newOrder.status
+        ]
+      );
+    } catch (e) {
+      console.warn('[MySQL createQuoteOrder Warning]:', e);
+    }
+  }
+
+  store.quotes.unshift(newOrder);
+  saveLocalStore(store);
+  return newOrder;
+}
+
+// ============================================================================
+// 8. USUARIOS ADMINISTRADORES
+// ============================================================================
+
+export async function getUserByUsername(username: string): Promise<User | null> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query(
+        'SELECT * FROM admin_users WHERE username = ? OR email = ? LIMIT 1',
+        [username.trim().toLowerCase(), username.trim().toLowerCase()]
+      );
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        return {
+          id: Number(r.id),
+          username: r.username,
+          name: r.username === 'superadmin' ? 'Super Administrador' : 'Administrador Hobby Bolivia',
+          email: r.email,
+          password: r.password_hash,
+          role: r.role as 'SUPERADMIN' | 'ADMIN',
+          isActive: true
+        };
+      }
+    } catch (e) {
+      console.warn('[MySQL getUserByUsername Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  const clean = username.trim().toLowerCase();
+  const user = store.users?.find(u => u.username?.toLowerCase() === clean || u.email?.toLowerCase() === clean);
+  return user || null;
+}
+
+// ============================================================================
+// 9. ADAPTADORES DE COMPATIBILIDAD
+// ============================================================================
+
+export const getCatalogItemById = getProductById;
+export const deleteCatalogItem = deleteProduct;
+export async function saveCatalogItem(data: Partial<Product>): Promise<Product> {
+  if (data.id) {
+    const updated = await updateProduct(data.id, data);
+    if (updated) return updated;
+  }
+  return createProduct(data);
+}
+
+export const getQuoteOrders = getQuotes;
+export async function updateQuoteOrderStatus(id: number, status: OrderStatus): Promise<QuoteOrder | null> {
+  const store = getLocalStore();
+  const index = store.quotes.findIndex(q => q.id === id);
+  if (index === -1) return null;
+  store.quotes[index].status = status;
+  store.quotes[index].updatedAt = new Date().toISOString();
+  saveLocalStore(store);
+  return store.quotes[index];
+}
+
+export async function getClaimRecords(): Promise<ClaimRecord[]> {
+  const store = getLocalStore();
+  return store.claims || [];
+}
+
+export async function getClaimRecordByCode(code: string): Promise<ClaimRecord | null> {
+  const store = getLocalStore();
+  return store.claims?.find(c => c.trackingCode === code) || null;
+}
+
+export async function createClaimRecord(data: Partial<ClaimRecord>): Promise<ClaimRecord> {
+  const store = getLocalStore();
+  if (!store.claims) store.claims = [];
+  const trackingCode = `REC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const newRecord: ClaimRecord = {
+    id: store.claims.length + 1,
+    trackingCode,
+    fullName: data.fullName || "",
+    documentId: data.documentId || "",
+    phone: data.phone || "",
+    email: data.email || "",
+    contractedItem: data.contractedItem || "",
+    orderCode: data.orderCode || null,
+    amount: data.amount || null,
+    type: data.type || "RECLAMO",
+    detail: data.detail || "",
+    customerRequest: data.customerRequest || "",
+    status: "PENDIENTE",
+    adminNotes: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  store.claims.unshift(newRecord);
+  saveLocalStore(store);
+  return newRecord;
+}
+
+export async function updateClaimStatus(id: number, status: any, adminNotes?: string): Promise<ClaimRecord | null> {
+  const store = getLocalStore();
+  const index = store.claims.findIndex(c => c.id === id);
+  if (index === -1) return null;
+  store.claims[index].status = status;
+  if (adminNotes !== undefined) store.claims[index].adminNotes = adminNotes;
+  store.claims[index].updatedAt = new Date().toISOString();
+  saveLocalStore(store);
+  return store.claims[index];
+}
+
+export async function getUsers(): Promise<User[]> {
+  const store = getLocalStore();
+  return store.users || [DEFAULT_SUPERADMIN];
+}
+
+export async function getUserById(id: number): Promise<User | null> {
+  const store = getLocalStore();
+  return store.users?.find(u => u.id === id) || null;
+}
+
+export async function saveUser(data: Partial<User>): Promise<User> {
+  const store = getLocalStore();
+  if (!store.users) store.users = [DEFAULT_SUPERADMIN];
+  if (data.id) {
+    const idx = store.users.findIndex(u => u.id === data.id);
+    if (idx !== -1) {
+      store.users[idx] = { ...store.users[idx], ...data, updatedAt: new Date().toISOString() };
+      saveLocalStore(store);
+      return store.users[idx];
+    }
+  }
+  const newId = store.users.length > 0 ? Math.max(...store.users.map(u => u.id)) + 1 : 1;
+  const newUser: User = {
+    id: newId,
+    name: data.name || "Usuario",
+    username: data.username || `user${newId}`,
+    email: data.email,
+    password: data.password || "password",
+    role: data.role || "ADMIN",
+    isActive: data.isActive !== undefined ? data.isActive : true,
+    createdAt: new Date().toISOString()
+  };
+  store.users.push(newUser);
+  saveLocalStore(store);
+  return newUser;
+}
+
+export async function deleteUser(id: number): Promise<boolean> {
+  const store = getLocalStore();
+  if (id === 1) return false;
+  const initCount = store.users.length;
+  store.users = store.users.filter(u => u.id !== id);
+  if (store.users.length !== initCount) {
+    saveLocalStore(store);
+    return true;
+  }
+  return false;
+}
+
+export async function saveBanner(data: Partial<Banner>): Promise<Banner> {
+  const store = getLocalStore();
+  if (!store.banners) store.banners = [...initialBanners];
+  if (data.id) {
+    const idx = store.banners.findIndex(b => b.id === data.id);
+    if (idx !== -1) {
+      store.banners[idx] = { ...store.banners[idx], ...data };
+      saveLocalStore(store);
+      return store.banners[idx];
+    }
+  }
+  const newId = store.banners.length > 0 ? Math.max(...store.banners.map(b => b.id)) + 1 : 1;
+  const newBanner: Banner = {
+    id: newId,
+    title: data.title || "Banner",
+    subtitle: data.subtitle,
+    imageUrl: data.imageUrl || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
+    buttonText: data.buttonText,
+    buttonUrl: data.buttonUrl,
+    placement: data.placement || "HERO",
+    isActive: data.isActive !== undefined ? data.isActive : true
+  };
+  store.banners.push(newBanner);
+  saveLocalStore(store);
+  return newBanner;
+}
+
+export async function deleteBanner(id: number): Promise<boolean> {
+  const store = getLocalStore();
+  const initCount = store.banners.length;
+  store.banners = store.banners.filter(b => b.id !== id);
+  if (store.banners.length !== initCount) {
+    saveLocalStore(store);
+    return true;
+  }
+  return false;
+}
+
+export async function saveOccasion(data: Partial<Occasion>): Promise<Occasion> {
+  const store = getLocalStore();
+  if (!store.occasions) store.occasions = [...initialOccasions];
+  if (data.id) {
+    const idx = store.occasions.findIndex(o => o.id === data.id);
+    if (idx !== -1) {
+      store.occasions[idx] = { ...store.occasions[idx], ...data };
+      saveLocalStore(store);
+      return store.occasions[idx];
+    }
+  }
+  const newId = store.occasions.length > 0 ? Math.max(...store.occasions.map(o => o.id)) + 1 : 1;
+  const newOccasion: Occasion = {
+    id: newId,
+    name: data.name || "Mando",
+    slug: data.slug || `mando-${newId}`,
+    iconName: data.iconName || "Plane",
+    isActive: data.isActive !== undefined ? data.isActive : true
+  };
+  store.occasions.push(newOccasion);
+  saveLocalStore(store);
+  return newOccasion;
+}
+
+export async function deleteOccasion(id: number): Promise<boolean> {
+  const store = getLocalStore();
+  const initCount = store.occasions.length;
+  store.occasions = store.occasions.filter(o => o.id !== id);
+  if (store.occasions.length !== initCount) {
+    saveLocalStore(store);
+    return true;
+  }
+  return false;
+}
+
+export const getCatalogItems = getProducts;
+export const updatePolicy = savePolicy;
+
+export async function getSiteConfig(): Promise<SiteConfig> {
   const store = getLocalStore();
   return store.siteConfig;
 }
 
 export async function updateSiteConfig(data: Partial<SiteConfig>): Promise<SiteConfig> {
   const store = getLocalStore();
-  store.siteConfig = { ...store.siteConfig, ...data, updatedAt: new Date().toISOString() };
+  store.siteConfig = { ...store.siteConfig, ...data };
   saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.siteConfig.upsert({
-        where: { id: 1 },
-        update: data,
-        create: { ...initialSiteConfig, ...data }
-      });
-    } catch (e) {
-      console.warn("Failed to update siteConfig in MySQL:", e);
-    }
-  }
-
   return store.siteConfig;
 }
 
-/* ========================================================
-   2. CATEGORIES
-======================================================== */
-export async function getCategories(): Promise<Category[]> {
-  const store = getLocalStore();
-  const items = store.items;
-
-  // Add item count to each category
-  const categoriesWithCount = store.categories.map((cat) => {
-    const count = items.filter((i) => i.categoryId === cat.id && i.availability !== 'OUT_OF_STOCK').length;
-    return {
-      ...cat,
-      itemCount: count
-    };
-  });
-
-  if (await isMySQLConnected()) {
-    try {
-      const cats = await prisma.category.findMany({
-        where: { isActive: true },
-        orderBy: { order: 'asc' },
-        include: { _count: { select: { items: true } } }
-      });
-      if (cats.length > 0) {
-        return cats.map((c) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-          order: c.order,
-          imageUrl: c.imageUrl,
-          description: c.description,
-          isActive: c.isActive,
-          itemCount: c._count.items
-        }));
-      }
-    } catch {
-      // fallback
-    }
-  }
-
-  return categoriesWithCount;
-}
-
-export async function saveCategory(categoryData: Partial<Category>): Promise<Category> {
-  const store = getLocalStore();
-  let saved: Category;
-
-  if (categoryData.id) {
-    const idx = store.categories.findIndex((c) => c.id === categoryData.id);
-    if (idx >= 0) {
-      store.categories[idx] = { ...store.categories[idx], ...categoryData };
-      saved = store.categories[idx];
-    } else {
-      saved = {
-        id: categoryData.id,
-        name: categoryData.name || '',
-        slug: categoryData.slug || '',
-        order: categoryData.order || 0,
-        imageUrl: categoryData.imageUrl || null,
-        description: categoryData.description || null,
-        isActive: categoryData.isActive ?? true
-      };
-      store.categories.push(saved);
-    }
-  } else {
-    const newId = store.categories.length > 0 ? Math.max(...store.categories.map((c) => c.id)) + 1 : 1;
-    saved = {
-      id: newId,
-      name: categoryData.name || '',
-      slug: categoryData.slug || '',
-      order: categoryData.order || store.categories.length + 1,
-      imageUrl: categoryData.imageUrl || null,
-      description: categoryData.description || null,
-      isActive: categoryData.isActive ?? true
-    };
-    store.categories.push(saved);
-  }
-
-  saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.category.upsert({
-        where: { slug: saved.slug },
-        update: {
-          name: saved.name,
-          order: saved.order,
-          imageUrl: saved.imageUrl,
-          description: saved.description,
-          isActive: saved.isActive
-        },
-        create: {
-          name: saved.name,
-          slug: saved.slug,
-          order: saved.order,
-          imageUrl: saved.imageUrl,
-          description: saved.description,
-          isActive: saved.isActive
-        }
-      });
-    } catch (e) {
-      console.warn("Failed category sync to MySQL:", e);
-    }
-  }
-
-  return saved;
-}
-
-export async function deleteCategory(id: number): Promise<boolean> {
-  const store = getLocalStore();
-  const cat = store.categories.find((c) => c.id === id);
-  store.categories = store.categories.filter((c) => c.id !== id);
-  saveLocalStore(store);
-
-  if (cat && (await isMySQLConnected())) {
-    try {
-      await prisma.category.delete({ where: { id } });
-    } catch {
-      // ignore
-    }
-  }
-
-  return true;
-}
-
-/* ========================================================
-   3. OCCASIONS
-======================================================== */
 export async function getOccasions(): Promise<Occasion[]> {
   const store = getLocalStore();
-  const items = store.items;
-
-  const occasionsWithCount = store.occasions.map((occ) => {
-    const count = items.filter((i) => i.occasionSlugs?.includes(occ.slug)).length;
-    return {
-      ...occ,
-      itemCount: count
-    };
-  });
-
-  if (await isMySQLConnected()) {
-    try {
-      const occs = await prisma.occasion.findMany({
-        where: { isActive: true },
-        include: { _count: { select: { items: true } } }
-      });
-      if (occs.length > 0) {
-        return occs.map((o) => ({
-          id: o.id,
-          name: o.name,
-          slug: o.slug,
-          iconName: o.iconName,
-          isActive: o.isActive,
-          itemCount: o._count.items
-        }));
-      }
-    } catch {
-      // fallback
-    }
-  }
-
-  return occasionsWithCount;
+  return store.occasions || [];
 }
 
-export async function saveOccasion(data: Partial<Occasion>): Promise<Occasion> {
-  const store = getLocalStore();
-  let saved: Occasion;
-
-  if (data.id) {
-    const idx = store.occasions.findIndex((o) => o.id === data.id);
-    if (idx >= 0) {
-      store.occasions[idx] = { ...store.occasions[idx], ...data };
-      saved = store.occasions[idx];
-    } else {
-      saved = {
-        id: data.id,
-        name: data.name || '',
-        slug: data.slug || '',
-        iconName: data.iconName || 'Flower',
-        isActive: data.isActive ?? true
-      };
-      store.occasions.push(saved);
-    }
-  } else {
-    const newId = store.occasions.length > 0 ? Math.max(...store.occasions.map((o) => o.id)) + 1 : 1;
-    saved = {
-      id: newId,
-      name: data.name || '',
-      slug: data.slug || '',
-      iconName: data.iconName || 'Flower',
-      isActive: data.isActive ?? true
-    };
-    store.occasions.push(saved);
-  }
-
-  saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.occasion.upsert({
-        where: { slug: saved.slug },
-        update: { name: saved.name, iconName: saved.iconName, isActive: saved.isActive },
-        create: { name: saved.name, slug: saved.slug, iconName: saved.iconName, isActive: saved.isActive }
-      });
-    } catch (e) {
-      console.warn("Failed occasion sync to MySQL:", e);
-    }
-  }
-
-  return saved;
-}
-
-export async function deleteOccasion(id: number): Promise<boolean> {
-  const store = getLocalStore();
-  store.occasions = store.occasions.filter((o) => o.id !== id);
-  saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.occasion.delete({ where: { id } });
-    } catch {
-      // ignore
-    }
-  }
-  return true;
-}
-
-/* ========================================================
-   4. BANNERS
-======================================================== */
 export async function getBanners(): Promise<Banner[]> {
   const store = getLocalStore();
-  if (await isMySQLConnected()) {
-    try {
-      const banners = await prisma.banner.findMany({ where: { isActive: true } });
-      if (banners.length > 0) return banners as unknown as Banner[];
-    } catch {
-      // fallback
-    }
-  }
-  return store.banners;
-}
-
-export async function saveBanner(data: Partial<Banner>): Promise<Banner> {
-  const store = getLocalStore();
-  let saved: Banner;
-
-  if (data.id) {
-    const idx = store.banners.findIndex((b) => b.id === data.id);
-    if (idx >= 0) {
-      store.banners[idx] = { ...store.banners[idx], ...data };
-      saved = store.banners[idx];
-    } else {
-      saved = {
-        id: data.id,
-        title: data.title || '',
-        subtitle: data.subtitle,
-        imageUrl: data.imageUrl || '',
-        buttonText: data.buttonText,
-        buttonUrl: data.buttonUrl,
-        placement: data.placement || 'HERO',
-        isActive: data.isActive ?? true
-      };
-      store.banners.push(saved);
-    }
-  } else {
-    const newId = store.banners.length > 0 ? Math.max(...store.banners.map((b) => b.id)) + 1 : 1;
-    saved = {
-      id: newId,
-      title: data.title || '',
-      subtitle: data.subtitle,
-      imageUrl: data.imageUrl || '',
-      buttonText: data.buttonText,
-      buttonUrl: data.buttonUrl,
-      placement: data.placement || 'HERO',
-      isActive: data.isActive ?? true
-    };
-    store.banners.push(saved);
-  }
-
-  saveLocalStore(store);
-  return saved;
-}
-
-export async function deleteBanner(id: number): Promise<boolean> {
-  const store = getLocalStore();
-  store.banners = store.banners.filter((b) => b.id !== id);
-  saveLocalStore(store);
-  return true;
-}
-
-/* ========================================================
-   5. CATALOG ITEMS (PRODUCTS & SERVICES)
-======================================================== */
-export interface CatalogItemFilters {
-  category?: string;
-  brand?: string;
-  occasion?: string;
-  flowerType?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  availability?: string;
-  q?: string;
-  sort?: string;
-}
-
-export async function getCatalogItems(filters: CatalogItemFilters = {}): Promise<CatalogItem[]> {
-  const store = getLocalStore();
-  let items = [...store.items];
-
-  // Category filter (slug or id)
-  if (filters.category && filters.category !== 'all') {
-    const cat = store.categories.find(
-      (c) => c.slug === filters.category || c.id.toString() === filters.category
-    );
-    if (cat) {
-      items = items.filter((i) => i.categoryId === cat.id);
-    }
-  }
-
-  // Brand filter
-  if (filters.brand && filters.brand !== 'all') {
-    const brandLower = filters.brand.toLowerCase().trim();
-    items = items.filter((i) => i.brand?.toLowerCase().trim() === brandLower);
-  }
-
-  // Occasion filter (slug)
-  if (filters.occasion && filters.occasion !== 'all') {
-    items = items.filter((i) => i.occasionSlugs?.includes(filters.occasion!));
-  }
-
-  // Flower Type filter
-  if (filters.flowerType) {
-    const ft = filters.flowerType.toLowerCase();
-    items = items.filter((i) =>
-      i.flowerTypes?.some((f) => f.toLowerCase().includes(ft))
-    );
-  }
-
-  // Price range
-  if (typeof filters.minPrice === 'number' && !isNaN(filters.minPrice)) {
-    items = items.filter((i) => i.price >= filters.minPrice!);
-  }
-  if (typeof filters.maxPrice === 'number' && !isNaN(filters.maxPrice)) {
-    items = items.filter((i) => i.price <= filters.maxPrice!);
-  }
-
-  // Availability
-  if (filters.availability && filters.availability !== 'all') {
-    items = items.filter((i) => i.availability === filters.availability);
-  }
-
-  // Search Query `q`
-  if (filters.q && filters.q.trim().length > 0) {
-    const query = filters.q.toLowerCase().trim();
-    items = items.filter((i) => {
-      const matchTitle = i.title.toLowerCase().includes(query);
-      const matchSku = i.sku.toLowerCase().includes(query);
-      const matchDesc = i.description.toLowerCase().includes(query);
-      const matchFlowers = i.flowerTypes?.some((f) => f.toLowerCase().includes(query));
-      return matchTitle || matchSku || matchDesc || matchFlowers;
-    });
-  }
-
-  // Sorting
-  if (filters.sort === 'price_asc') {
-    items.sort((a, b) => a.price - b.price);
-  } else if (filters.sort === 'price_desc') {
-    items.sort((a, b) => b.price - a.price);
-  } else if (filters.sort === 'newest') {
-    items.sort((a, b) => b.id - a.id);
-  } else if (filters.sort === 'featured') {
-    // Featured prioritizes items with discount or highest stock
-    items.sort((a, b) => (b.discountPercent || 0) - (a.discountPercent || 0));
-  }
-
-  // Hydrate category details
-  return items.map((i) => {
-    const cat = store.categories.find((c) => c.id === i.categoryId);
-    return {
-      ...i,
-      category: cat
-    };
-  });
-}
-
-export async function getCatalogItemById(id: number): Promise<CatalogItem | null> {
-  const store = getLocalStore();
-  const item = store.items.find((i) => i.id === id);
-  if (!item) return null;
-  const cat = store.categories.find((c) => c.id === item.categoryId);
-  return { ...item, category: cat };
-}
-
-export async function getCatalogItemBySlug(slug: string): Promise<CatalogItem | null> {
-  const store = getLocalStore();
-  const item = store.items.find((i) => i.slug === slug);
-  if (!item) return null;
-  const cat = store.categories.find((c) => c.id === item.categoryId);
-  return { ...item, category: cat };
-}
-
-export async function saveCatalogItem(data: Partial<CatalogItem>): Promise<CatalogItem> {
-  const store = getLocalStore();
-  let saved: CatalogItem;
-
-  if (data.id) {
-    const idx = store.items.findIndex((i) => i.id === data.id);
-    if (idx >= 0) {
-      store.items[idx] = {
-        ...store.items[idx],
-        ...data,
-        updatedAt: new Date().toISOString()
-      };
-      saved = store.items[idx];
-    } else {
-      saved = {
-        id: data.id,
-        sku: data.sku || `HB-NEW-${Date.now().toString().slice(-4)}`,
-        title: data.title || '',
-        slug: data.slug || `item-${Date.now()}`,
-        brand: data.brand || null,
-        description: data.description || '',
-        itemType: data.itemType || 'PRODUCT',
-        price: Number(data.price) || 0,
-        compareAtPrice: data.compareAtPrice ? Number(data.compareAtPrice) : null,
-        discountPercent: data.discountPercent ? Number(data.discountPercent) : null,
-        availability: data.availability || 'IN_STOCK',
-        stockQuantity: Number(data.stockQuantity) || 10,
-        actionType: data.actionType || 'ADD_TO_CART',
-        flowerTypes: data.flowerTypes || [],
-        specifications: data.specifications || {},
-        variants: data.variants || [],
-        images: data.images || ['https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp'],
-        categoryId: data.categoryId || 1,
-        occasionSlugs: data.occasionSlugs || []
-      };
-      store.items.push(saved);
-    }
-  } else {
-    const newId = store.items.length > 0 ? Math.max(...store.items.map((i) => i.id)) + 1 : 1;
-    saved = {
-      id: newId,
-      sku: data.sku || `HB-NEW-${Date.now().toString().slice(-4)}`,
-      title: data.title || '',
-      slug: data.slug || `item-${Date.now()}`,
-      brand: data.brand || null,
-      description: data.description || '',
-      itemType: data.itemType || 'PRODUCT',
-      price: Number(data.price) || 0,
-      compareAtPrice: data.compareAtPrice ? Number(data.compareAtPrice) : null,
-      discountPercent: data.discountPercent ? Number(data.discountPercent) : null,
-      availability: data.availability || 'IN_STOCK',
-      stockQuantity: Number(data.stockQuantity) || 10,
-      actionType: data.actionType || 'ADD_TO_CART',
-      flowerTypes: data.flowerTypes || [],
-      specifications: data.specifications || {},
-      variants: data.variants || [],
-      images: data.images && data.images.length > 0 ? data.images : ['https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp'],
-      categoryId: data.categoryId || 1,
-      occasionSlugs: data.occasionSlugs || []
-    };
-    store.items.push(saved);
-  }
-
-  saveLocalStore(store);
-
-  // Sync to MySQL if available
-  if (await isMySQLConnected()) {
-    try {
-      await (prisma.catalogItem.upsert as any)({
-        where: { sku: saved.sku },
-        update: {
-          title: saved.title,
-          slug: saved.slug,
-          brand: saved.brand || null,
-          description: saved.description,
-          itemType: saved.itemType,
-          price: saved.price,
-          compareAtPrice: saved.compareAtPrice,
-          discountPercent: saved.discountPercent,
-          availability: saved.availability,
-          stockQuantity: saved.stockQuantity,
-          actionType: saved.actionType,
-          flowerTypes: saved.flowerTypes,
-          specifications: saved.specifications,
-          variants: saved.variants,
-          images: saved.images,
-          categoryId: saved.categoryId
-        },
-        create: {
-          sku: saved.sku,
-          title: saved.title,
-          slug: saved.slug,
-          brand: saved.brand || null,
-          description: saved.description,
-          itemType: saved.itemType,
-          price: saved.price,
-          compareAtPrice: saved.compareAtPrice,
-          discountPercent: saved.discountPercent,
-          availability: saved.availability,
-          stockQuantity: saved.stockQuantity,
-          actionType: saved.actionType,
-          flowerTypes: saved.flowerTypes,
-          specifications: saved.specifications,
-          variants: saved.variants,
-          images: saved.images,
-          categoryId: saved.categoryId
-        }
-      });
-    } catch (e) {
-      console.warn("Failed item sync to MySQL:", e);
-    }
-  }
-
-  const cat = store.categories.find((c) => c.id === saved.categoryId);
-  return { ...saved, category: cat };
-}
-
-export async function deleteCatalogItem(id: number): Promise<boolean> {
-  const store = getLocalStore();
-  const item = store.items.find((i) => i.id === id);
-  store.items = store.items.filter((i) => i.id !== id);
-  saveLocalStore(store);
-
-  if (item && (await isMySQLConnected())) {
-    try {
-      await prisma.catalogItem.delete({ where: { id } });
-    } catch {
-      // ignore
-    }
-  }
-  return true;
-}
-
-/* ========================================================
-   6. QUOTE ORDERS & WHATSAPP ORDERS
-======================================================== */
-export async function getQuoteOrders(): Promise<QuoteOrder[]> {
-  const store = getLocalStore();
-  if (await isMySQLConnected()) {
-    try {
-      const orders = await prisma.quoteOrder.findMany({
-        orderBy: { createdAt: 'desc' }
-      });
-      if (orders.length > 0) return orders as unknown as QuoteOrder[];
-    } catch {
-      // fallback
-    }
-  }
-  return store.quotes.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-}
-
-export async function createQuoteOrder(data: Omit<QuoteOrder, 'id' | 'orderCode' | 'createdAt'>): Promise<{ order: QuoteOrder; whatsappUrl: string }> {
-  const store = getLocalStore();
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const rand = Math.floor(100 + Math.random() * 900);
-  const orderCode = `HB-${dateStr}-${rand}`;
-
-  const newOrder: QuoteOrder = {
-    id: store.quotes.length > 0 ? Math.max(...store.quotes.map((q) => q.id || 0)) + 1 : 1,
-    orderCode,
-    customerName: data.customerName,
-    customerPhone: data.customerPhone,
-    recipientName: data.recipientName,
-    deliveryDate: data.deliveryDate,
-    deliveryTimeSlot: data.deliveryTimeSlot,
-    deliveryAddress: data.deliveryAddress,
-    cardMessage: data.cardMessage || null,
-    items: data.items,
-    total: data.total,
-    status: 'PENDING',
-    createdAt: now.toISOString()
-  };
-
-  store.quotes.unshift(newOrder);
-  saveLocalStore(store);
-
-  // Sync with MySQL
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.quoteOrder.create({
-        data: {
-          orderCode: newOrder.orderCode,
-          customerName: newOrder.customerName,
-          customerPhone: newOrder.customerPhone,
-          recipientName: newOrder.recipientName,
-          deliveryDate: newOrder.deliveryDate,
-          deliveryTimeSlot: newOrder.deliveryTimeSlot,
-          deliveryAddress: newOrder.deliveryAddress,
-          cardMessage: newOrder.cardMessage,
-          items: newOrder.items as unknown as object,
-          total: newOrder.total,
-          status: newOrder.status
-        }
-      });
-    } catch (e) {
-      console.warn("Failed quote order sync to MySQL:", e);
-    }
-  }
-
-  // Build structured WhatsApp message
-  const itemsText = newOrder.items
-    .map((ci) => {
-      const opts = ci.selectedOptions ? ` (${Object.entries(ci.selectedOptions).map(([k, v]) => `${k}: ${v}`).join(', ')})` : '';
-      return `• ${ci.quantity}x ${ci.item.title}${opts} - Bs. ${(ci.item.price * ci.quantity).toFixed(2)}`;
-    })
-    .join('\n');
-
-  const waNumber = store.siteConfig.whatsappNumber.replace(/[^0-9]/g, '') || '59178000000';
-  const rawMsg = `🌸 *NUEVO PEDIDO EN HOBBY BOLIVIA* 🌸
-*Código:* ${orderCode}
-
-👤 *Cliente:* ${newOrder.customerName} (${newOrder.customerPhone})
-🎁 *Para:* ${newOrder.recipientName}
-📅 *Fecha de Entrega:* ${newOrder.deliveryDate}
-⏰ *Horario:* ${newOrder.deliveryTimeSlot}
-📍 *Dirección de Entrega:* ${newOrder.deliveryAddress}
-
-💌 *Dedicatoria en la Tarjeta:*
-"${newOrder.cardMessage || 'Sin dedicatoria especificada'}"
-
-💐 *Detalle de los Arreglos:*
-${itemsText}
-
-💰 *TOTAL A PAGAR:* Bs. ${Number(newOrder.total).toFixed(2)}
-
-_Hola Hobby Bolivia, acabo de generar mi pedido desde la web hobbybolivia.com. Por favor confirmen los datos para el pago y despacho._`;
-
-  const whatsappUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(rawMsg)}`;
-
-  return { order: newOrder, whatsappUrl };
-}
-
-export async function updateQuoteOrderStatus(orderCode: string, status: OrderStatus): Promise<QuoteOrder | null> {
-  const store = getLocalStore();
-  const order = store.quotes.find((q) => q.orderCode === orderCode);
-  if (!order) return null;
-  order.status = status;
-  order.updatedAt = new Date().toISOString();
-  saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.quoteOrder.update({
-        where: { orderCode },
-        data: { status }
-      });
-    } catch {
-      // ignore
-    }
-  }
-
-  return order;
-}
-
-/* ========================================================
-   7. LIBRO DE RECLAMACIONES (CLAIM RECORDS)
-======================================================== */
-export async function getClaimRecords(): Promise<ClaimRecord[]> {
-  const store = getLocalStore();
-  if (await isMySQLConnected()) {
-    try {
-      const claims = await prisma.claimRecord.findMany({ orderBy: { createdAt: 'desc' } });
-      if (claims.length > 0) return claims as unknown as ClaimRecord[];
-    } catch {
-      // fallback
-    }
-  }
-  return store.claims.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-}
-
-export async function getClaimRecordByCode(trackingCode: string): Promise<ClaimRecord | null> {
-  const store = getLocalStore();
-  const claim = store.claims.find((c) => c.trackingCode === trackingCode);
-  return claim || null;
-}
-
-export async function createClaimRecord(data: Omit<ClaimRecord, 'id' | 'trackingCode' | 'status' | 'createdAt'>): Promise<ClaimRecord> {
-  const store = getLocalStore();
-  const year = new Date().getFullYear();
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  const prefix = data.type === 'QUEJA' ? 'QUE' : 'REC';
-  const trackingCode = `${prefix}-${year}-${rand}`;
-
-  const newClaim: ClaimRecord = {
-    id: store.claims.length > 0 ? Math.max(...store.claims.map((c) => c.id || 0)) + 1 : 1,
-    trackingCode,
-    fullName: data.fullName,
-    documentId: data.documentId,
-    phone: data.phone,
-    email: data.email,
-    contractedItem: data.contractedItem,
-    orderCode: data.orderCode || null,
-    amount: data.amount ? Number(data.amount) : null,
-    type: data.type,
-    detail: data.detail,
-    customerRequest: data.customerRequest,
-    status: 'PENDIENTE',
-    adminNotes: null,
-    createdAt: new Date().toISOString()
-  };
-
-  store.claims.unshift(newClaim);
-  saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.claimRecord.create({
-        data: {
-          trackingCode: newClaim.trackingCode,
-          fullName: newClaim.fullName,
-          documentId: newClaim.documentId,
-          phone: newClaim.phone,
-          email: newClaim.email,
-          contractedItem: newClaim.contractedItem,
-          orderCode: newClaim.orderCode,
-          amount: newClaim.amount,
-          type: newClaim.type,
-          detail: newClaim.detail,
-          customerRequest: newClaim.customerRequest,
-          status: newClaim.status
-        }
-      });
-    } catch (e) {
-      console.warn("Failed claim record sync to MySQL:", e);
-    }
-  }
-
-  return newClaim;
-}
-
-export async function updateClaimStatus(trackingCode: string, status: ClaimStatus, adminNotes?: string): Promise<ClaimRecord | null> {
-  const store = getLocalStore();
-  const claim = store.claims.find((c) => c.trackingCode === trackingCode);
-  if (!claim) return null;
-
-  claim.status = status;
-  if (adminNotes !== undefined) claim.adminNotes = adminNotes;
-  claim.updatedAt = new Date().toISOString();
-  saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.claimRecord.update({
-        where: { trackingCode },
-        data: {
-          status,
-          adminNotes: claim.adminNotes
-        }
-      });
-    } catch {
-      // ignore
-    }
-  }
-
-  return claim;
-}
-
-/* ========================================================
-   8. USERS MANAGEMENT (SUPERADMIN & ADMIN)
-======================================================== */
-export async function getUsers(): Promise<User[]> {
-  const store = getLocalStore();
-  if (await isMySQLConnected()) {
-    try {
-      const dbUsers = await prisma.user.findMany({ orderBy: { id: 'asc' } });
-      if (dbUsers.length > 0) {
-        return dbUsers.map((u) => ({
-          id: u.id,
-          name: u.name,
-          username: u.email,
-          password: u.passwordHash,
-          role: (u.role as UserRole) || 'ADMIN',
-          isActive: true,
-          createdAt: u.createdAt
-        }));
-      }
-    } catch {
-      // fallback
-    }
-  }
-  return store.users || [DEFAULT_SUPERADMIN];
-}
-
-export async function getUserByUsername(username: string): Promise<User | null> {
-  const clean = username.trim().toLowerCase();
-  const users = await getUsers();
-  const user = users.find((u) => u.username.toLowerCase() === clean);
-  return user || null;
-}
-
-export async function getUserById(id: number): Promise<User | null> {
-  const users = await getUsers();
-  const user = users.find((u) => u.id === id);
-  return user || null;
-}
-
-export async function saveUser(data: Partial<User>): Promise<User> {
-  const store = getLocalStore();
-  let saved: User;
-
-  if (data.id) {
-    const idx = store.users.findIndex((u) => u.id === data.id);
-    if (idx >= 0) {
-      const isMaster = store.users[idx].username === 'superadmin';
-      store.users[idx] = {
-        ...store.users[idx],
-        ...data,
-        name: data.name !== undefined ? data.name : store.users[idx].name,
-        password: data.password ? data.password : store.users[idx].password,
-        role: isMaster ? 'SUPERADMIN' : (data.role || store.users[idx].role),
-        isActive: isMaster ? true : (data.isActive ?? store.users[idx].isActive),
-        updatedAt: new Date().toISOString()
-      };
-      saved = store.users[idx];
-    } else {
-      saved = {
-        id: data.id,
-        name: data.name || '',
-        username: data.username || '',
-        password: data.password || '',
-        role: (data.role as UserRole) || 'ADMIN',
-        isActive: data.isActive ?? true,
-        createdAt: new Date().toISOString()
-      };
-      store.users.push(saved);
-    }
-  } else {
-    const newId = store.users.length > 0 ? Math.max(...store.users.map((u) => u.id)) + 1 : 1;
-    saved = {
-      id: newId,
-      name: data.name || '',
-      username: data.username || '',
-      password: data.password || '',
-      role: (data.role as UserRole) || 'ADMIN',
-      isActive: data.isActive ?? true,
-      createdAt: new Date().toISOString()
-    };
-    store.users.push(saved);
-  }
-
-  saveLocalStore(store);
-
-  // Sync to MySQL if available
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.user.upsert({
-        where: { email: saved.username },
-        update: {
-          name: saved.name,
-          passwordHash: saved.password || '',
-          role: saved.role
-        },
-        create: {
-          name: saved.name,
-          email: saved.username,
-          passwordHash: saved.password || '',
-          role: saved.role
-        }
-      });
-    } catch (e) {
-      console.warn("Failed user sync to MySQL:", e);
-    }
-  }
-
-  return saved;
-}
-
-export async function deleteUser(id: number): Promise<boolean> {
-  const store = getLocalStore();
-  const target = store.users.find((u) => u.id === id);
-  if (!target || target.username === 'superadmin') {
-    return false; // Cannot delete master superadmin
-  }
-
-  store.users = store.users.filter((u) => u.id !== id);
-  saveLocalStore(store);
-
-  if (await isMySQLConnected()) {
-    try {
-      await prisma.user.delete({ where: { email: target.username } });
-    } catch {
-      // ignore
-    }
-  }
-
-  return true;
+  return store.banners || [];
 }
 

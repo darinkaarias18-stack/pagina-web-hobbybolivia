@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation';
+import React from 'react';
+import { AdminDashboardClient } from '@/components/admin/AdminDashboardClient';
 
-export default function AdminIndexPage() {
-  redirect('/admin/items');
+export default function AdminPage() {
+  return <AdminDashboardClient />;
 }

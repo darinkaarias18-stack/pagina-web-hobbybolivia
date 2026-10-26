@@ -74,10 +74,8 @@ export async function main() {
 
   // 6. Products & Services
   for (const item of initialItems) {
-    const categoryId = categoryMap.get(item.categorySlug);
-    if (!categoryId) continue;
-
-    const { categorySlug, occasionSlugs, ...itemData } = item;
+    const categoryId = item.category_id || item.categoryId || 1;
+    const { categorySlug, occasionSlugs, category, ...itemData } = item as any;
 
     const upsertedItem = await prisma.catalogItem.upsert({
       where: { sku: item.sku },
@@ -91,27 +89,31 @@ export async function main() {
       }
     });
 
+
     // Relate occasions
-    for (const occSlug of occasionSlugs) {
-      const occasionId = occasionMap.get(occSlug);
-      if (occasionId) {
-        await prisma.catalogItemOccasion.upsert({
-          where: {
-            itemId_occasionId: {
+    if (occasionSlugs && Array.isArray(occasionSlugs)) {
+      for (const occSlug of occasionSlugs) {
+        const occasionId = occasionMap.get(occSlug);
+        if (occasionId) {
+          await prisma.catalogItemOccasion.upsert({
+            where: {
+              itemId_occasionId: {
+                itemId: upsertedItem.id,
+                occasionId
+              }
+            },
+            update: {},
+            create: {
               itemId: upsertedItem.id,
               occasionId
             }
-          },
-          update: {},
-          create: {
-            itemId: upsertedItem.id,
-            occasionId
-          }
-        });
+          });
+        }
       }
     }
   }
-  console.log(`🌸 ${initialItems.length} arreglos florales y servicios sembrados en MySQL con éxito.`);
+  console.log(`✈️ ${initialItems.length} componentes y repuestos sembrados en MySQL con éxito.`);
+
 }
 
 main()

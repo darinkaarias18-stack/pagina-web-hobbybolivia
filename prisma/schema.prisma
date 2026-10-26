@@ -11,14 +11,21 @@ datasource db {
 model SiteConfig {
   id              Int      @id @default(autoincrement())
   companyName     String   @default("Hobby Bolivia")
+  subtitle        String?  @default("Repuestos y componentes de precisión para aviones a escala & aeromodelismo")
   domain          String   @default("https://hobbybolivia.com")
   logoUrl         String?  @db.VarChar(500)
-  primaryColor    String   @default("#E11D48")
-  secondaryColor  String   @default("#064E3B")
+  heroBannerUrl   String?  @db.VarChar(500)
+  primaryColor    String   @default("#F85606")
+  secondaryColor  String   @default("#161311")
+  accentColor     String   @default("#D4A359")
   currency        String   @default("Bs.")
-  whatsappNumber  String   @default("+59178000000")
-  topBarText      String   @default("Envíos en el día en toda la ciudad | Flores 100% frescas garantizadas")
+  whatsappNumber  String   @default("+591 77293446")
+  topBarText      String   @default("Hobby Bolivia: Repuestos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia")
   contactEmail    String   @default("contacto@hobbybolivia.com")
+  themePreset     String?  @default("technest")
+  cardStyle       String?  @default("with_button")
+  desktopColumns  Int?     @default(4)
+  showTopBar      Boolean  @default(true)
   termsPolicy     String?  @db.LongText
   privacyPolicy   String?  @db.LongText
   shippingPolicy  String?  @db.LongText
@@ -30,9 +37,11 @@ model SiteConfig {
 model User {
   id           Int      @id @default(autoincrement())
   name         String
-  email        String   @unique
+  username     String   @unique @default("admin")
+  email        String?  @unique
   passwordHash String
   role         String   @default("ADMIN")
+  isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
 }
 
@@ -47,6 +56,7 @@ model Category {
   description   String?       @db.Text
   isActive      Boolean       @default(true)
   order         Int           @default(0)
+  itemCount     Int           @default(0)
   items         CatalogItem[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -80,28 +90,32 @@ enum ActionType {
 }
 
 model CatalogItem {
-  id              Int                   @id @default(autoincrement())
-  sku             String                @unique
-  title           String
-  slug            String                @unique
-  brand           String?
-  description     String                @db.LongText
-  itemType        ItemType              @default(PRODUCT)
-  price           Decimal               @db.Decimal(10, 2)
-  compareAtPrice  Decimal?              @db.Decimal(10, 2)
-  discountPercent Int?
-  availability    Availability          @default(IN_STOCK)
-  stockQuantity   Int                   @default(10)
-  actionType      ActionType            @default(ADD_TO_CART)
-  flowerTypes     Json?                 // ["Rosas", "Girasoles", "Liliums"]
-  specifications  Json?                 // {"Cantidad de tallos": "24 rosas", "Altura": "50 cm", "Incluye": "Tarjeta + Moño"}
-  variants        Json?                 // [{"name": "Color", "options": ["Rojas", "Blancas", "Rosadas"]}]
-  images          Json                  // ["url1", "url2"]
-  categoryId      Int
-  category        Category              @relation(fields: [categoryId], references: [id])
-  occasions       CatalogItemOccasion[]
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id               Int                   @id @default(autoincrement())
+  sku              String                @unique
+  title            String
+  slug             String                @unique
+  brand            String?               @default("Dubro / GP")
+  description      String                @db.LongText
+  itemType         ItemType              @default(PRODUCT)
+  scale            String                @default("RC Estándar")
+  material         String                @default("Compuesto")
+  specsLine        String?
+  compatibleModels String?               @db.Text
+  price            Decimal               @db.Decimal(10, 2)
+  compareAtPrice   Decimal?              @db.Decimal(10, 2)
+  discountPercent  Int?
+  availability     Availability          @default(IN_STOCK)
+  stockQuantity    Int                   @default(10)
+  badge            String?               // "Best Seller", "Nuevo", "Popular", "Oferta"
+  actionType       ActionType            @default(ADD_TO_CART)
+  specifications   Json?
+  variants         Json?
+  images           Json                  // ["url1", "url2"]
+  categoryId       Int
+  category         Category              @relation(fields: [categoryId], references: [id])
+  occasions        CatalogItemOccasion[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 }
 
 model CatalogItemOccasion {
@@ -143,16 +157,23 @@ model QuoteOrder {
   orderCode        String      @unique
   customerName     String
   customerPhone    String
-  recipientName    String
-  deliveryDate     String
-  deliveryTimeSlot String
+  deliveryCity     String      @default("Santa Cruz")
   deliveryAddress  String      @db.Text
-  cardMessage      String?     @db.Text
+  customerNotes    String?     @db.Text
   items            Json
   total            Decimal     @db.Decimal(10, 2)
   status           OrderStatus @default(PENDING)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+}
+
+model Policy {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  title     String
+  content   String   @db.LongText
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
 
 enum ClaimType {

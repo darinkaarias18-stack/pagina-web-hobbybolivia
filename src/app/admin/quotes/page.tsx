@@ -68,8 +68,9 @@ export default function AdminQuotesPage() {
     const matchesSearch =
       o.orderCode.toLowerCase().includes(search.toLowerCase()) ||
       o.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      o.recipientName.toLowerCase().includes(search.toLowerCase()) ||
+      (o.recipientName || '').toLowerCase().includes(search.toLowerCase()) ||
       o.customerPhone.includes(search);
+
 
     const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
     return matchesSearch && matchesStatus;

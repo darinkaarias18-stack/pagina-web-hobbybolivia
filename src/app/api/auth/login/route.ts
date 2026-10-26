@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByUsername } from '@/lib/db';
+import { createSessionToken, setAuthSessionCookies } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,9 +15,12 @@ export async function POST(request: NextRequest) {
 
     const cleanUsername = username.trim().toLowerCase();
 
-    // 1. Guaranteed master account: superadmin / superhobby2026*
+    // 1. Cuentas maestras autorizadas (desde variables de entorno o credencial segura)
+    const envAdminUser = (process.env.ADMIN_USER || 'dariasdigital_hobbybolivia').toLowerCase();
+    const envAdminPass = process.env.ADMIN_PASSWORD || 'Imp6fSMr2%mj0w?v';
+
     let matchedUser: {
-      id?: number;
+      id: number;
       username: string;
       name: string;
       role: 'SUPERADMIN' | 'ADMIN';
@@ -32,18 +36,18 @@ export async function POST(request: NextRequest) {
         isActive: true
       };
     } else if (
-      (cleanUsername === 'dariasdigital_hobbybolivia' || cleanUsername === 'admin@hobbybolivia.com') &&
-      password === 'Imp6fSMr2%mj0w?v'
+      (cleanUsername === envAdminUser || cleanUsername === 'admin@hobbybolivia.com') &&
+      password === envAdminPass
     ) {
       matchedUser = {
         id: 2,
-        username: 'dariasdigital_hobbybolivia',
+        username: envAdminUser,
         name: 'Administrador Hobby Bolivia',
         role: 'SUPERADMIN',
         isActive: true
       };
     } else {
-      // 2. Lookup in database
+      // 2. Búsqueda en base de datos
       const dbUser = await getUserByUsername(cleanUsername);
       if (dbUser && dbUser.password === password) {
         if (dbUser.isActive === false) {
@@ -69,6 +73,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 3. Generar token de sesión criptográfico (HMAC-SHA256)
+    const token = await createSessionToken({
+      id: matchedUser.id,
+      username: matchedUser.username,
+      name: matchedUser.name,
+      role: matchedUser.role
+    });
+
     const response = NextResponse.json({
       success: true,
       user: {
@@ -79,17 +91,18 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Set auth cookies for session and role enforcement
-    const cookieOptions = {
-      path: '/',
-      httpOnly: false,
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    };
-
-    response.cookies.set('hb_admin_auth', 'authenticated', cookieOptions);
-    response.cookies.set('hb_user_role', matchedUser.role, cookieOptions);
-    response.cookies.set('hb_user_username', matchedUser.username, cookieOptions);
-    response.cookies.set('hb_user_name', encodeURIComponent(matchedUser.name), cookieOptions);
+    // 4. Inyectar cookies HttpOnly y seguras
+    setAuthSessionCookies(
+      response,
+      {
+        id: matchedUser.id,
+        username: matchedUser.username,
+        name: matchedUser.name,
+        role: matchedUser.role,
+        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600
+      },
+      token
+    );
 
     return response;
   } catch (error) {
@@ -97,4 +110,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Error al procesar login' }, { status: 500 });
   }
 }
-

@@ -1,135 +1,191 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
+import { ArrowRight, Sparkles, ChevronRight, CheckCircle2, Plane } from 'lucide-react';
 import type { Category } from '@/lib/types';
 
 interface CategoryTilesGridProps {
   categories: Category[];
-  selectedCategory: string;
   onSelectCategory: (slug: string) => void;
+  activeCategory?: string;
 }
 
 export function CategoryTilesGrid({
   categories,
-  selectedCategory,
-  onSelectCategory
+  onSelectCategory,
+  activeCategory
 }: CategoryTilesGridProps) {
-  // 12 visual categories matching the exact 2x6 grid from the reference screenshot
-  const displayCategories = [
-    {
-      name: 'Conectores E/Z',
-      count: 12,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp'
-    },
-    {
-      name: 'Bellcranks 90º',
-      count: 8,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/d315fa511a-dubq2000tn-t.webp'
-    },
-    {
-      name: 'Varillaje Push Rod',
-      count: 15,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/c2253e5048-gpmq3741-t.webp'
-    },
-    {
-      name: 'Clevises de Mando',
-      count: 10,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/7fcaad4571-dubq9306-large-t.webp'
-    },
-    {
-      name: 'Mini E/Z Conectores',
-      count: 9,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/19df1961af-dubq8450-t.webp'
-    },
-    {
-      name: 'Alambres Acerados',
-      count: 14,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/ac56aa1747-dubq9108-large-t.webp'
-    },
-    {
-      name: 'Alambres Rosca 2mm',
-      count: 11,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/434eae12fc-aib62993-large-t.webp'
-    },
-    {
-      name: 'Micro Bellcranks',
-      count: 7,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/c5452292f7-dubq2005-t.webp'
-    },
-    {
-      name: 'Varillas 4-40 HD',
-      count: 13,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/7f5b761d4f-dubq1474-large-t.webp'
-    },
-    {
-      name: 'Varillas 2-56 12"',
-      count: 16,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/7f5b761d4f-dubq1464-large-t.webp'
-    },
-    {
-      name: 'Hélices y Spinners',
-      count: 18,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/c2253e5048-gpmq3741-t.webp'
-    },
-    {
-      name: 'Bocinas y Bisagras',
-      count: 22,
-      slug: 'conectores-y-linea-de-control',
-      imageUrl: 'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp'
+  
+  const handleCategoryClick = (slug: string) => {
+    onSelectCategory(slug);
+    const el = document.getElementById('catalogo');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
     }
-  ];
+  };
 
   return (
-    <section className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 pt-10 pb-6" id="categorias">
-      {/* Title with blue underline (Galba style) */}
-      <div className="mb-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-[#162544] section-heading-galba">
-          Categorías
-        </h2>
-      </div>
+    <>
+      {/* Visual Showcase Banner - Full Width Edge-to-Edge Widescreen Cover */}
+      <section className="w-full relative bg-[#161311] border-b border-[#2D2622] overflow-hidden">
+        {/* Main Visual Banner Graphic - Full Bleed 16:9 Cinema */}
+        <div className="relative w-full h-[420px] sm:h-[480px] md:h-[540px] lg:h-[600px] overflow-hidden">
+          <img
+            src="/images/banners/banner_panoramic_aero.jpg"
+            alt="Hobby Bolivia · Taller de Precisión y Ensamblaje de Aviones a Escala"
+            className="w-full h-full object-cover object-center transform hover:scale-[1.01] transition-transform duration-700 ease-out"
+            loading="eager"
+          />
 
-      {/* Thin horizontal line */}
-      <div className="w-full border-t border-[#e2e8f0] mb-8" />
+          {/* Cinematic Vignette & Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#161311]/95 via-[#161311]/70 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#161311] to-transparent pointer-events-none" />
 
-      {/* 2 rows of 6 categories grid (Exact Galba format) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-x-4 gap-y-8">
-        {displayCategories.map((cat, idx) => (
-          <button
-            key={`${cat.name}-${idx}`}
-            type="button"
-            onClick={() => onSelectCategory(cat.slug)}
-            className="group flex flex-col items-center text-center transition-transform hover:-translate-y-1 focus:outline-none"
-          >
-            {/* Image Circle/Container on clean white */}
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-lg bg-white border border-[#f1f5f9] group-hover:border-[#cbd5e1] group-hover:shadow-md transition-all flex items-center justify-center p-3 mb-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={cat.imageUrl}
-                alt={cat.name}
-                className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-sm"
-                loading="lazy"
-              />
+          {/* Floating High-Conversion Branding & Taglines */}
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full max-w-[1320px] mx-auto px-4 sm:px-8">
+              <div className="max-w-xl space-y-4">
+                
+                {/* Micro Brand Pill */}
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#161311]/80 backdrop-blur-md border border-[#D4A359]/40 shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-[#F85606] animate-pulse"></span>
+                  <span className="text-[#D4A359] text-[11px] font-black uppercase tracking-wider">
+                    PLANEA · CONSTRUYE · VUELA
+                  </span>
+                </div>
+
+                {/* Main Headline Overlay */}
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[#F85606] font-black text-xs sm:text-sm tracking-wider uppercase">
+                      Hobby Bolivia
+                    </span>
+                    <span className="text-[#A89F91] text-xs">·</span>
+                    <span className="text-[#FAF8F5]/80 text-xs font-semibold">Descubre. Arma. Vuela.</span>
+                  </div>
+                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white uppercase tracking-tight leading-[1.05] drop-shadow-xl">
+                    REPUESTOS <span className="text-white">A ESCALA</span>
+                    <span className="block text-[#D4A359] mt-1">PRECISIÓN EN VUELO</span>
+                  </h2>
+                </div>
+
+                {/* Subtitle */}
+                <p className="text-xs sm:text-sm md:text-base text-[#FAF8F5]/90 font-medium leading-relaxed drop-shadow max-w-lg">
+                  La mayor variedad de repuestos mecánicos, varillajes templados, hélices balanceadas y componentes electrónicos para aeronaves a radio control en Bolivia.
+                </p>
+
+                {/* Call to action buttons */}
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleCategoryClick('all')}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#F85606] hover:bg-[#E04B00] text-white font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-[#F85606]/30 hover:scale-105 cursor-pointer"
+                  >
+                    <span>VER CATÁLOGO COMPLETO</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <a
+                    href="https://wa.me/59177293446?text=Hola%20Hobby%20Bolivia,%20quisiera%20asesor%C3%ADa%20técnica%20sobre%20repuestos."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#211E1C] hover:bg-[#2E2A27] text-white font-black text-xs uppercase tracking-wider border border-[#D4A359] transition-all shadow-lg hover:scale-105 cursor-pointer"
+                  >
+                    <Plane className="w-4 h-4 text-[#D4A359] -rotate-45" />
+                    <span>ASESORÍA TÉCNICA</span>
+                  </a>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Barra Inferior "Mantén tu flota en el aire" a ancho completo */}
+        <div className="w-full bg-[#1B1714] border-t border-[#2D2622] py-3.5 sm:py-4 px-4 sm:px-6">
+          <div className="w-full max-w-[1320px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-center sm:text-left">
+              <div className="w-9 h-9 rounded-full bg-[#F85606] text-white flex items-center justify-center shrink-0 shadow-md">
+                <Plane className="w-4 h-4 -rotate-45" />
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 justify-center sm:justify-start">
+                  <span>MANTÉN TU FLOTA EN EL AIRE</span>
+                  <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
+                  <span className="hidden sm:inline-block text-[#D4A359] text-xs">Precios en Bolivianos (Bs.)</span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-[#E2DCD3]/80">
+                  Envíos blindados con entrega rápida a toda Bolivia (La Paz, Santa Cruz, Cochabamba y el resto del país).
+                </p>
+              </div>
             </div>
 
-            {/* Label and Count Badge in Galba style: Herramientas (387) */}
-            <div className="text-xs sm:text-[13px] font-medium text-[#1e293b] leading-tight">
-              <span className="group-hover:text-[#2563eb] transition-colors">{cat.name}</span>{' '}
-              <span className="font-bold text-[#b45309] font-mono">({cat.count})</span>
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
+            <button
+              type="button"
+              onClick={() => handleCategoryClick('all')}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-md hover:scale-105 cursor-pointer shrink-0"
+            >
+              <span>Explorar Catálogo</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Categories Quick Filter Ribbon directly below */}
+      <section id="categorias" className="py-6 sm:py-8 bg-[#F5F2EB] border-b border-[#E2DCD3]">
+        <div className="w-full max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span className="text-xs font-black uppercase tracking-wider text-[#1A1817] flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-[#D4A359]" />
+              <span>Sistemas de Precisión por Categoría:</span>
+            </span>
+            <span className="text-xs text-[#8C827A] hidden sm:inline-block">
+              Haz clic para filtrar el catálogo al instante
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <button
+              type="button"
+              onClick={() => handleCategoryClick('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border ${
+                activeCategory === 'all'
+                  ? 'bg-[#211E1C] text-[#FAF8F5] border-[#D4A359] shadow-md'
+                  : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359] hover:bg-white'
+              }`}
+            >
+              ✦ Todos ({categories.reduce((acc, c) => acc + (c.itemCount || 0), 18)})
+            </button>
+
+            {categories.map((cat) => {
+              const isSelected = activeCategory === cat.slug;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleCategoryClick(cat.slug)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                    isSelected
+                      ? 'bg-[#211E1C] text-[#FAF8F5] border-[#D4A359] shadow-md ring-1 ring-[#D4A359]'
+                      : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359] hover:bg-white hover:text-[#F85606]'
+                  }`}
+                >
+                  <span>{cat.name}</span>
+                  {cat.itemCount !== undefined && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                      isSelected ? 'bg-[#D4A359] text-[#161311]' : 'bg-[#EAE4D9] text-[#5C5650]'
+                    }`}>
+                      {cat.itemCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

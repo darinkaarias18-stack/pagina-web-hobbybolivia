@@ -28,7 +28,7 @@ Hola Hobby Bolivia, deseo cotizar repuestos o asesoría para mi modelo:
 
 ¿Podrían indicarme si tienen stock o fecha de llegada? Muchas gracias.`;
 
-    const whatsappUrl = `https://wa.me/59178000000?text=${encodeURIComponent(msg)}`;
+    const whatsappUrl = `https://wa.me/59177293446?text=${encodeURIComponent(msg)}`;
     window.open(whatsappUrl, '_blank');
     closeCustomModal();
   };

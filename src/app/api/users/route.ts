@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, saveUser } from '@/lib/db';
-
-function isSuperAdmin(request: NextRequest): boolean {
-  const auth = request.cookies.get('hb_admin_auth')?.value;
-  const role = request.cookies.get('hb_user_role')?.value;
-  return auth === 'authenticated' && role === 'SUPERADMIN';
-}
+import { requireSuperAdmin } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isSuperAdmin(request)) {
-      return NextResponse.json(
-        { success: false, error: 'Acceso denegado. Se requiere rol SUPERADMIN.' },
-        { status: 403 }
-      );
-    }
+    const authCheck = await requireSuperAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
 
     const users = await getUsers();
-    // Return users with passwords masked for security
+    // Retornar usuarios con contraseñas ofuscadas
     const sanitized = users.map((u) => ({
       id: u.id,
       name: u.name,
@@ -41,12 +32,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isSuperAdmin(request)) {
-      return NextResponse.json(
-        { success: false, error: 'Acceso denegado. Se requiere rol SUPERADMIN.' },
-        { status: 403 }
-      );
-    }
+    const authCheck = await requireSuperAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
 
     const body = await request.json();
     const { name, username, password, role } = body;
@@ -67,7 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Role can only be ADMIN for newly created users
+    // El rol para nuevos usuarios creados desde este endpoint solo puede ser ADMIN o SUPERADMIN
     const userRole = role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN';
 
     const newUser = await saveUser({

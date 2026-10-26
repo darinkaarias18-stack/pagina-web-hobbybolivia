@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireAdmin } from '@/lib/auth';
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB (3 * 1024 * 1024 bytes)
-const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg'];
-const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
-const RESTRICTION_ERROR = 'Solo se permiten imágenes en formato PNG o JPG de hasta 3MB';
+const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
+const RESTRICTION_ERROR = 'Solo se permiten imágenes en formato PNG, JPG o WEBP de hasta 3MB';
 
 export async function POST(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
@@ -23,12 +27,12 @@ export async function POST(request: NextRequest) {
     const originalName = file.name || '';
     const fileExt = originalName.includes('.')
       ? originalName.slice(originalName.lastIndexOf('.')).toLowerCase()
-      : (file.type === 'image/png' ? '.png' : '.jpg');
+      : (file.type === 'image/png' ? '.png' : (file.type === 'image/webp' ? '.webp' : '.jpg'));
 
     const isMimeValid = ALLOWED_MIME_TYPES.includes(file.type);
     const isExtValid = ALLOWED_EXTENSIONS.includes(fileExt);
 
-    // Strict validation: PNG and JPG only, max 3MB
+    // Strict validation: PNG, JPG, WEBP only, max 3MB
     if ((!isMimeValid && !isExtValid) || file.size > MAX_FILE_SIZE || file.size <= 0) {
       return NextResponse.json(
         { success: false, error: RESTRICTION_ERROR },
@@ -46,7 +50,7 @@ export async function POST(request: NextRequest) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Clean base name for unique filename
+    // Clean base name for unique filename to prevent path traversal
     const baseName = path.basename(originalName, fileExt)
       .toLowerCase()
       .normalize('NFD')
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
       .replace(/-+/g, '-')
       .replace(/^-+|-+$/g, '') || 'producto';
 
-    const safeExt = fileExt === '.png' ? '.png' : (fileExt === '.jpeg' ? '.jpeg' : '.jpg');
+    const safeExt = fileExt === '.png' ? '.png' : (fileExt === '.webp' ? '.webp' : (fileExt === '.jpeg' ? '.jpeg' : '.jpg'));
     const filename = `${Date.now()}-${baseName}${safeExt}`;
     const filePath = path.join(uploadsDir, filename);
 
@@ -78,4 +82,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

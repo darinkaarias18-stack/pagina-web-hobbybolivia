@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCategories, saveCategory, deleteCategory } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
   try {
@@ -13,6 +14,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     if (!body.name || !body.slug) {
       return NextResponse.json({ success: false, error: "Name and slug are required" }, { status: 400 });
@@ -28,6 +32,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     if (!body.id) {
       return NextResponse.json({ success: false, error: "Category ID is required" }, { status: 400 });
@@ -43,6 +50,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

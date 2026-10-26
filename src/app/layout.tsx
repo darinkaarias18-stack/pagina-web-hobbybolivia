@@ -1,9 +1,17 @@
 import type { Metadata } from 'next';
+import { Manrope } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartContext';
-import { CartQuoteDrawer } from '@/components/catalog/CartQuoteDrawer';
-import { ProductOptionsModal } from '@/components/catalog/ProductOptionsModal';
-import { CustomArrangementModal } from '@/components/catalog/CustomArrangementModal';
+import { FloatingWhatsApp } from '@/components/layout/FloatingWhatsApp';
+import { ClientModals } from '@/components/layout/ClientModals';
+
+/* Optimized Font Self-Hosting (Zero render-blocking network requests) */
+const manrope = Manrope({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--font-manrope',
+});
 
 export const metadata: Metadata = {
   title: 'Hobby Bolivia · Aeromodelismo y radio control',
@@ -28,19 +36,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={manrope.variable}>
       <head>
         <meta name="theme-color" content="#162544" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
-      <body className="antialiased min-h-screen flex flex-col bg-white text-[#1e293b]">
+      <body className={`${manrope.className} antialiased min-h-screen flex flex-col bg-white text-[#1e293b]`}>
         <CartProvider>
           {children}
-          <CartQuoteDrawer />
-          <ProductOptionsModal />
-          <CustomArrangementModal />
+          <ClientModals />
+          <FloatingWhatsApp phone="+591 77293446" />
         </CartProvider>
       </body>
     </html>

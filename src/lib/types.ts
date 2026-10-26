@@ -7,6 +7,8 @@ export type ClaimType = "RECLAMO" | "QUEJA";
 export type ClaimStatus = "PENDIENTE" | "EN_PROCESO" | "RESUELTO";
 export type UserRole = "SUPERADMIN" | "ADMIN";
 
+export type ProductBadge = "Best Seller" | "Nuevo" | "Popular" | "Pocas Unidades" | "Oferta";
+
 export interface User {
   id: number;
   name: string;
@@ -18,7 +20,6 @@ export interface User {
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }
-
 
 export interface SiteConfig {
   id: number;
@@ -50,11 +51,12 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
-  parentId?: number | null;
   imageUrl?: string | null;
+  image_url?: string | null;
   description?: string | null;
   isActive: boolean;
   order: number;
+  parentId?: number | null;
   itemCount?: number;
 }
 
@@ -67,30 +69,58 @@ export interface Occasion {
   itemCount?: number;
 }
 
-export interface CatalogItem {
+export interface Policy {
+  id: number;
+  slug: 'envios' | 'devoluciones' | 'garantias' | 'privacidad' | string;
+  title: string;
+  content: string;
+  updatedAt?: string | Date;
+  updated_at?: string | Date;
+}
+
+export interface Product {
   id: number;
   sku: string;
+  name: string;
   title: string;
   slug: string;
-  brand?: string | null;
-  description: string;
-  itemType: ItemType;
-  price: number;
-  compareAtPrice?: number | null;
-  discountPercent?: number | null;
-  availability: Availability;
-  stockQuantity: number;
-  actionType: ActionType;
-  flowerTypes?: string[];
-  specifications?: Record<string, any>;
-  variants?: Array<{ name: string; options: string[] }>;
-  images: string[];
+  category_id: number;
   categoryId: number;
   category?: Category;
+  categorySlug?: string;
   occasionSlugs?: string[];
+  scale: string; // ej. '1:10', '1:32', '1:48', 'RC Estándar', 'Micro'
+  material: string; // 'Fibra de Carbono', 'Aluminio CNC', 'Espuma EPO', 'Balsa', 'Compuesto', 'Nylon'
+  specs_line: string; // ej. '2200KV | XT60 | 45g'
+  compatible_models: string; // ej. 'Aviones RC Glow/Gasolina, Drones, Planeadores'
+  price: number; // en Bs.
+  old_price?: number | null; // en Bs.
+  compareAtPrice?: number | null;
+  discountPercent?: number | null;
+  stock: number;
+  stockQuantity: number;
+  badge?: ProductBadge | null;
+  image_url: string;
+  imageUrl?: string;
+  images: string[];
+  is_active: boolean;
+  isActive: boolean;
+  brand?: string | null;
+  description?: string;
+  specifications?: Record<string, any>;
+  variants?: Array<{ name: string; options: string[] }>;
+  flowerTypes?: string[];
+  created_at?: string | Date;
+  updated_at?: string | Date;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  itemType?: ItemType;
+  actionType?: ActionType;
+  availability?: Availability;
 }
+
+// Alias for compatibility
+export type CatalogItem = Product;
 
 export interface Banner {
   id: number;
@@ -104,7 +134,7 @@ export interface Banner {
 }
 
 export interface CartItem {
-  item: CatalogItem;
+  item: Product;
   quantity: number;
   selectedOptions?: Record<string, string>;
 }
@@ -114,14 +144,18 @@ export interface QuoteOrder {
   orderCode: string;
   customerName: string;
   customerPhone: string;
-  recipientName: string;
-  deliveryDate: string;
-  deliveryTimeSlot: string;
-  deliveryAddress: string;
+  recipientName?: string;
+  deliveryCity?: string;
+  deliveryAddress?: string;
+  deliveryDate?: string;
+  deliveryTimeSlot?: string;
   cardMessage?: string | null;
+  customerNotes?: string | null;
   items: CartItem[];
   total: number;
   status: OrderStatus;
+  order?: any;
+  whatsappUrl?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }

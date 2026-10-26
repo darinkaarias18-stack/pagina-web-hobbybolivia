@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getClaimRecords, getClaimRecordByCode, createClaimRecord, updateClaimStatus } from '@/lib/db';
 import type { ClaimStatus } from '@/lib/types';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
 
+    // Consulta individual por código de seguimiento (permitido para clientes con su código)
     if (code) {
       const claim = await getClaimRecordByCode(code.trim().toUpperCase());
       if (!claim) {
@@ -14,6 +16,10 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ success: true, data: claim });
     }
+
+    // Listado masivo de reclamos: requiere autenticación de administrador para proteger PII
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
 
     const claims = await getClaimRecords();
     return NextResponse.json({ success: true, count: claims.length, data: claims });
@@ -74,6 +80,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     const { trackingCode, status, adminNotes } = body;
 

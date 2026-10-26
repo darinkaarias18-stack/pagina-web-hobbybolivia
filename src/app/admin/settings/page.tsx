@@ -28,7 +28,7 @@ export default function AdminSettingsPage() {
   const [companyName, setCompanyName] = useState('Hobby Bolivia');
   const [subtitle, setSubtitle] = useState('Aeromodelismo & R/C');
   const [currency, setCurrency] = useState('$us');
-  const [whatsappNumber, setWhatsappNumber] = useState('+59178000000');
+  const [whatsappNumber, setWhatsappNumber] = useState('+591 77293446');
   const [contactEmail, setContactEmail] = useState('contacto@hobbybolivia.com');
   const [topBarText, setTopBarText] = useState('Hobby Bolivia · Aeromodelismo y radio control en Bolivia | Envíos a todo el país');
   const [domain, setDomain] = useState('https://hobbybolivia.com');
@@ -109,7 +109,7 @@ export default function AdminSettingsPage() {
           setCompanyName(c.companyName || 'Hobby Bolivia');
           setSubtitle(c.subtitle || 'Aeromodelismo & R/C');
           setCurrency(c.currency || '$us');
-          setWhatsappNumber(c.whatsappNumber || '+59178000000');
+          setWhatsappNumber(c.whatsappNumber || '+591 77293446');
           setContactEmail(c.contactEmail || 'contacto@hobbybolivia.com');
           setTopBarText(c.topBarText || '');
           setDomain(c.domain || 'https://hobbybolivia.com');
@@ -308,7 +308,7 @@ export default function AdminSettingsPage() {
                 required
                 value={whatsappNumber}
                 onChange={(e) => setWhatsappNumber(e.target.value)}
-                placeholder="+59178000000"
+                placeholder="+591 77293446"
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
               />
             </div>

@@ -33,8 +33,9 @@ export default async function PoliticasPage() {
             Políticas de Servicio, Envíos y Privacidad
           </h1>
           <p className="text-xs text-slate-500">
-            Última actualización: {new Date().toLocaleDateString('es-BO', { year: 'numeric', month: 'long', day: 'numeric' })}
+            Última actualización: 25 de octubre de 2026
           </p>
+
         </div>
 
         {/* 1. Envíos y Entregas */}
