@@ -19,7 +19,8 @@ import type {
   ClaimRecord,
   OrderStatus,
   User,
-  Policy
+  Policy,
+  ExchangeRateConfig
 } from './types';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -303,6 +304,25 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        setting_key VARCHAR(100) NOT NULL UNIQUE,
+        exchange_rate DECIMAL(10,4) NOT NULL DEFAULT 6.9600,
+        auto_update TINYINT(1) NOT NULL DEFAULT 1,
+        source VARCHAR(100) DEFAULT 'API Oficial',
+        last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      INSERT INTO system_settings (id, setting_key, exchange_rate, auto_update, source)
+      VALUES (1, 'default_exchange_rate', 6.9600, 1, 'API Oficial')
+      ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
+    `);
+
     // 2. Verificar datos existentes
     const [catCountRows]: any = await conn.query('SELECT COUNT(*) as cnt FROM categories');
     const existingCats = catCountRows[0]?.cnt || 0;
@@ -413,6 +433,30 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
   }
 }
 
+// Sincronización automática transparente de tablas y datos (sin intervención manual)
+let hasAutoSynced = false;
+let autoSyncPromise: Promise<void> | null = null;
+
+export async function ensureMysqlSynced(): Promise<void> {
+  if (hasAutoSynced || !isMysqlConfigured()) return;
+  if (autoSyncPromise) return autoSyncPromise;
+
+  autoSyncPromise = (async () => {
+    try {
+      const pool = getMysqlPool();
+      if (!pool) return;
+      await syncMysqlTables(false);
+      hasAutoSynced = true;
+    } catch (err) {
+      console.warn('[Auto-Sync DB]: Sincronización automática de base de datos:', err);
+    } finally {
+      autoSyncPromise = null;
+    }
+  })();
+
+  return autoSyncPromise;
+}
+
 // ============================================================================
 // 3. ALMACENAMIENTO LOCAL REACTIVO (FALLBACK SEGURO)
 // ============================================================================
@@ -427,6 +471,7 @@ export interface LocalDatabase {
   quotes: QuoteOrder[];
   claims: ClaimRecord[];
   users: User[];
+  systemSettings?: ExchangeRateConfig;
 }
 
 export function initDefaultDatabase(): LocalDatabase {
@@ -456,7 +501,14 @@ export function initDefaultDatabase(): LocalDatabase {
       }
     ],
     claims: [],
-    users: [DEFAULT_SUPERADMIN]
+    users: [DEFAULT_SUPERADMIN],
+    systemSettings: {
+      exchangeRate: 6.96,
+      autoUpdate: true,
+      source: "API Oficial",
+      lastChecked: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
   };
 }
 
@@ -485,6 +537,16 @@ export function getLocalStore(): LocalDatabase {
       parsed.categories = [...initialCategories];
       saveLocalStore(parsed);
     }
+    if (!parsed.systemSettings) {
+      parsed.systemSettings = {
+        exchangeRate: 6.96,
+        autoUpdate: true,
+        source: "API Oficial",
+        lastChecked: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      saveLocalStore(parsed);
+    }
 
     return parsed;
   } catch (error) {
@@ -502,6 +564,80 @@ export function saveLocalStore(data: LocalDatabase): void {
   } catch (error) {
     console.error('Error al guardar localStore:', error);
   }
+}
+
+export async function getExchangeRateDb(): Promise<ExchangeRateConfig> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query(
+        "SELECT * FROM system_settings WHERE setting_key = 'default_exchange_rate' LIMIT 1"
+      );
+      if (rows && rows.length > 0) {
+        const row = rows[0];
+        return {
+          exchangeRate: Number(row.exchange_rate) || 6.96,
+          autoUpdate: Boolean(row.auto_update),
+          source: row.source || "API Oficial",
+          lastChecked: row.last_checked ? new Date(row.last_checked).toISOString() : new Date().toISOString(),
+          updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
+        };
+      }
+    } catch (e) {
+      console.warn('[MySQL getExchangeRateDb Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  return store.systemSettings || {
+    exchangeRate: 6.96,
+    autoUpdate: true,
+    source: "API Oficial",
+    lastChecked: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+export async function saveExchangeRateDb(config: Partial<ExchangeRateConfig>): Promise<ExchangeRateConfig> {
+  const current = await getExchangeRateDb();
+  const updated: ExchangeRateConfig = {
+    exchangeRate: config.exchangeRate !== undefined ? Number(config.exchangeRate) : current.exchangeRate,
+    autoUpdate: config.autoUpdate !== undefined ? Boolean(config.autoUpdate) : current.autoUpdate,
+    source: config.source || current.source || "API Oficial",
+    lastChecked: config.lastChecked || current.lastChecked || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        `INSERT INTO system_settings (setting_key, exchange_rate, auto_update, source, last_checked, updated_at)
+         VALUES ('default_exchange_rate', ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+           exchange_rate = VALUES(exchange_rate),
+           auto_update = VALUES(auto_update),
+           source = VALUES(source),
+           last_checked = VALUES(last_checked),
+           updated_at = CURRENT_TIMESTAMP`,
+        [
+          updated.exchangeRate,
+          updated.autoUpdate ? 1 : 0,
+          updated.source,
+          new Date(updated.lastChecked || Date.now()),
+          new Date(updated.updatedAt)
+        ]
+      );
+    } catch (e) {
+      console.warn('[MySQL saveExchangeRateDb Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  store.systemSettings = updated;
+  saveLocalStore(store);
+
+  return updated;
 }
 
 // ============================================================================
@@ -562,6 +698,9 @@ function mapMysqlRowToProduct(row: any): Product {
 }
 
 export async function getProducts(filters: ProductFilters = {}): Promise<Product[]> {
+  if (isMysqlConfigured() && !hasAutoSynced) {
+    await ensureMysqlSynced();
+  }
   const pool = getMysqlPool();
   if (pool) {
     try {
@@ -695,6 +834,9 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
 }
 
 export async function getAllProductsAdmin(): Promise<Product[]> {
+  if (isMysqlConfigured() && !hasAutoSynced) {
+    await ensureMysqlSynced();
+  }
   const pool = getMysqlPool();
   if (pool) {
     try {
@@ -766,6 +908,8 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
     specs_line: data.specs_line || "Componente mecánico original Hobby Bolivia",
     compatible_models: data.compatible_models || "Aviones a escala y radiocontrol",
     price: Number(data.price) || 0,
+    currency: data.currency || 'Bs.',
+    display_currency: (data.display_currency || data.currency || 'Bs.') as any,
     old_price: data.old_price ? Number(data.old_price) : undefined,
     compareAtPrice: data.old_price ? Number(data.old_price) : undefined,
     stock: data.stock !== undefined ? Number(data.stock) : 10,
@@ -840,6 +984,8 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
     name: data.name || current.name,
     title: data.name || current.title || current.name,
     price: data.price !== undefined ? Number(data.price) : current.price,
+    currency: data.currency !== undefined ? data.currency : (current.currency || 'Bs.'),
+    display_currency: (data.display_currency !== undefined ? data.display_currency : (current.display_currency || current.currency || 'Bs.')) as any,
     stock: data.stock !== undefined ? Number(data.stock) : current.stock,
     stockQuantity: data.stock !== undefined ? Number(data.stock) : (current.stockQuantity || current.stock),
     specs_line: data.specs_line || current.specs_line,
@@ -917,6 +1063,9 @@ export async function deleteProduct(id: number): Promise<boolean> {
 // ============================================================================
 
 export async function getCategories(): Promise<Category[]> {
+  if (isMysqlConfigured() && !hasAutoSynced) {
+    await ensureMysqlSynced();
+  }
   const pool = getMysqlPool();
   if (pool) {
     try {
@@ -1046,6 +1195,9 @@ export async function deleteCategory(id: number): Promise<boolean> {
 // ============================================================================
 
 export async function getPolicies(): Promise<Policy[]> {
+  if (isMysqlConfigured() && !hasAutoSynced) {
+    await ensureMysqlSynced();
+  }
   const pool = getMysqlPool();
   if (pool) {
     try {

@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { requireAdmin } from '@/lib/auth';
+import sharp from 'sharp';
+import { getSessionUser } from '@/lib/auth';
 
-const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB (3 * 1024 * 1024 bytes)
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB (2,097,152 bytes)
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
-const RESTRICTION_ERROR = 'Solo se permiten imágenes en formato PNG, JPG o WEBP de hasta 3MB';
 
 export async function POST(request: NextRequest) {
   try {
-    const authCheck = await requireAdmin(request);
-    if (authCheck instanceof NextResponse) return authCheck;
+    const user = await getSessionUser(request);
+    // En producción requiere sesión válida
+    if (!user && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { success: false, error: 'Acceso no autorizado' },
+        { status: 401 }
+      );
+    }
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -23,7 +29,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine extension and mime type
+    // 1. Validar límite estricto de tamaño a 2 MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: 'El tamaño máximo permitido por imagen es de 2 MB.' },
+        { status: 400 }
+      );
+    }
+
+    // 2. Validar formato permitido (.jpg, .jpeg, .png, .webp)
     const originalName = file.name || '';
     const fileExt = originalName.includes('.')
       ? originalName.slice(originalName.lastIndexOf('.')).toLowerCase()
@@ -32,52 +46,57 @@ export async function POST(request: NextRequest) {
     const isMimeValid = ALLOWED_MIME_TYPES.includes(file.type);
     const isExtValid = ALLOWED_EXTENSIONS.includes(fileExt);
 
-    // Strict validation: PNG, JPG, WEBP only, max 3MB
-    if ((!isMimeValid && !isExtValid) || file.size > MAX_FILE_SIZE || file.size <= 0) {
+    if (!isMimeValid && !isExtValid) {
       return NextResponse.json(
-        { success: false, error: RESTRICTION_ERROR },
+        { success: false, error: 'Solo se permiten formatos web (.jpg, .jpeg, .png, .webp)' },
         { status: 400 }
       );
     }
 
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // 3. Convertir archivo a Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const rawBuffer = Buffer.from(arrayBuffer);
 
-    // Target directory: public/uploads
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    // 4. Directorio de destino: public/uploads/products/
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'products');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Clean base name for unique filename to prevent path traversal
+    // 5. Normalizar nombre base seguro para evitar path traversal
     const baseName = path.basename(originalName, fileExt)
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'producto';
+      .replace(/^-+|-+$/g, '') || 'repuesto';
 
-    const safeExt = fileExt === '.png' ? '.png' : (fileExt === '.webp' ? '.webp' : (fileExt === '.jpeg' ? '.jpeg' : '.jpg'));
-    const filename = `${Date.now()}-${baseName}${safeExt}`;
+    const filename = `${Date.now()}-${baseName}.webp`;
     const filePath = path.join(uploadsDir, filename);
 
-    fs.writeFileSync(filePath, buffer);
+    // 6. Optimización y compresión a WebP con Sharp
+    const optimizedWebpBuffer = await sharp(rawBuffer)
+      .webp({ quality: 85, effort: 4 })
+      .toBuffer();
 
-    const publicUrl = `/uploads/${filename}`;
+    await fs.promises.writeFile(filePath, optimizedWebpBuffer);
+
+    // 7. Ruta relativa resultante
+    const publicUrl = `/uploads/products/${filename}`;
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
       filename,
-      size: file.size,
-      mimeType: file.type
+      originalSize: file.size,
+      optimizedSize: optimizedWebpBuffer.length,
+      mimeType: 'image/webp'
     });
-  } catch (error) {
-    console.error('Error in POST /api/upload:', error);
+  } catch (error: any) {
+    console.error('Error al procesar subida de imagen en /api/upload:', error);
     return NextResponse.json(
-      { success: false, error: 'Error al guardar el archivo en el servidor' },
+      { success: false, error: error?.message || 'Error al procesar y optimizar la imagen' },
       { status: 500 }
     );
   }

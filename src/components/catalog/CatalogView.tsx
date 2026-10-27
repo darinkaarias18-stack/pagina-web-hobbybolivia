@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   SlidersHorizontal,
   Search,
@@ -10,7 +10,10 @@ import {
   ChevronDown,
   LayoutGrid,
   ShoppingCart,
-  Plane
+  Plane,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { TopBar } from '@/components/layout/TopBar';
@@ -43,13 +46,15 @@ interface CatalogViewProps {
   initialItems?: Product[];
   initialBanners?: Banner[];
   initialPolicies?: Policy[];
+  initialExchangeRate?: number;
 }
 
 export function CatalogView({
   initialConfig,
   initialCategories = [],
   initialItems = [],
-  initialPolicies = []
+  initialPolicies = [],
+  initialExchangeRate = 6.96
 }: CatalogViewProps) {
   const [products] = useState<Product[]>(initialItems);
   const [categories] = useState<Category[]>(initialCategories);
@@ -63,12 +68,53 @@ export function CatalogView({
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('popular');
+  const [catalogCurrency, setCatalogCurrency] = useState<'auto' | 'BOB' | 'USD'>('auto');
 
   // Modal & Favorites State
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const { totalCount, openDrawer } = useCart();
+
+  // Category Pills Carousel Controls
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkCategoryScroll = () => {
+    if (categoryScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = categoryScrollRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkCategoryScroll();
+    window.addEventListener('resize', checkCategoryScroll);
+    return () => window.removeEventListener('resize', checkCategoryScroll);
+  }, [categories]);
+
+  useEffect(() => {
+    if (categoryScrollRef.current) {
+      const activeEl = categoryScrollRef.current.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+    checkCategoryScroll();
+  }, [activeCategorySlug]);
+
+  const scrollCategories = (direction: 'left' | 'right') => {
+    if (categoryScrollRef.current) {
+      const scrollAmount = 260;
+      categoryScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+      setTimeout(checkCategoryScroll, 320);
+    }
+  };
 
   const activeFiltersCount = useMemo(() => {
     return [
@@ -176,8 +222,8 @@ export function CatalogView({
       if (sortBy === 'price_desc') return b.price - a.price;
       if (sortBy === 'name_asc') return (a.name || a.title || '').localeCompare(b.name || b.title || '');
       if (sortBy === 'popular') {
-        const aVal = a.badge === 'Best Seller' ? 2 : a.badge === 'Popular' ? 1 : 0;
-        const bVal = b.badge === 'Best Seller' ? 2 : b.badge === 'Popular' ? 1 : 0;
+        const aVal = a.badge === 'Popular' ? 2 : 0;
+        const bVal = b.badge === 'Popular' ? 2 : 0;
         return bVal - aVal;
       }
       return 0;
@@ -199,12 +245,11 @@ export function CatalogView({
     <div className="min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817]">
       
       {/* 1. Top Utility Bar (Carbón #161311 & Dorado #D4A359) */}
-      <TopBar config={initialConfig} />
+      <TopBar config={initialConfig} exchangeRate={initialExchangeRate} />
 
       {/* 2. Sticky Main Header with Logo & Cart */}
       <Header
         config={initialConfig}
-        onSearch={(term) => setSearchQuery(term)}
         favoritesCount={favorites.length}
       />
 
@@ -223,6 +268,7 @@ export function CatalogView({
 
       {/* 6. Main Interactive Catalog Section */}
       <section id="catalogo" className="py-14 bg-[#F5F2EB]">
+        <div id="categorias" className="scroll-mt-24"></div>
         <div className="w-full max-w-[1320px] mx-auto px-4">
           
           {/* Section Header with Centered Line & Gold Star */}
@@ -236,146 +282,122 @@ export function CatalogView({
               <span className="text-[#D4A359] text-sm">✦</span>
               <span className="h-px bg-gradient-to-l from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-24"></span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5C5650] max-w-xl">
+            <p className="text-xs sm:text-sm text-[#5C5650] max-w-none whitespace-normal md:whitespace-nowrap">
               Filtra por sistema, material o escala y arma tu cotización directa con precios en Bolivianos (Bs.).
             </p>
           </div>
 
-          {/* Buscador Rápido por Compatibilidad Aeronáutica */}
-          <div id="buscador-compatibilidad" className="mb-8 max-w-5xl mx-auto">
-            <div className="bg-[#1E1916] rounded-2xl p-5 sm:p-6 border border-[#2D2622] shadow-2xl">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="p-2 bg-[#F85606] text-white rounded-xl shadow-sm">
-                  <Plane className="w-4 h-4 transform -rotate-45" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-black text-[#FAF8F5] uppercase tracking-wide">
-                    Buscador Rápido por Compatibilidad Aeronáutica
-                  </h3>
-                  <p className="text-xs text-[#A89F91]">
-                    Filtra por sistema, escala y material para encontrar la pieza exacta para tu aeronave.
-                  </p>
-                </div>
+          {/* Buscador Simple con Lupa */}
+          <div id="buscador-catalogo" className="mb-8 max-w-2xl mx-auto px-4">
+            <div className="relative flex items-center">
+              <div className="absolute left-4.5 flex items-center pointer-events-none text-[#D4A359]">
+                <Search className="w-5 h-5" />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Categoría */}
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1.5">
-                    Categoría de Pieza
-                  </label>
-                  <select
-                    value={activeCategorySlug}
-                    onChange={(e) => setActiveCategorySlug(e.target.value)}
-                    className="w-full text-xs font-semibold py-2.5 px-3 bg-[#211E1C] text-[#FAF8F5] border border-[#3D352E] rounded-xl focus:border-[#D4A359] outline-none cursor-pointer"
-                  >
-                    <option value="all">Todas las Categorías</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.slug}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Escala */}
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1.5">
-                    Escala de Avión
-                  </label>
-                  <select
-                    value={selectedScale}
-                    onChange={(e) => setSelectedScale(e.target.value)}
-                    className="w-full text-xs font-semibold py-2.5 px-3 bg-[#211E1C] text-[#FAF8F5] border border-[#3D352E] rounded-xl focus:border-[#D4A359] outline-none cursor-pointer"
-                  >
-                    <option value="all">Todas las Escalas</option>
-                    <option value="RC Estándar">RC Estándar</option>
-                    <option value="Micro">Micro / 1:32</option>
-                    <option value="1:10">1:10 / Escala Grande</option>
-                    <option value="1:48">1:48</option>
-                  </select>
-                </div>
-
-                {/* Material */}
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1.5">
-                    Material
-                  </label>
-                  <select
-                    value={selectedMaterial}
-                    onChange={(e) => setSelectedMaterial(e.target.value)}
-                    className="w-full text-xs font-semibold py-2.5 px-3 bg-[#211E1C] text-[#FAF8F5] border border-[#3D352E] rounded-xl focus:border-[#D4A359] outline-none cursor-pointer"
-                  >
-                    <option value="all">Todos los Materiales</option>
-                    <option value="Acero">Acero Templado</option>
-                    <option value="Aluminio">Aluminio CNC / Latón</option>
-                    <option value="Fibra de Carbono">Fibra de Carbono</option>
-                    <option value="Nylon">Nylon Compuesto</option>
-                    <option value="Compuesto">Compuesto Poliamida</option>
-                  </select>
-                </div>
-
-                {/* Palabra Clave / SKU */}
-                <div className="flex flex-col justify-end">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1.5">
-                    Palabra Clave / SKU
-                  </label>
-                  <div className="relative flex items-center">
-                    <input
-                      type="text"
-                      placeholder="Ej. DUBQ3570"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full text-xs py-2.5 pl-3 pr-10 bg-[#211E1C] text-[#FAF8F5] placeholder-[#8C827A] border border-[#3D352E] rounded-xl focus:border-[#D4A359] outline-none"
-                    />
-                    <div className="absolute right-1 p-1.5 bg-[#D4A359] text-[#161311] rounded-lg pointer-events-none">
-                      <Search className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <input
+                type="text"
+                placeholder="Buscar por repuesto, SKU, marca (Dubro, Great Planes)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-12 py-3.5 bg-white text-[#1A1817] placeholder-[#8C827A] text-xs sm:text-sm font-medium rounded-full border border-[#E2DCD3] shadow-xs hover:border-[#D4A359] focus:border-[#D4A359] focus:ring-4 focus:ring-[#D4A359]/15 outline-none transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 p-1.5 rounded-full text-[#8C827A] hover:text-[#1A1817] hover:bg-[#F5F2EB] transition-colors cursor-pointer"
+                  title="Limpiar búsqueda"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Quick Filter Pills / Tabs */}
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 flex-1">
-              <button
-                type="button"
-                onClick={() => setActiveCategorySlug('all')}
-                className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
-                  activeCategorySlug === 'all'
-                    ? 'bg-[#211E1C] text-[#FAF8F5] shadow-md border border-[#D4A359]/40'
-                    : 'bg-[#FAF8F5] hover:bg-white text-[#1A1817] border border-[#E2DCD3]'
-                }`}
-              >
-                Todos ({products.length})
-              </button>
+          {/* Quick Filter Pills Carousel */}
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="relative flex-1 flex items-center gap-1.5 overflow-hidden">
+              
+              {/* Left Carousel Navigation Arrow */}
+              {canScrollLeft && (
+                <button
+                  type="button"
+                  onClick={() => scrollCategories('left')}
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-[#FAF8F5] text-[#1A1817] hover:text-[#F85606] border border-[#E2DCD3] shadow-md transition-all shrink-0 z-20 cursor-pointer"
+                  title="Desplazar a la izquierda"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
 
-              {categories.map((cat) => {
-                const isActive = activeCategorySlug === cat.slug;
-                return (
+              {/* Pills Scroll Track Container */}
+              <div className="relative flex-1 overflow-hidden">
+                {/* Left/Right Gradient Masks */}
+                {canScrollLeft && (
+                  <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-r from-[#F5F2EB] to-transparent" />
+                )}
+                {canScrollRight && (
+                  <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-[#F5F2EB] to-transparent" />
+                )}
+
+                <div
+                  ref={categoryScrollRef}
+                  onScroll={checkCategoryScroll}
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  className="flex items-center gap-2 overflow-x-auto scroll-smooth py-1 px-0.5 no-scrollbar"
+                >
                   <button
-                    key={cat.id}
                     type="button"
-                    onClick={() => setActiveCategorySlug(cat.slug)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                      isActive
+                    onClick={() => setActiveCategorySlug('all')}
+                    data-active={activeCategorySlug === 'all' ? 'true' : undefined}
+                    className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                      activeCategorySlug === 'all'
                         ? 'bg-[#211E1C] text-[#FAF8F5] shadow-md border border-[#D4A359]/40'
-                        : 'bg-[#FAF8F5] hover:bg-white text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3]'
+                        : 'bg-[#FAF8F5] hover:bg-white text-[#1A1817] border border-[#E2DCD3]'
                     }`}
                   >
-                    {cat.name}
+                    Todos ({products.length})
                   </button>
-                );
-              })}
+
+                  {categories.map((cat) => {
+                    const isActive = activeCategorySlug === cat.slug;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setActiveCategorySlug(cat.slug)}
+                        data-active={isActive ? 'true' : undefined}
+                        className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                          isActive
+                            ? 'bg-[#211E1C] text-[#FAF8F5] shadow-md border border-[#D4A359]/40'
+                            : 'bg-[#FAF8F5] hover:bg-white text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3]'
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right Carousel Navigation Arrow */}
+              {canScrollRight && (
+                <button
+                  type="button"
+                  onClick={() => scrollCategories('right')}
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-[#FAF8F5] text-[#1A1817] hover:text-[#F85606] border border-[#E2DCD3] shadow-md transition-all shrink-0 z-20 cursor-pointer"
+                  title="Desplazar a la derecha"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+
             </div>
 
-            {/* Mobile Filter Toggle */}
+            {/* Mobile Filter Toggle Button */}
             <button
               type="button"
               onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-              className="lg:hidden inline-flex items-center gap-2 px-4 py-2 bg-[#FAF8F5] border border-[#E2DCD3] rounded-full text-xs font-bold text-[#1A1817] shrink-0 relative cursor-pointer"
+              className="lg:hidden inline-flex items-center gap-2 px-4 py-2 bg-[#FAF8F5] border border-[#E2DCD3] rounded-full text-xs font-bold text-[#1A1817] shrink-0 relative cursor-pointer ml-1"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-[#D4A359]" />
               <span>Filtros</span>
@@ -489,21 +511,6 @@ export function CatalogView({
                 </div>
               </div>
 
-              {/* Switch: Solo en Stock */}
-              <div className="pt-3 border-t border-[#E2DCD3]">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={onlyInStock}
-                    onChange={(e) => setOnlyInStock(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#D4A359] focus:ring-[#D4A359] border-[#E2DCD3]"
-                  />
-                  <span className="text-xs font-bold text-[#1A1817]">
-                    Solo repuestos en stock
-                  </span>
-                </label>
-              </div>
-
               {/* Ordenar Por */}
               <div className="pt-3 border-t border-[#E2DCD3]">
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
@@ -538,17 +545,64 @@ export function CatalogView({
             {/* Product Grid */}
             <div className="lg:col-span-3">
               
-              {/* Results status bar */}
-              <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#E2DCD3] text-xs text-[#5C5650]">
-                <span>
-                  Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} repuestos disponibles
-                </span>
-                {activeCategorySlug !== 'all' && (
-                  <span className="bg-[#FAF8F5] border border-[#D4A359]/40 text-[#1A1817] px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
-                    {categories.find(c => c.slug === activeCategorySlug)?.name}
+              {/* Results status bar con selector de moneda */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-[#E2DCD3] text-xs text-[#5C5650]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span>
+                    Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} repuestos disponibles
                   </span>
-                )}
+                  {activeCategorySlug !== 'all' && (
+                    <span className="bg-[#FAF8F5] border border-[#D4A359]/40 text-[#1A1817] px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
+                      {categories.find(c => c.slug === activeCategorySlug)?.name}
+                    </span>
+                  )}
+                </div>
+
+                {/* Opción de elegir si los productos se muestran en Bs. o en USD */}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className="text-[11px] font-bold text-[#8C827A] uppercase tracking-wider">
+                    Ver en:
+                  </span>
+                  <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-xl shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setCatalogCurrency('auto')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                        catalogCurrency === 'auto'
+                          ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                          : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                      title="Mostrar cada repuesto en su moneda asignada (Bs. o USD)"
+                    >
+                      Por Repuesto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCatalogCurrency('BOB')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                        catalogCurrency === 'BOB'
+                          ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                          : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                      title="Mostrar todos los productos en Bolivianos (Bs.)"
+                    >
+                      Bs.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCatalogCurrency('USD')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                        catalogCurrency === 'USD'
+                          ? 'bg-[#128C7E] text-white shadow-xs'
+                          : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                      title="Mostrar todos los productos en Dólares ($ USD)"
+                    >
+                      USD
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {filteredProducts.length === 0 ? (
@@ -572,6 +626,8 @@ export function CatalogView({
                     <ProductCard
                       key={prod.id}
                       product={prod}
+                      exchangeRate={initialExchangeRate}
+                      currencyMode={catalogCurrency}
                       onQuickView={(p) => setQuickViewProduct(p)}
                       isFavorite={favorites.includes(prod.id)}
                       onToggleFavorite={toggleFavorite}

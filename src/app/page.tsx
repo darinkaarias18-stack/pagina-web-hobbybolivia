@@ -1,14 +1,20 @@
+import { connection } from 'next/server';
 import { getSiteConfig, getCategories, getOccasions, getCatalogItems, getBanners, getPolicies } from '@/lib/db';
+import { getExchangeRateConfig } from '@/lib/exchange-rate';
 import { CatalogView } from '@/components/catalog/CatalogView';
 
+export const instant = false;
+
 export default async function HomePage() {
-  const [config, categories, occasions, items, banners, policies] = await Promise.all([
+  await connection();
+  const [config, categories, occasions, items, banners, policies, rateConfig] = await Promise.all([
     getSiteConfig(),
     getCategories(),
     getOccasions(),
     getCatalogItems(),
     getBanners(),
-    getPolicies()
+    getPolicies(),
+    getExchangeRateConfig().catch(() => ({ exchangeRate: 6.96 }))
   ]);
 
   return (
@@ -19,6 +25,7 @@ export default async function HomePage() {
       initialItems={items}
       initialBanners={banners}
       initialPolicies={policies}
+      initialExchangeRate={rateConfig?.exchangeRate || 6.96}
     />
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Store,
@@ -13,7 +14,9 @@ import {
   Loader2,
   Sparkles,
   RefreshCw,
-  Eye
+  Eye,
+  QrCode,
+  Coins
 } from 'lucide-react';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 import type { SiteConfig } from '@/lib/types';
@@ -37,7 +40,12 @@ export default function AdminSettingsPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [heroBannerUrl, setHeroBannerUrl] = useState('');
 
-  // 3. Theme Presets & Custom Colors
+  // 3. Payment QR (QR Simple Bolivia)
+  const [paymentQrUrl, setPaymentQrUrl] = useState('/images/payment/qr_simple_hobbybolivia.svg');
+  const [paymentQrInstructions, setPaymentQrInstructions] = useState('');
+  const [enablePaymentQr, setEnablePaymentQr] = useState(true);
+
+  // 4. Theme Presets & Custom Colors
   const [themePreset, setThemePreset] = useState('ferreteria');
   const [primaryColor, setPrimaryColor] = useState('#e04f26');
   const [secondaryColor, setSecondaryColor] = useState('#162544');
@@ -117,6 +125,10 @@ export default function AdminSettingsPage() {
           setLogoUrl(c.logoUrl || '');
           setHeroBannerUrl(c.heroBannerUrl || '');
 
+          setPaymentQrUrl(c.paymentQrUrl || '/images/payment/qr_simple_hobbybolivia.svg');
+          setPaymentQrInstructions(c.paymentQrInstructions || '');
+          setEnablePaymentQr(c.enablePaymentQr !== false);
+
           setThemePreset(c.themePreset || 'ferreteria');
           setPrimaryColor(c.primaryColor || '#e04f26');
           setSecondaryColor(c.secondaryColor || '#162544');
@@ -161,6 +173,9 @@ export default function AdminSettingsPage() {
         domain,
         logoUrl: logoUrl.trim() || null,
         heroBannerUrl: heroBannerUrl.trim() || null,
+        paymentQrUrl: paymentQrUrl.trim() || null,
+        paymentQrInstructions: paymentQrInstructions.trim() || null,
+        enablePaymentQr,
         themePreset,
         primaryColor,
         secondaryColor,
@@ -334,6 +349,32 @@ export default function AdminSettingsPage() {
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
               />
             </div>
+
+            {/* Quick Link to Exchange Rate Configuration */}
+            <div className="sm:col-span-2 lg:col-span-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#D4A359]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#D4A359]/20 text-[#B88738] flex items-center justify-center shrink-0">
+                  <Coins className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-[#1A1817] flex items-center gap-2">
+                    <span>Tipo de Cambio Oficial (USD a BOB)</span>
+                    <span className="text-[10px] font-mono font-bold bg-[#D4A359]/20 text-[#9E6C21] px-2 py-0.5 rounded-full">
+                      Sincronización 24h
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-[#5C554E] mt-0.5">
+                    Configuración de tasa oficial de cambio, modo automático vía API o sobrescritura manual con simulador en tiempo real.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin/currency"
+                className="text-xs font-black text-white bg-[#F85606] hover:bg-[#d44500] px-4 py-2 rounded-xl transition-all shadow-xs shrink-0 flex items-center gap-1.5"
+              >
+                <span>Administrar Tipo de Cambio →</span>
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -375,7 +416,83 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* ========================================================
-            3. SELECTOR DE TEMA Y COLORES (PRESETS DE APARIENCIA)
+            3. CONFIGURACIÓN DE PAGO CON QR (QR SIMPLE BOLIVIA)
+        ======================================================== */}
+        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#F85606]/10 text-[#F85606] flex items-center justify-center">
+                <QrCode className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[#162544]">3. Cobro con QR Simple (Bolivia)</h2>
+                <p className="text-xs text-slate-400">Publica el código QR bancario que se mostrará en el carrito para que tus clientes paguen al instante.</p>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 transition-colors">
+              <input
+                type="checkbox"
+                checked={enablePaymentQr}
+                onChange={(e) => setEnablePaymentQr(e.target.checked)}
+                className="w-4 h-4 rounded text-[#F85606] focus:ring-[#F85606]"
+              />
+              <span className="text-xs font-bold text-slate-700">Habilitar QR en Carrito</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* Uploader QR */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+              <ImageUploader
+                label="Imagen del Código QR Bancario"
+                value={paymentQrUrl}
+                onChange={setPaymentQrUrl}
+                recommendedSize="Sube la captura de tu QR Simple generado desde tu app bancaria (Banco Unión, BCP, BNB, Mercantil, etc.). Formato PNG, JPG o WEBP."
+              />
+            </div>
+
+            {/* Instrucciones & Vista Previa */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Datos de Cuenta / Instrucciones para el Comprador:
+                </label>
+                <textarea
+                  rows={4}
+                  value={paymentQrInstructions}
+                  onChange={(e) => setPaymentQrInstructions(e.target.value)}
+                  placeholder="Ej: Titular: Hobby Bolivia SRL&#10;Banco: Banco Unión&#10;Cuenta en Bs.: 100000XXXX&#10;Por favor adjunta tu comprobante al enviar la orden por WhatsApp."
+                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Este texto se mostrará directamente debajo del QR en el carrito de compras.
+                </p>
+              </div>
+
+              {/* Vista previa en vivo */}
+              {paymentQrUrl && (
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#D4A359]/40 flex items-center gap-4">
+                  <div className="w-24 h-24 bg-white p-1 rounded-xl border border-[#E2DCD3] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src={paymentQrUrl} alt="Vista previa QR" className="max-h-full max-w-full object-contain" />
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-[#3E7B44] text-white text-[10px] font-bold">
+                      ✓ QR Configurado
+                    </span>
+                    <p className="font-bold text-[#1A1817]">Vista previa en el Carrito</p>
+                    <p className="text-[11px] text-slate-600 whitespace-pre-line line-clamp-3">
+                      {paymentQrInstructions || 'Titular: Hobby Bolivia\nEnvía tu comprobante con tu orden por WhatsApp.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================
+            4. SELECTOR DE TEMA Y COLORES (PRESETS DE APARIENCIA)
         ======================================================== */}
         <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">

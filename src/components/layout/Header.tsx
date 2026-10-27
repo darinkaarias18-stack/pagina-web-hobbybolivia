@@ -3,54 +3,37 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Search,
   ShoppingCart,
   Heart,
   Plane,
   Menu,
   X,
-  ArrowRight,
-  ShieldCheck
+  ArrowRight
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import type { SiteConfig } from '@/lib/types';
 
 interface HeaderProps {
   config?: SiteConfig | null;
-  onSearch?: (term: string) => void;
   favoritesCount?: number;
 }
 
-export function Header({ onSearch, favoritesCount = 0 }: HeaderProps) {
+export function Header({ favoritesCount = 0 }: HeaderProps) {
   const { totalCount, subtotal, openDrawer } = useCart();
-  const [searchTerm, setSearchTerm] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onSearch) {
-      onSearch(searchTerm);
-    }
-    const el = document.getElementById('catalogo');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
 
   const navLinks = [
     { label: "Inicio", href: "#" },
     { label: "Catálogo de Repuestos", href: "#catalogo" },
     { label: "Categorías", href: "#categorias" },
-    { label: "Compatibilidad", href: "#buscador-compatibilidad" },
     { label: "Ofertas", href: "#ofertas" },
-    { label: "Políticas", href: "#politicas" },
     { label: "Contacto", href: "#contacto" },
   ];
 
   return (
     <header className="sticky top-0 z-40 bg-[#161311] border-b border-[#2D2622] shadow-lg transition-all">
       <div className="w-full max-w-[1320px] mx-auto px-4 py-3 sm:py-3.5">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 lg:gap-6">
           
           {/* Logo Hobby Bolivia (Naranja #F85606) */}
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">
@@ -67,34 +50,24 @@ export function Header({ onSearch, favoritesCount = 0 }: HeaderProps) {
             </div>
           </Link>
 
-          {/* Quick Integrated Search Bar */}
-          <form
-            onSubmit={handleSearchSubmit}
-            className="hidden lg:flex items-center flex-1 max-w-md mx-4 relative"
-          >
-            <div className="relative w-full">
-              <input
-                type="text"
-                placeholder="Buscar repuesto, SKU (ej. DUBQ3570), motor o escala..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  if (onSearch) onSearch(e.target.value);
-                }}
-                className="w-full pl-10 pr-24 py-2.5 text-xs bg-[#211E1C] hover:bg-[#282421] focus:bg-[#211E1C] text-[#FAF8F5] placeholder-[#8C827A] rounded-xl border border-[#3D352E] focus:border-[#D4A359] focus:ring-1 focus:ring-[#D4A359] transition-all outline-none"
-              />
-              <Search className="w-4 h-4 text-[#D4A359] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-[#D4A359] hover:bg-[#C69755] text-[#161311] text-xs font-black rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+          {/* Menú de Navegación Unificado (Escritorio) */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-xs font-bold text-[#A89F91]">
+            {navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="hover:text-[#D4A359] transition-colors py-1.5 flex items-center gap-1.5 tracking-wide"
               >
-                Buscar
-              </button>
-            </div>
-          </form>
+                {link.label === "Ofertas" && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#F85606] animate-pulse"></span>
+                )}
+                <span>{link.label}</span>
+              </a>
+            ))}
+          </nav>
 
           {/* Actions & Utilities */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             
             {/* Favorites Icon */}
             <a
@@ -153,45 +126,9 @@ export function Header({ onSearch, favoritesCount = 0 }: HeaderProps) {
 
         </div>
 
-        {/* Secondary Navigation Row (Desktop) */}
-        <nav className="hidden lg:flex items-center justify-between pt-2.5 mt-2.5 border-t border-[#2D2622] text-xs font-semibold text-[#A89F91]">
-          <div className="flex items-center gap-6">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="hover:text-[#D4A359] transition-colors py-1 flex items-center gap-1.5"
-              >
-                {link.label === "Ofertas" && <span className="w-1.5 h-1.5 rounded-full bg-[#F85606] animate-pulse"></span>}
-                {link.label}
-              </a>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 text-[#A89F91] text-[11px]">
-            <span className="flex items-center gap-1.5 text-[#D4A359] font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#F85606]" />
-              Piezas Genuinas Dubro & Great Planes
-            </span>
-          </div>
-        </nav>
-
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden mt-3 pt-3 border-t border-[#2D2622] flex flex-col gap-2">
-            <form onSubmit={handleSearchSubmit} className="relative mb-2">
-              <input
-                type="text"
-                placeholder="Buscar repuesto o SKU..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  if (onSearch) onSearch(e.target.value);
-                }}
-                className="w-full pl-9 pr-3 py-2 text-sm bg-[#211E1C] border border-[#3D352E] rounded-xl text-[#FAF8F5] outline-none"
-              />
-              <Search className="w-4 h-4 text-[#D4A359] absolute left-3 top-1/2 -translate-y-1/2" />
-            </form>
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <a
@@ -204,6 +141,7 @@ export function Header({ onSearch, favoritesCount = 0 }: HeaderProps) {
                 </a>
               ))}
             </div>
+
             <div className="pt-2 border-t border-[#2D2622] flex items-center justify-between">
               <Link
                 href="/admin"

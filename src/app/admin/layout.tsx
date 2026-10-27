@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   LogOut,
-  Database
+  Database,
+  Coins
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -81,6 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Gestor de Políticas', href: '/admin/policies', icon: FileText },
     { label: 'Categorías', href: '/admin/categories', icon: Layers },
     { label: 'Pedidos & Cotizaciones', href: '/admin/quotes', icon: ShoppingBag },
+    { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins },
     { label: 'Configuración de Tienda', href: '/admin/settings', icon: Settings }
   ];
 

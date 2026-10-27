@@ -85,7 +85,7 @@ export function Footer({ config }: FooterProps) {
             <div className="space-y-2 text-[#A89F91] text-xs pt-1">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#D4A359] shrink-0" />
-                <span>Santa Cruz de la Sierra, Bolivia (Despachos a los 9 Departamentos)</span>
+                <span>La Paz, Bolivia (Despachos a los 9 Departamentos)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#D4A359] shrink-0" />

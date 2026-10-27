@@ -39,6 +39,9 @@ export interface SiteConfig {
   privacyPolicy: string | null;
   shippingPolicy: string | null;
   returnsPolicy: string | null;
+  paymentQrUrl?: string | null;
+  paymentQrInstructions?: string | null;
+  enablePaymentQr?: boolean;
   themePreset?: string;
   cardStyle?: 'with_button' | 'catalog_only';
   desktopColumns?: number;
@@ -94,6 +97,8 @@ export interface Product {
   specs_line: string; // ej. '2200KV | XT60 | 45g'
   compatible_models: string; // ej. 'Aviones RC Glow/Gasolina, Drones, Planeadores'
   price: number; // en Bs.
+  currency?: 'Bs.' | 'USD' | string; // 'Bs.' o 'USD'
+  display_currency?: 'Bs.' | 'USD';
   old_price?: number | null; // en Bs.
   compareAtPrice?: number | null;
   discountPercent?: number | null;
@@ -177,4 +182,23 @@ export interface ClaimRecord {
   adminNotes?: string | null;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+}
+
+export interface ExchangeRateConfig {
+  exchangeRate: number;      // Tasa de cambio oficial actual (ej. 6.96)
+  autoUpdate: boolean;       // Si la sincronización automática vía API está activa
+  source?: string;           // Fuente de la tasa (API Oficial / Manual)
+  lastChecked?: string;      // Fecha/hora de última verificación con API
+  updatedAt: string;         // Fecha/hora de última actualización
+}
+
+export interface SystemSettingsRecord {
+  id?: number;
+  settingKey: string;
+  exchangeRate: number;
+  autoUpdate: boolean;
+  source?: string;
+  lastChecked?: string | Date;
+  updatedAt?: string | Date;
+  createdAt?: string | Date;
 }

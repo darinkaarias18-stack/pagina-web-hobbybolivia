@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- Background -->
+  <rect width="400" height="400" rx="24" fill="#FFFFFF"/>
+  <rect x="8" y="8" width="384" height="384" rx="18" fill="none" stroke="#D4A359" stroke-width="3" stroke-dasharray="8 6"/>
+
+  <!-- Header Banner: QR Simple Bolivia -->
+  <rect x="24" y="24" width="352" height="44" rx="12" fill="#161311"/>
+  <circle cx="50" cy="46" r="10" fill="#F85606"/>
+  <text x="50" y="50" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="900" fill="#FFFFFF" text-anchor="middle">HB</text>
+  <text x="70" y="47" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="900" fill="#FAF8F5" letter-spacing="1">PAGO QR SIMPLE</text>
+  <text x="70" y="59" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="600" fill="#D4A359">BOLIVIA · BANCA MÓVIL</text>
+
+  <!-- QR Outer Border -->
+  <rect x="45" y="85" width="310" height="260" rx="16" fill="#FAF8F5" stroke="#E2DCD3" stroke-width="1.5"/>
+
+  <!-- QR Finder Pattern Top-Left -->
+  <rect x="70" y="105" width="60" height="60" rx="8" fill="#161311"/>
+  <rect x="80" y="115" width="40" height="40" rx="4" fill="#FAF8F5"/>
+  <rect x="90" y="125" width="20" height="20" rx="2" fill="#F85606"/>
+
+  <!-- QR Finder Pattern Top-Right -->
+  <rect x="270" y="105" width="60" height="60" rx="8" fill="#161311"/>
+  <rect x="280" y="115" width="40" height="40" rx="4" fill="#FAF8F5"/>
+  <rect x="290" y="125" width="20" height="20" rx="2" fill="#F85606"/>
+
+  <!-- QR Finder Pattern Bottom-Left -->
+  <rect x="70" y="265" width="60" height="60" rx="8" fill="#161311"/>
+  <rect x="80" y="275" width="40" height="40" rx="4" fill="#FAF8F5"/>
+  <rect x="90" y="285" width="20" height="20" rx="2" fill="#F85606"/>
+
+  <!-- QR Data Matrix Blocks (Stylized Realistic Grid) -->
+  <g fill="#161311">
+    <!-- Row 1 -->
+    <rect x="145" y="105" width="12" height="12" rx="2"/>
+    <rect x="165" y="105" width="12" height="24" rx="2"/>
+    <rect x="195" y="105" width="24" height="12" rx="2"/>
+    <rect x="235" y="105" width="12" height="12" rx="2"/>
+
+    <!-- Row 2 -->
+    <rect x="145" y="125" width="12" height="12" rx="2"/>
+    <rect x="185" y="125" width="12" height="24" rx="2"/>
+    <rect x="215" y="125" width="12" height="12" rx="2"/>
+    <rect x="245" y="125" width="12" height="24" rx="2"/>
+
+    <!-- Row 3 -->
+    <rect x="145" y="145" width="24" height="12" rx="2"/>
+    <rect x="205" y="145" width="24" height="12" rx="2"/>
+
+    <!-- Middle Cross Rows -->
+    <rect x="70" y="180" width="24" height="12" rx="2"/>
+    <rect x="105" y="180" width="12" height="24" rx="2"/>
+    <rect x="130" y="175" width="12" height="12" rx="2"/>
+    <rect x="155" y="175" width="24" height="12" rx="2"/>
+    <rect x="220" y="175" width="12" height="24" rx="2"/>
+    <rect x="245" y="180" width="24" height="12" rx="2"/>
+    <rect x="285" y="175" width="12" height="12" rx="2"/>
+    <rect x="310" y="180" width="20" height="12" rx="2"/>
+
+    <rect x="70" y="205" width="12" height="24" rx="2"/>
+    <rect x="95" y="215" width="24" height="12" rx="2"/>
+    <rect x="130" y="205" width="24" height="12" rx="2"/>
+    <rect x="245" y="205" width="12" height="24" rx="2"/>
+    <rect x="270" y="210" width="24" height="12" rx="2"/>
+    <rect x="310" y="205" width="20" height="24" rx="2"/>
+
+    <rect x="70" y="240" width="24" height="12" rx="2"/>
+    <rect x="110" y="235" width="12" height="12" rx="2"/>
+    <rect x="140" y="230" width="12" height="24" rx="2"/>
+    <rect x="250" y="240" width="30" height="12" rx="2"/>
+    <rect x="300" y="240" width="25" height="12" rx="2"/>
+
+    <!-- Bottom Data Blocks -->
+    <rect x="145" y="265" width="24" height="12" rx="2"/>
+    <rect x="180" y="265" width="12" height="24" rx="2"/>
+    <rect x="210" y="270" width="24" height="12" rx="2"/>
+    <rect x="250" y="265" width="12" height="12" rx="2"/>
+    <rect x="280" y="265" width="20" height="24" rx="2"/>
+    <rect x="315" y="270" width="15" height="12" rx="2"/>
+
+    <rect x="145" y="295" width="12" height="24" rx="2"/>
+    <rect x="170" y="300" width="24" height="12" rx="2"/>
+    <rect x="210" y="295" width="12" height="24" rx="2"/>
+    <rect x="235" y="300" width="30" height="12" rx="2"/>
+    <rect x="280" y="305" width="45" height="12" rx="2"/>
+  </g>
+
+  <!-- Center Logo Badge -->
+  <rect x="175" y="185" width="50" height="50" rx="12" fill="#FFFFFF" stroke="#D4A359" stroke-width="2"/>
+  <circle cx="200" cy="210" r="18" fill="#F85606"/>
+  <path d="M192 210 L208 210 M200 202 L200 218 M195 205 L205 215" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Footer Instructions inside QR Frame -->
+  <rect x="40" y="358" width="320" height="28" rx="8" fill="#F5F2EB"/>
+  <text x="200" y="376" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="800" fill="#161311" text-anchor="middle">
+    ESCANEAR CON CUALQUIER APP BANCARIA DE BOLIVIA
+  </text>
+</svg>

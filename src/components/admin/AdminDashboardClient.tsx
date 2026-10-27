@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Package,
@@ -19,10 +19,12 @@ import {
   FileText,
   CheckCircle2,
   Plane,
-  Database,
-  RefreshCw,
-  Server,
-  Activity
+  Activity,
+  Coins,
+  UploadCloud,
+  Image as ImageIcon,
+  Loader2,
+  Boxes
 } from 'lucide-react';
 import type { Product, Category, Policy } from '@/lib/types';
 
@@ -32,30 +34,12 @@ export function AdminDashboardClient() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // MySQL Hosting Status State
-  const [dbStatus, setDbStatus] = useState<{
-    loading: boolean;
-    syncing: boolean;
-    connected: boolean;
-    configured: boolean;
-    host?: string;
-    database?: string;
-    latencyMs?: number;
-    currentMode: string;
-    message: string;
-    tables?: string[];
-    productCount?: number;
-  }>({
-    loading: true,
-    syncing: false,
-    connected: false,
-    configured: false,
-    currentMode: 'LOCAL_REACTIVE_FALLBACK',
-    message: 'Comprobando estado de conexión con MySQL del hosting...'
-  });
-
   // Active Tab: 'products' | 'policies'
   const [activeTab, setActiveTab] = useState<'products' | 'policies'>('products');
+
+  // Exchange Rate State in Dashboard
+  const [exchangeRate, setExchangeRate] = useState<number>(6.96);
+  const [autoUpdate, setAutoUpdate] = useState<boolean>(true);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,6 +62,7 @@ export function AdminDashboardClient() {
     specs_line: '',
     compatible_models: '',
     price: '',
+    currency: 'Bs.',
     old_price: '',
     stock: '',
     badge: '' as any,
@@ -85,6 +70,57 @@ export function AdminDashboardClient() {
     brand: 'Dubro',
     description: ''
   });
+
+  // Image Upload Dropzone State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  const handleImageFile = async (file: File) => {
+    setImageError(null);
+
+    // 1. Limitar tamaño máximo permitido por archivo a 2 MB
+    const MAX_SIZE = 2 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setImageError("El tamaño máximo permitido por imagen es de 2 MB.");
+      return;
+    }
+
+    // 2. Formatos web permitidos: .jpg, .jpeg, .png, .webp
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
+    const isMimeOk = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+    const isExtOk = allowedExtensions.includes(ext);
+
+    if (!isMimeOk && !isExtOk) {
+      setImageError("Solo se permiten formatos web (.jpg, .jpeg, .png, .webp)");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        setFormData(prev => ({ ...prev, image_url: data.url }));
+        showToast("Imagen optimizada en WebP correctamente");
+      } else {
+        setImageError(data.error || "Error al subir la imagen");
+      }
+    } catch (err: any) {
+      setImageError(err?.message || "Error al conectar con el servidor de subidas");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   // Policy Editor State
   const [selectedPolicySlug, setSelectedPolicySlug] = useState('envios');
@@ -101,76 +137,28 @@ export function AdminDashboardClient() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Check MySQL Hosting Connection Status
-  const checkDbStatus = async () => {
-    try {
-      setDbStatus(prev => ({ ...prev, loading: true }));
-      const res = await fetch('/api/db-setup', { cache: 'no-store' });
-      const data = await res.json();
-      if (data.success) {
-        setDbStatus({
-          loading: false,
-          syncing: false,
-          connected: Boolean(data.mysql?.connected),
-          configured: Boolean(data.mysql?.configured),
-          host: data.mysql?.host || 'No configurado',
-          database: data.mysql?.database || 'Local Store',
-          latencyMs: data.mysql?.latencyMs,
-          currentMode: data.currentMode,
-          message: data.message,
-          tables: data.mysql?.tables || [],
-          productCount: data.mysql?.productCount ?? data.localFallback?.productsCount
-        });
-      }
-    } catch {
-      setDbStatus(prev => ({
-        ...prev,
-        loading: false,
-        message: 'No se pudo verificar el diagnóstico de MySQL.'
-      }));
-    }
-  };
-
-  // Trigger Table Sync on Hosting
-  const handleSyncHostingTables = async () => {
-    try {
-      setDbStatus(prev => ({ ...prev, syncing: true }));
-      const res = await fetch('/api/db-setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ forceSeed: true })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast("¡Tablas inicializadas y sincronizadas en el MySQL de tu Hosting!");
-        await checkDbStatus();
-        await fetchData();
-      } else {
-        showToast(data.message || "Error al sincronizar tablas", "error");
-      }
-    } catch (err) {
-      showToast("Error de red al conectar con el endpoint de setup", "error");
-    } finally {
-      setDbStatus(prev => ({ ...prev, syncing: false }));
-    }
-  };
-
   // Load Data from APIs
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes, polRes] = await Promise.all([
+      const [prodRes, catRes, polRes, rateRes] = await Promise.all([
         fetch('/api/products?t=' + Date.now(), { cache: 'no-store' }),
         fetch('/api/categories?t=' + Date.now(), { cache: 'no-store' }),
-        fetch('/api/policies?t=' + Date.now(), { cache: 'no-store' })
+        fetch('/api/policies?t=' + Date.now(), { cache: 'no-store' }),
+        fetch('/api/exchange-rate?t=' + Date.now(), { cache: 'no-store' })
       ]);
 
       const prodData = await prodRes.json();
       const catData = await catRes.json();
       const polData = await polRes.json();
+      const rateData = await rateRes.json();
 
       if (prodData.success) setProducts(prodData.data);
       if (catData.success) setCategories(catData.data);
+      if (rateData.success && rateData.data) {
+        setExchangeRate(Number(rateData.data.exchangeRate) || 6.96);
+        setAutoUpdate(rateData.data.autoUpdate !== false);
+      }
       if (polData.success) {
         setPolicies(polData.data);
         const currentPol = polData.data.find((p: Policy) => p.slug === selectedPolicySlug) || polData.data[0];
@@ -188,26 +176,33 @@ export function AdminDashboardClient() {
     }
   };
 
+
   useEffect(() => {
-    checkDbStatus();
     fetchData();
   }, []);
 
-  // Inline Fast Update (Price or Stock)
-  const handleInlineUpdate = async (id: number, field: 'price' | 'stock', value: number) => {
+  // Inline Fast Update (Price, Stock or Currency)
+  const handleInlineUpdate = async (id: number, field: 'price' | 'stock' | 'currency', value: any) => {
     setInlineLoadingId(id);
     try {
+      const payload = field === 'currency'
+        ? { currency: value, display_currency: value }
+        : { [field]: value };
+
       const res = await fetch(`/api/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: value })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (data.success) {
         setProducts(prev =>
-          prev.map(p => (p.id === id ? { ...p, [field]: value } : p))
+          prev.map(p => (p.id === id ? { ...p, [field]: value, ...(field === 'currency' ? { currency: value, display_currency: value } : {}) } : p))
         );
-        showToast(`${field === 'price' ? 'Precio' : 'Stock'} actualizado`);
+        const msg = field === 'currency'
+          ? `Repuesto configurado para mostrarse en ${value === 'USD' ? 'Dólares ($ USD)' : 'Bolivianos (Bs.)'}`
+          : `${field === 'price' ? 'Precio' : 'Stock'} actualizado`;
+        showToast(msg);
       } else {
         showToast(data.error || "Error al actualizar", "error");
       }
@@ -222,8 +217,11 @@ export function AdminDashboardClient() {
   // Open Modal for Create
   const openCreateModal = () => {
     setEditingProduct(null);
+    setImageError(null);
+    const nextId = products.length > 0 ? Math.max(...products.map(p => p.id), 0) + 1 : 1;
+    const defaultSku = `HB-${nextId.toString().padStart(4, '0')}`;
     setFormData({
-      sku: `HB-${(products.length + 1).toString().padStart(4, '0')}`,
+      sku: defaultSku,
       name: '',
       categoryId: categories[0]?.id || 1,
       scale: 'RC Estándar',
@@ -231,10 +229,11 @@ export function AdminDashboardClient() {
       specs_line: '',
       compatible_models: '',
       price: '',
+      currency: 'Bs.',
       old_price: '',
       stock: '15',
       badge: '',
-      image_url: 'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
+      image_url: '',
       brand: 'Dubro',
       description: ''
     });
@@ -244,8 +243,11 @@ export function AdminDashboardClient() {
   // Open Modal for Edit
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
+    setImageError(null);
+    const systemDefaultSku = `HB-${product.id.toString().padStart(4, '0')}`;
+    const initialSku = (product.sku && product.sku.startsWith('HB-')) ? product.sku : systemDefaultSku;
     setFormData({
-      sku: product.sku || '',
+      sku: initialSku,
       name: product.name || product.title || '',
       categoryId: product.category_id || product.categoryId || 1,
       scale: product.scale || 'RC Estándar',
@@ -253,8 +255,9 @@ export function AdminDashboardClient() {
       specs_line: product.specs_line || '',
       compatible_models: product.compatible_models || '',
       price: String(product.price || ''),
+      currency: product.currency || 'Bs.',
       old_price: product.old_price ? String(product.old_price) : '',
-      stock: String(product.stock !== undefined ? product.stock : (product.stockQuantity || 0)),
+      stock: product.stock !== undefined ? String(product.stock) : (product.stockQuantity !== undefined ? String(product.stockQuantity) : ''),
       badge: (product.badge || '') as any,
       image_url: product.image_url || (product.images && product.images[0]) || '',
       brand: product.brand || 'Dubro',
@@ -311,18 +314,28 @@ export function AdminDashboardClient() {
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.image_url.trim()) {
+      setImageError("Por favor carga o selecciona una imagen para el repuesto.");
+      return;
+    }
+
+    const targetId = editingProduct ? editingProduct.id : (products.length > 0 ? Math.max(...products.map(p => p.id), 0) + 1 : 1);
+    const finalSku = formData.sku.trim() || `HB-${targetId.toString().padStart(4, '0')}`;
+
     const payload = {
-      sku: formData.sku.trim(),
+      sku: finalSku,
       name: formData.name.trim(),
       category_id: Number(formData.categoryId),
       categoryId: Number(formData.categoryId),
       scale: formData.scale,
       material: formData.material,
-      specs_line: formData.specs_line.trim(),
+      specs_line: formData.specs_line.trim() || 'Especificaciones estándar Hobby Bolivia',
       compatible_models: formData.compatible_models.trim(),
       price: parseFloat(formData.price) || 0,
+      currency: formData.currency || 'Bs.',
+      display_currency: (formData.currency || 'Bs.') as any,
       old_price: formData.old_price ? parseFloat(formData.old_price) : undefined,
-      stock: parseInt(formData.stock, 10) || 0,
+      stock: formData.stock ? parseInt(formData.stock, 10) : 0,
       badge: formData.badge || undefined,
       image_url: formData.image_url.trim(),
       images: [formData.image_url.trim()],
@@ -388,13 +401,7 @@ export function AdminDashboardClient() {
     }
   };
 
-  // Metrics
-  const totalProducts = products.length;
-  const lowStockCount = products.filter(p => (p.stock || p.stockQuantity || 0) < 5).length;
-  const activeCategoriesCount = categories.length;
-  const totalInventoryValue = products.reduce((acc, p) => acc + (p.price * (p.stock || p.stockQuantity || 0)), 0);
-
-  // Filtered Products
+  // Filtered Products (Table Rows)
   const filteredProducts = products.filter(p => {
     const term = searchTerm.toLowerCase().trim();
     const matchSearch =
@@ -409,6 +416,18 @@ export function AdminDashboardClient() {
     return matchSearch && matchCategory;
   });
 
+  // Metrics in function of the table below (filteredProducts)
+  const totalProducts = filteredProducts.length;
+  const activeCategoriesCount = categoryFilter === 'all'
+    ? new Set(filteredProducts.map(p => p.category_id || p.categoryId)).size
+    : (filteredProducts.length > 0 ? 1 : 0);
+  const totalInventoryValue = filteredProducts.reduce((acc, p) => acc + (p.price * (p.stock || p.stockQuantity || 0)), 0);
+  const totalStockUnits = filteredProducts.reduce((acc, p) => {
+    const qty = p.stock !== undefined ? Number(p.stock) : (Number(p.stockQuantity) || 0);
+    return acc + (isNaN(qty) ? 0 : qty);
+  }, 0);
+  const lowStockCount = filteredProducts.filter(p => (p.stock !== undefined ? Number(p.stock) : (Number(p.stockQuantity) || 0)) < 5).length;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       
@@ -422,72 +441,7 @@ export function AdminDashboardClient() {
         </div>
       )}
 
-      {/* TOP BANNER: ESTADO DE CONEXIÓN MYSQL DEL HOSTING */}
-      <div className="bg-[#161311] text-[#FAF8F5] rounded-3xl p-5 sm:p-6 border border-[#2D2622] shadow-xl">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          
-          <div className="flex items-start gap-3.5">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-              dbStatus.connected
-                ? 'bg-[#3E7B44]/20 border-[#3E7B44] text-[#78C47F]'
-                : 'bg-[#211E1C] border-[#D4A359]/40 text-[#D4A359]'
-            }`}>
-              <Database className="w-6 h-6" />
-            </div>
 
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                  dbStatus.connected
-                    ? 'bg-[#3E7B44] text-white'
-                    : 'bg-[#211E1C] text-[#D4A359] border border-[#D4A359]/40'
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${dbStatus.connected ? 'bg-white animate-pulse' : 'bg-[#F85606]'}`} />
-                  {dbStatus.connected ? 'MySQL Hosting Conectado' : 'Modo Almacenamiento Local Reactivo'}
-                </span>
-
-                {dbStatus.latencyMs !== undefined && (
-                  <span className="text-[11px] font-mono text-[#D4A359]">
-                    Latencia: {dbStatus.latencyMs}ms
-                  </span>
-                )}
-              </div>
-
-              <h3 className="text-sm sm:text-base font-black text-[#FAF8F5] mt-1.5 tracking-tight">
-                Servidor MySQL: <span className="text-[#D4A359] font-mono">{dbStatus.host || 'Local (.data/db.json)'}</span> • BD: <span className="text-[#D4A359] font-mono">{dbStatus.database}</span>
-              </h3>
-
-              <p className="text-xs text-[#A89F91] mt-0.5 max-w-2xl">
-                {dbStatus.message}
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons for Hosting DB */}
-          <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto justify-end">
-            <button
-              onClick={checkDbStatus}
-              disabled={dbStatus.loading}
-              type="button"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#211E1C] hover:bg-[#2E2A27] text-[#FAF8F5] font-bold text-xs uppercase tracking-wider border border-[#D4A359]/40 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-[#D4A359] ${dbStatus.loading ? 'animate-spin' : ''}`} />
-              <span>Probar Conexión</span>
-            </button>
-
-            <button
-              onClick={handleSyncHostingTables}
-              disabled={dbStatus.syncing}
-              type="button"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-md hover:scale-[1.02] cursor-pointer disabled:opacity-50"
-            >
-              <Server className="w-3.5 h-3.5 text-[#161311]" />
-              <span>{dbStatus.syncing ? 'Sincronizando...' : 'Sincronizar Tablas en el Hosting'}</span>
-            </button>
-          </div>
-
-        </div>
-      </div>
 
       {/* Header Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
@@ -503,31 +457,37 @@ export function AdminDashboardClient() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center flex-wrap gap-2.5">
+          {/* Quick Currency Status (Solo informativo) */}
+          <div
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#FAF8F5] text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs select-none"
+            title="Sincronización automática de paridad cada 24 horas"
+          >
+            <Coins className="w-4 h-4 text-[#D4A359]" />
+            <span>TC Oficial:</span>
+            <span className="font-mono font-black text-[#F85606]">
+              Bs. {exchangeRate.toFixed(2)}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold">
+              {autoUpdate ? 'Auto' : 'Manual'}
+            </span>
+          </div>
+
           <Link
             href="/"
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
           >
             <span>Ver Tienda Pública</span>
             <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
           </Link>
-
-          <button
-            onClick={openCreateModal}
-            type="button"
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider shadow-md transition-all hover:scale-[1.02] cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-[#161311]" />
-            <span>Agregar Repuesto</span>
-          </button>
         </div>
       </div>
 
       {/* 1. Dashboard de Métricas en Warm Tech */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Total Productos */}
+        {/* 1. Total Productos (Columna: Producto / Repuesto) */}
         <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shrink-0 border border-[#D4A359]/30">
             <Package className="w-6 h-6 text-[#D4A359]" />
@@ -542,24 +502,7 @@ export function AdminDashboardClient() {
           </div>
         </div>
 
-        {/* Bajo Stock */}
-        <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-            lowStockCount > 0 ? 'bg-[#F85606]/15 border-[#F85606]/30 text-[#F85606]' : 'bg-[#3E7B44]/15 border-[#3E7B44]/30 text-[#3E7B44]'
-          }`}>
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black text-[#8C827A] uppercase tracking-wider">
-              Bajo Stock (&lt; 5 unid.)
-            </span>
-            <p className="text-2xl font-black text-[#1A1817] leading-tight">
-              {lowStockCount}
-            </p>
-          </div>
-        </div>
-
-        {/* Categorías Activas */}
+        {/* 2. Categorías (Columna: Categoría) */}
         <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#FAF8F5] flex items-center justify-center shrink-0 border border-[#2D2622]">
             <Layers className="w-6 h-6 text-[#D4A359]" />
@@ -574,7 +517,7 @@ export function AdminDashboardClient() {
           </div>
         </div>
 
-        {/* Valor Total del Inventario */}
+        {/* 3. Valor Total del Inventario (Columna: Precio) */}
         <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-[#F85606]/10 text-[#F85606] flex items-center justify-center shrink-0 border border-[#F85606]/20">
             <span className="text-lg font-black text-[#F85606]">Bs.</span>
@@ -589,6 +532,27 @@ export function AdminDashboardClient() {
           </div>
         </div>
 
+        {/* 4. Total Stock (Columna: Stock) */}
+        <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#FAF8F5] flex items-center justify-center shrink-0 border border-[#2D2622]">
+            <Boxes className="w-6 h-6 text-[#D4A359]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-black text-[#8C827A] uppercase tracking-wider">
+                Total Stock
+              </span>
+              {lowStockCount > 0 && (
+                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-[#F85606]/15 text-[#F85606] border border-[#F85606]/30">
+                  {lowStockCount} bajo stock
+                </span>
+              )}
+            </div>
+            <p className="text-2xl font-black text-[#1A1817] leading-tight">
+              {totalStockUnits.toLocaleString('es-BO')} <span className="text-xs font-bold text-[#8C827A]">unid.</span>
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Navigation Tabs between Product Management & Policies */}
@@ -657,7 +621,7 @@ export function AdminDashboardClient() {
                 className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] rounded-full text-xs font-black uppercase tracking-wider transition-colors whitespace-nowrap cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Nuevo</span>
+                <span>Nuevo Producto</span>
               </button>
             </div>
           </div>
@@ -670,10 +634,11 @@ export function AdminDashboardClient() {
                   <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase text-[10px] font-black tracking-wider">
                     <th className="py-3.5 px-4">Producto / Repuesto</th>
                     <th className="py-3.5 px-3">SKU</th>
-                    <th className="py-3.5 px-3">Categoría / Escala</th>
+                    <th className="py-3.5 px-3">Categoría</th>
                     <th className="py-3.5 px-3">Precio (Bs.)</th>
+                    <th className="py-3.5 px-3">Precio en USD</th>
+                    <th className="py-3.5 px-3 text-center">Mostrar en</th>
                     <th className="py-3.5 px-3">Stock</th>
-                    <th className="py-3.5 px-3">Badge</th>
                     <th className="py-3.5 px-4 text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -709,13 +674,12 @@ export function AdminDashboardClient() {
 
                         {/* SKU */}
                         <td className="py-3 px-3 font-mono font-bold text-[#D4A359] whitespace-nowrap">
-                          {p.sku}
+                          {(p.sku && p.sku.startsWith('HB-')) ? p.sku : `HB-${p.id.toString().padStart(4, '0')}`}
                         </td>
 
-                        {/* Category & Scale */}
+                        {/* Category */}
                         <td className="py-3 px-3 text-[#5C5650] whitespace-nowrap">
                           <span className="block font-bold text-[#1A1817]">{catName}</span>
-                          <span className="text-[10px] text-[#8C827A]">{p.scale || 'RC Estándar'}</span>
                         </td>
 
                         {/* Fast Inline Edit: Precio (Bs.) */}
@@ -737,12 +701,59 @@ export function AdminDashboardClient() {
                           </div>
                         </td>
 
+                        {/* Precio en USD (calculado según TC Oficial) */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1 font-mono font-bold text-xs">
+                            <span className="text-[#8C827A] text-[10px] font-sans">$</span>
+                            <span className="text-[#1A1817]">
+                              {(exchangeRate > 0 ? (p.price / exchangeRate) : 0).toFixed(2)}
+                            </span>
+                            <span className="text-[9px] text-[#8C827A] font-sans uppercase">USD</span>
+                          </div>
+                        </td>
+
+                        {/* Opción de elegir si el producto se mostrará en Bs. o en USD */}
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-xl shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => handleInlineUpdate(p.id, 'currency', 'Bs.')}
+                              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all cursor-pointer ${
+                                (p.currency || 'Bs.') === 'Bs.'
+                                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                                  : 'text-[#8C827A] hover:text-[#1A1817]'
+                              }`}
+                              title="Mostrar este producto en Bolivianos (Bs.) en el catálogo público"
+                            >
+                              Bs.
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleInlineUpdate(p.id, 'currency', 'USD')}
+                              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all cursor-pointer ${
+                                p.currency === 'USD'
+                                  ? 'bg-[#128C7E] text-white shadow-xs'
+                                  : 'text-[#8C827A] hover:text-[#1A1817]'
+                              }`}
+                              title="Mostrar este producto en Dólares ($ USD) en el catálogo público"
+                            >
+                              USD
+                            </button>
+                          </div>
+                        </td>
+
                         {/* Fast Inline Edit: Stock */}
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-1.5">
                             <input
+                              key={`${p.id}-stock-${p.stock}`}
                               type="number"
                               defaultValue={p.stock !== undefined ? p.stock : (p.stockQuantity || 0)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
                               onBlur={(e) => {
                                 const val = parseInt(e.target.value, 10);
                                 if (!isNaN(val) && val !== p.stock) {
@@ -759,16 +770,7 @@ export function AdminDashboardClient() {
                           </div>
                         </td>
 
-                        {/* Badge */}
-                        <td className="py-3 px-3">
-                          {p.badge ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#211E1C] text-[#D4A359] whitespace-nowrap border border-[#D4A359]/30">
-                              {p.badge}
-                            </span>
-                          ) : (
-                            <span className="text-[#8C827A] text-xs">-</span>
-                          )}
-                        </td>
+
 
                         {/* Actions */}
                         <td className="py-3 px-4 text-right whitespace-nowrap">
@@ -863,7 +865,7 @@ export function AdminDashboardClient() {
 
             <div className="flex items-center justify-between pt-2">
               <span className="text-[11px] text-[#8C827A]">
-                Se guardará inmediatamente vía endpoint <code>PUT /api/policies</code> en el Hosting MySQL y Local Store.
+                Los cambios se guardan y sincronizan automáticamente con la web pública.
               </span>
               <button
                 type="submit"
@@ -921,19 +923,26 @@ export function AdminDashboardClient() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">SKU Oficial *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-[#1A1817]">SKU Oficial</label>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] uppercase tracking-wider font-mono">
+                      Asignado por el sistema
+                    </span>
+                  </div>
                   <input
                     type="text"
-                    required
-                    placeholder="Ej. DUBQ3570"
+                    readOnly
                     value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-mono font-bold"
+                    className="w-full p-2.5 bg-[#F2EDE4] border border-[#DCD6CC] rounded-xl outline-none font-mono font-black uppercase tracking-wider text-[#1A1817] cursor-not-allowed select-none"
+                    title="Código oficial generado automáticamente por el sistema. No editable."
                   />
+                  <span className="text-[10px] text-[#8C827A] mt-1 block">
+                    Identificador único no editable generado por el sistema.
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="block font-bold text-[#1A1817] mb-1">Categoría *</label>
                   <select
@@ -963,10 +972,41 @@ export function AdminDashboardClient() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Stock Disponible *</label>
+                  <label className="block font-bold text-[#1A1817] mb-1">
+                    Mostrar en Tienda *
+                  </label>
+                  <div className="flex items-center gap-1 p-1 bg-[#F2EDE4] border border-[#DCD6CC] rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, currency: 'Bs.' })}
+                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${
+                        (formData.currency || 'Bs.') === 'Bs.'
+                          ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                          : 'text-[#5C5650] hover:text-[#1A1817]'
+                      }`}
+                    >
+                      Bs.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, currency: 'USD' })}
+                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${
+                        formData.currency === 'USD'
+                          ? 'bg-[#128C7E] text-white shadow-xs'
+                          : 'text-[#5C5650] hover:text-[#1A1817]'
+                      }`}
+                    >
+                      USD
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#1A1817] mb-1">
+                    Stock Disponible <span className="text-[#8C827A] font-normal text-[11px]">(Opcional)</span>
+                  </label>
                   <input
                     type="number"
-                    required
                     placeholder="15"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
@@ -975,54 +1015,14 @@ export function AdminDashboardClient() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Escala</label>
-                  <select
-                    value={formData.scale}
-                    onChange={(e) => setFormData({ ...formData, scale: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none"
-                  >
-                    <option value="RC Estándar">RC Estándar</option>
-                    <option value="Micro">Micro / 1:32</option>
-                    <option value="1:10">1:10</option>
-                    <option value="1:48">1:48</option>
-                  </select>
-                </div>
 
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Material</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Aluminio CNC / Latón"
-                    value={formData.material}
-                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Badge</label>
-                  <select
-                    value={formData.badge}
-                    onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none"
-                  >
-                    <option value="">Sin Badge</option>
-                    <option value="Best Seller">Best Seller</option>
-                    <option value="Nuevo">Nuevo</option>
-                    <option value="Popular">Popular</option>
-                    <option value="Pocas Unidades">Pocas Unidades</option>
-                    <option value="Oferta">Oferta</option>
-                  </select>
-                </div>
-              </div>
 
               <div>
-                <label className="block font-bold text-[#1A1817] mb-1">Línea de Especificaciones Técnicas *</label>
+                <label className="block font-bold text-[#1A1817] mb-1">
+                  Línea de Especificaciones Técnicas <span className="text-[#8C827A] font-normal text-[11px]">(Opcional)</span>
+                </label>
                 <input
                   type="text"
-                  required
                   placeholder="Ej. Paso Alambre hasta 2mm | Prisionero Allen | 12 Pcs"
                   value={formData.specs_line}
                   onChange={(e) => setFormData({ ...formData, specs_line: e.target.value })}
@@ -1030,16 +1030,145 @@ export function AdminDashboardClient() {
                 />
               </div>
 
+              {/* ZONA DE CARGA DE IMÁGENES (DROPZONE + PREVIEW) */}
               <div>
-                <label className="block font-bold text-[#1A1817] mb-1">URL de la Imagen * (Conserva rutas originales)</label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
+                  <label className="block font-bold text-[#1A1817] text-xs uppercase tracking-wider">
+                    Foto del Repuesto / Producto *
+                  </label>
+                  <span className="text-[11px] font-semibold text-[#8C827A]">
+                    Solo se aceptan imágenes de 2 MB como máximo
+                  </span>
+                </div>
+
+                {/* Input oculto para selección de archivos del sistema */}
                 <input
-                  type="text"
-                  required
-                  placeholder="https://hobbybolivia.com/media/products/..."
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-mono text-[11px]"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleImageFile(e.target.files[0]);
+                    }
+                  }}
                 />
+
+                {/* Si ya existe imagen cargada: Miniatura de previsualización con subir y eliminar */}
+                {formData.image_url ? (
+                  <div className="p-3.5 bg-white border border-[#E2DCD3] rounded-2xl flex items-center justify-between gap-4 shadow-2xs">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-16 h-16 rounded-xl bg-[#FAF8F5] border border-[#E2DCD3] overflow-hidden shrink-0 flex items-center justify-center relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={formData.image_url}
+                          alt="Previsualización"
+                          className="w-full h-full object-contain p-1"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/images/placeholder.webp';
+                          }}
+                        />
+                        {isUploadingImage && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-2xs flex items-center justify-center">
+                            <Loader2 className="w-5 h-5 text-[#D4A359] animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-[#1A1817] truncate">
+                            {formData.image_url.split('/').pop() || 'Foto del repuesto'}
+                          </span>
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[#3E7B44]/15 text-[#3E7B44] border border-[#3E7B44]/30">
+                            WebP
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#8C827A] truncate font-mono mt-0.5">
+                          {formData.image_url}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingImage}
+                        className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#E2DCD3] text-[#1A1817] text-xs font-bold border border-[#DCD6CC] transition-colors cursor-pointer flex items-center gap-1.5"
+                        title="Subir nueva foto"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-[#D4A359]" />
+                        <span>Subir</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                        disabled={isUploadingImage}
+                        className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold border border-red-200 transition-colors cursor-pointer flex items-center gap-1"
+                        title="Eliminar imagen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Eliminar</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Zona de carga amplia y visual (Dropzone) */
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleImageFile(e.dataTransfer.files[0]);
+                      }
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                      isDragging
+                        ? 'border-[#D4A359] bg-[#D4A359]/10 scale-[1.01]'
+                        : 'border-[#D0C7BC] bg-[#FAF8F5] hover:bg-white hover:border-[#D4A359]'
+                    }`}
+                  >
+                    {isUploadingImage ? (
+                      <div className="py-2 flex flex-col items-center gap-2">
+                        <Loader2 className="w-8 h-8 text-[#D4A359] animate-spin" />
+                        <span className="text-xs font-bold text-[#1A1817]">
+                          Optimizando y convirtiendo a WebP...
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shadow-xs">
+                          <UploadCloud className="w-6 h-6 text-[#D4A359]" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-[#1A1817]">
+                            <span className="text-[#D4A359] underline decoration-[#D4A359]">Haz clic para buscar</span> o arrastra y suelta tu foto aquí
+                          </p>
+                          <p className="text-[11px] text-[#8C827A] mt-0.5">
+                            Formatos web: .jpg, .jpeg, .png, .webp · Máximo 2 MB
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Alerta de validación si excede 2 MB o formato inválido */}
+                {imageError && (
+                  <div className="mt-2 p-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs font-bold text-red-600 animate-in fade-in">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{imageError}</span>
+                  </div>
+                )}
               </div>
 
               <div>

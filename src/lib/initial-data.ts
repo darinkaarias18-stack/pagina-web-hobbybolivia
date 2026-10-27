@@ -26,13 +26,16 @@ export const initialSiteConfig: SiteConfig = {
   privacyPolicy: `POLÍTICA DE PRIVACIDAD - HOBBY BOLIVIA
 En Hobby Bolivia protegemos sus datos personales. La información de contacto, número de celular y dirección de entrega se utilizan exclusivamente para despachos, facturación y confirmación logística mediante guías de transporte nacional.`,
   shippingPolicy: `POLÍTICA DE ENVÍOS Y EMBALAJE FRÁGIL - HOBBY BOLIVIA
-- Envíos Locales (Santa Cruz): Entregas en el día o en 24 horas mediante mensajería directa o recojo en almacén.
-- Envíos Nacionales: Despachos diarios a La Paz, Cochabamba, Sucre, Tarija, Oruro, Potosí, Beni y Pando mediante flotas de encomienda o courier aéreo expreso.
+- Envíos Locales (La Paz y El Alto): Entregas en el día o en 24 horas mediante mensajería directa o recojo en almacén.
+- Envíos Nacionales: Despachos diarios a Santa Cruz, Cochabamba, Sucre, Tarija, Oruro, Potosí, Beni y Pando mediante flotas de encomienda o courier aéreo expreso.
 - Embalaje Blindado: Varillas de push-rod, alambres templados y componentes de fibra de carbono se envían protegidos en tubos rígidos de PVC o cartón de alta densidad para evitar dobladuras accidentales.`,
   returnsPolicy: `POLÍTICA DE GARANTÍA Y CONFORMIDAD TÉCNICA
 - Repuestos mecánicos 100% nuevos, genuinos y sin uso (Dubro, Great Planes, APC, E-flite).
 - Garantía de 30 días contra defectos de fabricación en componentes mecánicos y estructurales.
-- Componentes electrónicos cuentan con verificación previa de polaridad y continuidad antes de despacho.`
+- Componentes electrónicos cuentan con verificación previa de polaridad y continuidad antes de despacho.`,
+  paymentQrUrl: "/images/payment/qr_simple_hobbybolivia.svg",
+  paymentQrInstructions: "Titular: Hobby Bolivia\nBanco: Banco Unión / BCP / BNB\nMoneda: Bolivianos (Bs.)\nEnvía tu comprobante de pago por WhatsApp para procesar tu despacho.",
+  enablePaymentQr: true
 };
 
 export const initialCategories: Category[] = [
@@ -132,8 +135,8 @@ export const initialPolicies: Policy[] = [
     slug: "envios",
     title: "Política de Envíos y Embalaje Frágil",
     content: `En Hobby Bolivia garantizamos que cada repuesto y componente llegue en perfectas condiciones a cualquier rincón de Bolivia:
-- **Santa Cruz de la Sierra:** Entregas en el día o en un lapso máximo de 24 horas a través de mensajería express o entrega en nuestro punto céntrico.
-- **Envíos Nacionales:** Despachos de lunes a sábado a La Paz, El Alto, Cochabamba, Sucre, Tarija, Oruro, Potosí, Beni y Pando mediante empresas de transporte interdepartamental y courier aéreo.
+- **La Paz y El Alto:** Entregas en el día o en un lapso máximo de 24 horas a través de mensajería express o entrega en nuestro punto céntrico.
+- **Envíos Nacionales:** Despachos de lunes a sábado a Santa Cruz, Cochabamba, Sucre, Tarija, Oruro, Potosí, Beni y Pando mediante empresas de transporte interdepartamental y courier aéreo.
 - **Embalaje Especial Anti-Dobladuras:** Las varillas de alambre templado (push-rods), tubos de fibra de carbono y hélices se empacan en fundas rígidas de PVC o perfiles de cartón reforzado con relleno amortiguante para evitar deflexión durante el traslado.
 - **Código de Seguimiento:** Reciba la guía de transporte inmediatamente despachado su pedido vía WhatsApp.`,
     updatedAt: "2026-10-25T12:00:00Z"
@@ -206,7 +209,7 @@ export const initialProducts: Product[] = [
   // 1. DUBQ3570 - Conectores E/Z Dubro (12)
   {
     id: 1,
-    sku: "DUBQ3570",
+    sku: "HB-0001",
     name: "Conectores E/Z Dubro (12)",
     title: "Conectores E/Z Dubro (12)",
     slug: "conectores-e-z-dubro-12",
@@ -223,7 +226,7 @@ export const initialProducts: Product[] = [
     discountPercent: 10,
     stock: 15,
     stockQuantity: 15,
-    badge: "Best Seller",
+    badge: "Popular",
     image_url: "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
     images: ["https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp"],
     is_active: true,
@@ -243,7 +246,7 @@ export const initialProducts: Product[] = [
   // 2. DUBQ8450 - Conector Mini E/Z (2) Dubro
   {
     id: 2,
-    sku: "DUBQ8450",
+    sku: "HB-0002",
     name: "Conector Mini E/Z (2) Dubro",
     title: "Conector Mini E/Z (2) Dubro",
     slug: "conector-mini-e-z-2-dubro",
@@ -278,7 +281,7 @@ export const initialProducts: Product[] = [
   // 3. DUBQ2000 - Bellcrank 90º Standard
   {
     id: 3,
-    sku: "DUBQ2000",
+    sku: "HB-0003",
     name: "Bellcrank 90º Standard de Plástico Dubro",
     title: "Bellcrank 90º Standard de Plástico Dubro",
     slug: "bellcrank-90o-standard-de-plastico-dubro",
@@ -314,7 +317,7 @@ export const initialProducts: Product[] = [
   // 4. AIB62993 - Alambre Push Rod con rosca 2 mm
   {
     id: 4,
-    sku: "AIB62993",
+    sku: "HB-0004",
     name: "Alambre de Push Rod con Rosca 2mm (2) y 4 Clevises",
     title: "Alambre de Push Rod con Rosca 2mm (2) y 4 Clevises",
     slug: "alambre-de-push-road-con-rosca-2-mm-2-y-4-clevises",
@@ -329,7 +332,7 @@ export const initialProducts: Product[] = [
     old_price: null,
     stock: 22,
     stockQuantity: 22,
-    badge: "Best Seller",
+    badge: null,
     image_url: "https://hobbybolivia.com/media/products/434eae12fc-aib62993-large-t.webp",
     images: ["https://hobbybolivia.com/media/products/434eae12fc-aib62993-large-t.webp"],
     is_active: true,
@@ -348,14 +351,14 @@ export const initialProducts: Product[] = [
   // 5. GPMQ3741 - Alambre rosca completa 2-56 Great Planes
   {
     id: 5,
-    sku: "GPMQ3741",
+    sku: "HB-0005",
     name: "Alambre con Rosca Completa 2-56 de 12\" Great Planes",
     title: "Alambre con Rosca Completa 2-56 de 12\" Great Planes",
     slug: "alambre-con-rosca-completa-2-56-de-12-great-planes",
     brand: "Great Planes",
     category_id: 2,
     categoryId: 2,
-    scale: "RC Estándar / 1:32",
+    scale: "RC Estándar",
     material: "Acero Templado",
     specs_line: "Rosca Continua 2-56 | Longitud 12\" (305mm) | Rigidez Superior",
     compatible_models: "Modelos a escala, entrenadores .40-.46 y acrobáticos",
@@ -384,7 +387,7 @@ export const initialProducts: Product[] = [
   // 6. DUBQ1474 - Alambre rosca 4-40 un extremo 12"
   {
     id: 6,
-    sku: "DUBQ1474",
+    sku: "HB-0006",
     name: "Alambre con Rosca 4-40 en un Solo Extremo 12\"",
     title: "Alambre con Rosca 4-40 en un Solo Extremo 12\"",
     slug: "alambre-con-rosca-4-40-en-un-solo-extremo-12",
@@ -418,14 +421,14 @@ export const initialProducts: Product[] = [
   // 7. DUBQ1464 - Alambre rosca 2-56 un extremo 12"
   {
     id: 7,
-    sku: "DUBQ1464",
+    sku: "HB-0007",
     name: "Alambre con Rosca 2-56 en un Solo Extremo 12\"",
     title: "Alambre con Rosca 2-56 en un Solo Extremo 12\"",
     slug: "alambre-con-rosca-2-56-en-un-solo-extremo-12",
     brand: "Dubro",
     category_id: 2,
     categoryId: 2,
-    scale: "RC Estándar / 1:32",
+    scale: "RC Estándar",
     material: "Acero Templado",
     specs_line: "Rosca 2-56 | Longitud 12\" | Acabado Brillante",
     compatible_models: "Mandos de servo estándar y bocinas de control",
@@ -452,7 +455,7 @@ export const initialProducts: Product[] = [
   // 8. DUBQ9306 - Alambre 4-40 con Clevis
   {
     id: 8,
-    sku: "DUBQ9306",
+    sku: "HB-0008",
     name: "Alambre 4-40 de 12\" de Largo con Clevis",
     title: "Alambre 4-40 de 12\" de Largo con Clevis",
     slug: "alambre-4-40-de-12-de-largo-con-clevis",
@@ -489,14 +492,14 @@ export const initialProducts: Product[] = [
   // 9. DUBQ9108 - Alambre 2-56 con Clevis
   {
     id: 9,
-    sku: "DUBQ9108",
+    sku: "HB-0009",
     name: "Alambre 2-56 de 12\" de Largo con Clevis",
     title: "Alambre 2-56 de 12\" de Largo con Clevis",
     slug: "alambre-2-56-de-12-de-largo-con-clevis",
     brand: "Dubro",
     category_id: 2,
     categoryId: 2,
-    scale: "RC Estándar / 1:32",
+    scale: "RC Estándar",
     material: "Acero + Clevis Dubro",
     specs_line: "Rosca 2-56 | Clevis Preensamblado | 12 Pulgadas",
     compatible_models: "Modelos .25 a .60 y planeadores eléctricos",
@@ -524,7 +527,7 @@ export const initialProducts: Product[] = [
   // 10. DUBQ2005 - Micro Bellcrank 90º Dubro
   {
     id: 10,
-    sku: "DUBQ2005",
+    sku: "HB-0010",
     name: "90º Bellcrank Micro de Plástico Dubro",
     title: "90º Bellcrank Micro de Plástico Dubro",
     slug: "90o-bellcrank-micro-de-plastico-dubro",
@@ -558,7 +561,7 @@ export const initialProducts: Product[] = [
   // 11. Motor Brushless A2212 1400KV Outrunner
   {
     id: 11,
-    sku: "MOT-2212-1400",
+    sku: "HB-0011",
     name: "Motor Brushless A2212 1400KV Outrunner con Accesorios",
     title: "Motor Brushless A2212 1400KV Outrunner con Accesorios",
     slug: "motor-brushless-a2212-1400kv-outrunner",
@@ -575,7 +578,7 @@ export const initialProducts: Product[] = [
     discountPercent: 15,
     stock: 16,
     stockQuantity: 16,
-    badge: "Best Seller",
+    badge: null,
     image_url: "https://images.unsplash.com/photo-1559819614-81fea9ef7080?auto=format&fit=crop&w=600&q=80",
     images: ["https://images.unsplash.com/photo-1559819614-81fea9ef7080?auto=format&fit=crop&w=600&q=80"],
     is_active: true,
@@ -595,7 +598,7 @@ export const initialProducts: Product[] = [
   // 12. Variador ESC 30A Brushless con BEC 5V/2A
   {
     id: 12,
-    sku: "ESC-30A-BEC",
+    sku: "HB-0012",
     name: "Variador de Velocidad Electrónico ESC 30A con BEC 5V/2A",
     title: "Variador de Velocidad Electrónico ESC 30A con BEC 5V/2A",
     slug: "variador-esc-30a-con-bec",
@@ -631,7 +634,7 @@ export const initialProducts: Product[] = [
   // 13. Hélice APC 9x6 Thin Electric E-Series
   {
     id: 13,
-    sku: "APC-09060E",
+    sku: "HB-0013",
     name: "Hélice APC 9x6 Thin Electric E-Series Balanceada",
     title: "Hélice APC 9x6 Thin Electric E-Series Balanceada",
     slug: "helice-apc-9x6-thin-electric",
@@ -646,7 +649,7 @@ export const initialProducts: Product[] = [
     old_price: null,
     stock: 30,
     stockQuantity: 30,
-    badge: "Best Seller",
+    badge: null,
     image_url: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=600&q=80",
     images: ["https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=600&q=80"],
     is_active: true,
@@ -665,7 +668,7 @@ export const initialProducts: Product[] = [
   // 14. Spinner de Aluminio CNC 51mm (2 Pulgadas)
   {
     id: 14,
-    sku: "SPIN-CNC-51",
+    sku: "HB-0014",
     name: "Spinner en Aluminio CNC Anodizado 51mm (2\")",
     title: "Spinner en Aluminio CNC Anodizado 51mm (2\")",
     slug: "spinner-aluminio-cnc-51mm",
@@ -700,7 +703,7 @@ export const initialProducts: Product[] = [
   // 15. Micro Servo TowerPro MG90S Metal Gear 9g
   {
     id: 15,
-    sku: "SRV-MG90S",
+    sku: "HB-0015",
     name: "Micro Servo MG90S 9g con Piñonería Metálica Completa",
     title: "Micro Servo MG90S 9g con Piñonería Metálica Completa",
     slug: "micro-servo-mg90s-metal-gear-9g",
@@ -717,7 +720,7 @@ export const initialProducts: Product[] = [
     discountPercent: 15,
     stock: 45,
     stockQuantity: 45,
-    badge: "Best Seller",
+    badge: null,
     image_url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80",
     images: ["https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"],
     is_active: true,
@@ -736,7 +739,7 @@ export const initialProducts: Product[] = [
   // 16. Tren de Aterrizaje en Fibra de Carbono para Avión 15-20cc
   {
     id: 16,
-    sku: "TREN-CF-20CC",
+    sku: "HB-0016",
     name: "Tren de Aterrizaje Principal en Fibra de Carbono 3K",
     title: "Tren de Aterrizaje Principal en Fibra de Carbono 3K",
     slug: "tren-de-aterrizaje-fibra-carbono-3k",
@@ -753,7 +756,7 @@ export const initialProducts: Product[] = [
     discountPercent: 16,
     stock: 8,
     stockQuantity: 8,
-    badge: "Popular",
+    badge: null,
     image_url: "https://images.unsplash.com/photo-1517976487507-5b3b48855a82?auto=format&fit=crop&w=600&q=80",
     images: ["https://images.unsplash.com/photo-1517976487507-5b3b48855a82?auto=format&fit=crop&w=600&q=80"],
     is_active: true,
@@ -772,7 +775,7 @@ export const initialProducts: Product[] = [
   // 17. Batería LiPo Tattu 3S 2200mAh 45C con Conector XT60
   {
     id: 17,
-    sku: "BAT-3S-2200",
+    sku: "HB-0017",
     name: "Batería LiPo Tattu 3S 11.1V 2200mAh 45C XT60",
     title: "Batería LiPo Tattu 3S 11.1V 2200mAh 45C XT60",
     slug: "bateria-lipo-tattu-3s-2200mah-45c",
@@ -789,7 +792,7 @@ export const initialProducts: Product[] = [
     discountPercent: 11,
     stock: 12,
     stockQuantity: 12,
-    badge: "Best Seller",
+    badge: null,
     image_url: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80",
     images: ["https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80"],
     is_active: true,
@@ -816,7 +819,7 @@ export const initialProducts: Product[] = [
     brand: "AeroCarbon",
     category_id: 8,
     categoryId: 8,
-    scale: "RC Estándar / 1:32",
+    scale: "RC Estándar",
     material: "Fibra de Carbono",
     specs_line: "Diámetro Ext. 10mm | Int. 8mm | Largo 500mm | Mate",
     compatible_models: "Largueros alares, bayonetas desmontables y fuselajes",

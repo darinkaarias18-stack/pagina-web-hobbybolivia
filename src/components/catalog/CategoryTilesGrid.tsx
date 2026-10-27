@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
-import { ArrowRight, Sparkles, ChevronRight, CheckCircle2, Plane } from 'lucide-react';
+import { ArrowRight, Plane } from 'lucide-react';
 import type { Category } from '@/lib/types';
 
 interface CategoryTilesGridProps {
@@ -85,16 +84,6 @@ export function CategoryTilesGrid({
                     <span>VER CATÁLOGO COMPLETO</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
-
-                  <a
-                    href="https://wa.me/59177293446?text=Hola%20Hobby%20Bolivia,%20quisiera%20asesor%C3%ADa%20técnica%20sobre%20repuestos."
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#211E1C] hover:bg-[#2E2A27] text-white font-black text-xs uppercase tracking-wider border border-[#D4A359] transition-all shadow-lg hover:scale-105 cursor-pointer"
-                  >
-                    <Plane className="w-4 h-4 text-[#D4A359] -rotate-45" />
-                    <span>ASESORÍA TÉCNICA</span>
-                  </a>
                 </div>
 
               </div>
@@ -129,60 +118,6 @@ export function CategoryTilesGrid({
               <span>Explorar Catálogo</span>
               <ArrowRight className="w-4 h-4" />
             </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Quick Filter Ribbon directly below */}
-      <section id="categorias" className="py-6 sm:py-8 bg-[#F5F2EB] border-b border-[#E2DCD3]">
-        <div className="w-full max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <span className="text-xs font-black uppercase tracking-wider text-[#1A1817] flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#D4A359]" />
-              <span>Sistemas de Precisión por Categoría:</span>
-            </span>
-            <span className="text-xs text-[#8C827A] hidden sm:inline-block">
-              Haz clic para filtrar el catálogo al instante
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleCategoryClick('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border ${
-                activeCategory === 'all'
-                  ? 'bg-[#211E1C] text-[#FAF8F5] border-[#D4A359] shadow-md'
-                  : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359] hover:bg-white'
-              }`}
-            >
-              ✦ Todos ({categories.reduce((acc, c) => acc + (c.itemCount || 0), 18)})
-            </button>
-
-            {categories.map((cat) => {
-              const isSelected = activeCategory === cat.slug;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleCategoryClick(cat.slug)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
-                    isSelected
-                      ? 'bg-[#211E1C] text-[#FAF8F5] border-[#D4A359] shadow-md ring-1 ring-[#D4A359]'
-                      : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359] hover:bg-white hover:text-[#F85606]'
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                  {cat.itemCount !== undefined && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
-                      isSelected ? 'bg-[#D4A359] text-[#161311]' : 'bg-[#EAE4D9] text-[#5C5650]'
-                    }`}>
-                      {cat.itemCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
       </section>

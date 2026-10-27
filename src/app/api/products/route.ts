@@ -53,11 +53,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.sku) {
-      return NextResponse.json(
-        { success: false, error: "El código SKU es obligatorio" },
-        { status: 400 }
-      );
+    if (!body.sku || !body.sku.trim()) {
+      const allProducts = await getProducts();
+      const nextId = allProducts.length > 0 ? Math.max(...allProducts.map(p => p.id)) + 1 : 1;
+      body.sku = `HB-${nextId.toString().padStart(4, '0')}`;
     }
 
     const newProduct = await createProduct(body);

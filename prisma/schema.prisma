@@ -30,6 +30,9 @@ model SiteConfig {
   privacyPolicy   String?  @db.LongText
   shippingPolicy  String?  @db.LongText
   returnsPolicy   String?  @db.LongText
+  paymentQrUrl    String?  @db.VarChar(500)
+  paymentQrInstructions String? @db.Text
+  enablePaymentQr Boolean  @default(true)
   updatedAt       DateTime @updatedAt
   createdAt       DateTime @default(now())
 }
@@ -204,4 +207,17 @@ model ClaimRecord {
   adminNotes      String?     @db.LongText
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+}
+
+model SystemSetting {
+  id           Int      @id @default(autoincrement())
+  settingKey   String   @unique @map("setting_key") @db.VarChar(100)
+  exchangeRate Decimal  @default(6.9600) @map("exchange_rate") @db.Decimal(10, 4)
+  autoUpdate   Boolean  @default(true) @map("auto_update")
+  source       String?  @default("API Oficial") @db.VarChar(100)
+  lastChecked  DateTime @default(now()) @map("last_checked")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("system_settings")
 }

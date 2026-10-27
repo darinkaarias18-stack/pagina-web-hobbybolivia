@@ -2,14 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { MapPin, Truck, ShieldAlert, HelpCircle, Lock } from 'lucide-react';
+import { MapPin, ShieldAlert, HelpCircle, Lock } from 'lucide-react';
 import type { SiteConfig } from '@/lib/types';
 
 interface TopBarProps {
   config?: SiteConfig | null;
+  exchangeRate?: number;
 }
 
-export function TopBar({ config }: TopBarProps) {
+export function TopBar({ config, exchangeRate }: TopBarProps) {
   const whatsapp = config?.whatsappNumber || "+591 77293446";
 
   return (
@@ -28,18 +29,16 @@ export function TopBar({ config }: TopBarProps) {
         <div className="flex items-center flex-wrap gap-4 text-[#A89F91] text-[11.5px]">
           <span className="flex items-center gap-1 hover:text-[#D4A359] transition-colors cursor-pointer">
             <MapPin className="w-3.5 h-3.5 text-[#D4A359]" />
-            <span>Santa Cruz, Bolivia</span>
+            <span>La Paz, Bolivia</span>
           </span>
 
-          <a
-            href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}?text=Hola%20Hobby%20Bolivia,%20quisiera%20rastrear%20mi%20pedido%20de%20repuestos.`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:text-[#D4A359] transition-colors"
-          >
-            <Truck className="w-3.5 h-3.5 text-[#D4A359]" />
-            <span>Rastrear Pedido</span>
-          </a>
+          {exchangeRate ? (
+            <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#211E1C] border border-[#D4A359]/30 text-[#FAF8F5] font-mono text-[11px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[#A89F91]">TC:</span>
+              <strong className="text-[#D4A359]">1 USD = Bs. {exchangeRate.toFixed(2)}</strong>
+            </span>
+          ) : null}
 
           <a
             href="#politicas"
