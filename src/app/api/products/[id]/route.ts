@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getProductById, updateProduct, deleteProduct } from '@/lib/db';
 
 export async function GET(
@@ -40,6 +41,13 @@ export async function PUT(
 
     if (!updated) {
       return NextResponse.json({ success: false, error: "Producto no encontrado para actualizar" }, { status: 404 });
+    }
+
+    try {
+      revalidatePath('/');
+      revalidatePath('/admin');
+    } catch {
+      // non-fatal
     }
 
     return NextResponse.json({

@@ -256,7 +256,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                   <div className="space-y-1.5">
                     <h4 className="font-extrabold text-base text-[#1A1817]">Tu carrito aún está vacío</h4>
                     <p className="text-xs text-[#5C5650] max-w-xs mx-auto leading-relaxed">
-                      Elige los conectores, varillajes, hélices o componentes mecánicos que necesitas y haz clic en el botón <strong className="text-[#F85606]">"Añadir"</strong> de cada pieza.
+                      Elige los conectores, varillajes, hélices o componentes mecánicos que necesitas y haz clic en el botón <strong className="text-[#F85606]">&quot;Añadir&quot;</strong> de cada pieza.
                     </p>
                   </div>
 

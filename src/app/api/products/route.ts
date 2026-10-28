@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProducts, createProduct } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

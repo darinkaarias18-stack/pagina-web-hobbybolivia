@@ -41,7 +41,7 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
           ) : null}
 
           <a
-            href="#politicas"
+            href="/politicas"
             className="flex items-center gap-1 hover:text-[#D4A359] transition-colors"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-[#A89F91]" />

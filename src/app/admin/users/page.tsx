@@ -1,23 +1,24 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Users,
   UserPlus,
   ShieldCheck,
-  ShieldAlert,
   Key,
   Trash2,
   Edit2,
   Check,
-  X,
   Loader2,
   AlertTriangle,
-  Lock,
   UserCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  Search,
+  Crown,
+  CheckCircle2
 } from 'lucide-react';
 import type { User, UserRole } from '@/lib/types';
 
@@ -26,71 +27,118 @@ export default function AdminUsersPage() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
+
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | 'SUPERADMIN' | 'ADMIN'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
   // Create User Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState<UserRole>('ADMIN');
+  const [newIsActive, setNewIsActive] = useState(true);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
   const [createError, setCreateError] = useState('');
 
-  // Edit / Change Password Modal
+  // Edit User Modal
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editName, setEditName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
-  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [editRole, setEditRole] = useState<UserRole>('ADMIN');
   const [editIsActive, setEditIsActive] = useState(true);
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
   // Delete Confirmation Modal
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Toast
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
     setTimeout(() => {
-      setToastMessage(null);
-    }, 3500);
+      setToast(null);
+    }, 3800);
   };
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/users', { cache: 'no-store' });
+      if (res.status === 401) {
+        router.replace('/login?redirect=/admin/users');
+        return;
+      }
       if (res.status === 403) {
-        // Not superadmin
-        router.replace('/admin/items');
+        router.replace('/admin');
         return;
       }
       const data = await res.json();
-      if (data.success) {
+      if (data.success && Array.isArray(data.data)) {
         setUsers(data.data);
+      } else {
+        showToast(data.error || 'Error al obtener usuarios', 'error');
       }
     } catch (e) {
       console.error('Error fetching users:', e);
+      showToast('Error de red al consultar usuarios', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
-    const role = (localStorage.getItem('hb_user_role') as UserRole) || 'ADMIN';
-    setCurrentRole(role);
-
-    if (role !== 'SUPERADMIN') {
-      router.replace('/admin/items');
+    const role = localStorage.getItem('hb_user_role');
+    if (role && role !== 'SUPERADMIN') {
+      router.replace('/admin');
       return;
     }
-
     loadUsers();
-  }, [router]);
+  }, [loadUsers, router]);
+
+  // Filtered Users List
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const query = searchQuery.trim().toLowerCase();
+      const matchSearch =
+        !query ||
+        u.name?.toLowerCase().includes(query) ||
+        u.username?.toLowerCase().includes(query) ||
+        (u.email && u.email.toLowerCase().includes(query));
+
+      const matchRole =
+        roleFilter === 'ALL' ? true : u.role === roleFilter;
+
+      const matchStatus =
+        statusFilter === 'ALL'
+          ? true
+          : statusFilter === 'ACTIVE'
+          ? u.isActive !== false
+          : u.isActive === false;
+
+      return matchSearch && matchRole && matchStatus;
+    });
+  }, [users, searchQuery, roleFilter, statusFilter]);
+
+  // Statistics
+  const stats = useMemo(() => {
+    const total = users.length;
+    const superadmins = users.filter((u) => u.role === 'SUPERADMIN').length;
+    const admins = users.filter((u) => u.role === 'ADMIN').length;
+    const active = users.filter((u) => u.isActive !== false).length;
+    return { total, superadmins, admins, active };
+  }, [users]);
 
   // Handle Create User
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -98,7 +146,12 @@ export default function AdminUsersPage() {
     setCreateError('');
 
     if (!newName.trim() || !newUsername.trim() || !newPassword.trim()) {
-      setCreateError('Todos los campos son obligatorios');
+      setCreateError('Nombre, usuario y contraseña son campos obligatorios.');
+      return;
+    }
+
+    if (newPassword.trim().length < 6) {
+      setCreateError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
@@ -109,9 +162,11 @@ export default function AdminUsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newName.trim(),
-          username: newUsername.trim(),
+          username: newUsername.trim().toLowerCase(),
+          email: newEmail.trim() || `${newUsername.trim().toLowerCase()}@hobbybolivia.com`,
           password: newPassword.trim(),
-          role: 'ADMIN'
+          role: newRole,
+          isActive: newIsActive
         })
       });
 
@@ -123,7 +178,10 @@ export default function AdminUsersPage() {
       setIsCreateOpen(false);
       setNewName('');
       setNewUsername('');
+      setNewEmail('');
       setNewPassword('');
+      setNewRole('ADMIN');
+      setNewIsActive(true);
       showToast(`Usuario "${data.data.username}" creado exitosamente.`);
       loadUsers();
     } catch (err: unknown) {
@@ -136,8 +194,11 @@ export default function AdminUsersPage() {
   // Open Edit Modal
   const openEditModal = (user: User) => {
     setEditingUser(user);
-    setEditName(user.name);
+    setEditName(user.name || '');
+    setEditUsername(user.username || '');
+    setEditEmail(user.email || '');
     setEditPassword('');
+    setEditRole(user.role || 'ADMIN');
     setEditIsActive(user.isActive !== false);
     setEditError('');
   };
@@ -148,10 +209,23 @@ export default function AdminUsersPage() {
     if (!editingUser) return;
     setEditError('');
 
+    if (!editName.trim()) {
+      setEditError('El nombre completo es requerido.');
+      return;
+    }
+
+    if (editPassword.trim() && editPassword.trim().length < 6) {
+      setEditError('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
     setEditSaving(true);
     try {
       const payload: Record<string, unknown> = {
         name: editName.trim(),
+        username: editUsername.trim().toLowerCase(),
+        email: editEmail.trim(),
+        role: editRole,
         isActive: editIsActive
       };
 
@@ -180,10 +254,15 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Toggle quick active status
+  // Toggle active status
   const handleToggleActive = async (user: User) => {
-    if (user.username === 'superadmin') {
-      alert('La cuenta principal SUPERADMIN no puede ser desactivada.');
+    const isMaster =
+      user.id === 1 ||
+      user.username.toLowerCase() === 'darinka.arias18@gmail.com' ||
+      (user.role === 'SUPERADMIN' && stats.superadmins <= 1);
+
+    if (isMaster && user.isActive) {
+      showToast('La cuenta Superadmin principal no puede ser desactivada.', 'error');
       return;
     }
 
@@ -200,12 +279,16 @@ export default function AdminUsersPage() {
         );
         showToast(
           nextState
-            ? `Usuario "${user.username}" activado.`
+            ? `Usuario "${user.username}" activado con éxito.`
             : `Usuario "${user.username}" desactivado.`
         );
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'No se pudo cambiar el estado', 'error');
       }
     } catch (e) {
       console.error(e);
+      showToast('Error de conexión al actualizar estado', 'error');
     }
   };
 
@@ -213,6 +296,7 @@ export default function AdminUsersPage() {
   const confirmDelete = async () => {
     if (!userToDelete) return;
     setDeleting(true);
+    setDeleteError('');
     try {
       const res = await fetch(`/api/users/${userToDelete.id}`, { method: 'DELETE' });
       const data = await res.json();
@@ -221,318 +305,556 @@ export default function AdminUsersPage() {
         setUserToDelete(null);
         loadUsers();
       } else {
-        alert(data.error || 'No se pudo eliminar el usuario.');
+        setDeleteError(data.error || 'No se pudo eliminar el usuario.');
       }
     } catch (e) {
       console.error(e);
-      alert('Error de conexión al eliminar usuario.');
+      setDeleteError('Error de red al comunicarse con el servidor.');
     } finally {
       setDeleting(false);
     }
   };
 
-  if (currentRole !== 'SUPERADMIN') {
-    return null;
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#10202f] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-bold border border-[#f2b705] animate-fade-in">
-          <Check className="w-4 h-4 text-[#f2b705]" />
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom duration-200 border ${
+            toast.type === 'success'
+              ? 'bg-[#161311] text-[#FAF8F5] border-[#D4A359]'
+              : 'bg-rose-950 text-white border-rose-600'
+          }`}
+        >
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-[#D4A359]" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 text-rose-400" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#dcd5c4]">
+      {/* Header Top Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#f2b705] text-[#10202f] uppercase tracking-wider">
-              Exclusivo Superadmin
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-pulse" />
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#D4A359]">
+              Control de Accesos & Seguridad · Hobby Bolivia
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#10202f] tracking-tight">
-            Usuarios / Accesos al Panel
+          <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
+            Gestión de Usuarios
           </h1>
-          <p className="text-xs text-[#6b7480] mt-0.5">
-            Crea cuentas de Administrador (`ADMIN`), administra accesos y actualiza contraseñas.
+          <p className="text-xs text-[#5C5650] mt-1 max-w-2xl leading-relaxed">
+            Administra las cuentas de administradores, asigna roles y gestiona credenciales de acceso seguro al panel.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setCreateError('');
-            setIsCreateOpen(true);
-          }}
-          className="px-5 py-2.5 rounded-full bg-[#10202f] hover:bg-[#1b3248] text-[#f2b705] font-extrabold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer self-start sm:self-auto"
-        >
-          <UserPlus className="w-4 h-4 text-[#f2b705]" />
-          <span>Nuevo Usuario Admin</span>
-        </button>
-      </div>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
+          >
+            <span>Volver al Dashboard</span>
+          </Link>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-white border border-[#dcd5c4] shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#f2b705]/20 text-[#10202f] flex items-center justify-center font-bold">
-            <Users className="w-5 h-5 text-[#10202f]" />
-          </div>
-          <div>
-            <span className="text-[11px] text-[#6b7480] font-semibold block">Total Cuentas</span>
-            <span className="text-xl font-extrabold text-[#10202f] font-mono">{users.length}</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-white border border-[#dcd5c4] shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-            <UserCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] text-[#6b7480] font-semibold block">Usuarios Activos</span>
-            <span className="text-xl font-extrabold text-emerald-700 font-mono">
-              {users.filter((u) => u.isActive !== false).length}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-white border border-[#dcd5c4] shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#10202f] text-[#f2b705] flex items-center justify-center font-bold">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] text-[#6b7480] font-semibold block">Cuenta Maestra</span>
-            <span className="text-xs font-mono font-bold text-[#10202f] truncate block">
-              superadmin (Rol SUPERADMIN)
-            </span>
-          </div>
+          {/* Primary Action Button: "Crear Nuevo Usuario" */}
+          <button
+            type="button"
+            onClick={() => {
+              setCreateError('');
+              setIsCreateOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#D4A359] to-[#C69755] hover:from-[#C69755] hover:to-[#B8863A] text-[#161311] font-black text-xs uppercase tracking-wider shadow-md shadow-[#D4A359]/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4 text-[#161311]" />
+            <span>Crear Nuevo Usuario</span>
+          </button>
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-2xl border border-[#dcd5c4] shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-sm font-extrabold text-[#10202f] uppercase tracking-wide">
-            Cuentas Registradas
-          </h2>
-          <span className="text-xs text-[#6b7480] font-mono">
-            {users.length} usuario{users.length === 1 ? '' : 's'}
+      {/* Metric Summary Cards (Warm Tech Aesthetic) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Usuarios (Dark Charcoal Hero Card) */}
+        <div className="bg-[#161311] text-[#FAF8F5] p-5 rounded-3xl border border-[#2D2622] shadow-md flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-[#A89F91] font-bold uppercase tracking-wider block mb-1">
+              Total Registrados
+            </span>
+            <span className="text-3xl font-black text-[#D4A359] font-mono tracking-tight">
+              {stats.total}
+            </span>
+            <span className="text-[10px] text-[#8C827A] block mt-0.5">
+              Cuentas en base de datos
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-[#D4A359]/15 border border-[#D4A359]/30 text-[#D4A359] flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6 text-[#D4A359]" />
+          </div>
+        </div>
+
+        {/* Card 2: Superadmins */}
+        <div className="bg-white p-5 rounded-3xl border border-[#E2DCD3] shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-[#8C827A] font-bold uppercase tracking-wider block mb-1">
+              Superadmins
+            </span>
+            <span className="text-3xl font-black text-[#B8863A] font-mono tracking-tight">
+              {stats.superadmins}
+            </span>
+            <span className="text-[10px] text-[#8C827A] block mt-0.5">
+              Acceso maestro total
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-[#D4A359]/20 border border-[#D4A359]/40 text-[#B8863A] flex items-center justify-center shrink-0">
+            <Crown className="w-6 h-6 text-[#B8863A]" />
+          </div>
+        </div>
+
+        {/* Card 3: Administradores */}
+        <div className="bg-white p-5 rounded-3xl border border-[#E2DCD3] shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-[#8C827A] font-bold uppercase tracking-wider block mb-1">
+              Admins Estándar
+            </span>
+            <span className="text-3xl font-black text-[#1A1817] font-mono tracking-tight">
+              {stats.admins}
+            </span>
+            <span className="text-[10px] text-[#8C827A] block mt-0.5">
+              Catálogo & Cotizaciones
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] text-[#F85606] flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-6 h-6 text-[#F85606]" />
+          </div>
+        </div>
+
+        {/* Card 4: Cuentas Activas */}
+        <div className="bg-white p-5 rounded-3xl border border-[#E2DCD3] shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-[#8C827A] font-bold uppercase tracking-wider block mb-1">
+              Cuentas Activas
+            </span>
+            <span className="text-3xl font-black text-[#3E7B44] font-mono tracking-tight">
+              {stats.active}
+            </span>
+            <span className="text-[10px] text-[#3E7B44] block mt-0.5 font-bold">
+              Sesiones habilitadas
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-[#3E7B44]/15 border border-[#3E7B44]/30 text-[#3E7B44] flex items-center justify-center shrink-0">
+            <UserCheck className="w-6 h-6 text-[#3E7B44]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white rounded-3xl border border-[#E2DCD3] p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-3" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nombre, usuario o email..."
+            className="w-full pl-10 pr-8 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all placeholder:text-[#A89F91]"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-2.5 text-xs text-[#8C827A] hover:text-[#1A1817] cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-2">
+          {/* Role Filter */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as any)}
+            className="px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-bold text-[#1A1817] focus:border-[#D4A359] outline-none cursor-pointer"
+          >
+            <option value="ALL">Todos los Roles</option>
+            <option value="SUPERADMIN">Solo Superadmins</option>
+            <option value="ADMIN">Solo Administradores</option>
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-bold text-[#1A1817] focus:border-[#D4A359] outline-none cursor-pointer"
+          >
+            <option value="ALL">Todos los Estados</option>
+            <option value="ACTIVE">Solo Activos</option>
+            <option value="INACTIVE">Solo Inactivos</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Users Table Card (Fits 100% on screen, NO horizontal scroll) */}
+      <div className="bg-white rounded-3xl border border-[#E2DCD3] shadow-xs overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-[#E2DCD3] flex items-center justify-between bg-[#FAF8F5]">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-[#D4A359]" />
+            <h2 className="text-xs font-black text-[#1A1817] uppercase tracking-wider">
+              Cuentas Registradas ({filteredUsers.length})
+            </h2>
+          </div>
+          <span className="text-[11px] font-mono text-[#8C827A]">
+            Mostrando {filteredUsers.length} de {users.length} usuarios
           </span>
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-[#10202f]" />
-            <span>Cargando lista de usuarios...</span>
+          <div className="p-16 text-center text-xs text-[#8C827A] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-[#D4A359]" />
+            <span className="font-semibold">Cargando directorio de administradores...</span>
           </div>
-        ) : users.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-500">
-            No hay usuarios registrados.
+        ) : filteredUsers.length === 0 ? (
+          <div className="p-16 text-center text-xs text-[#8C827A] space-y-2">
+            <p className="font-bold text-sm text-[#1A1817]">No se encontraron usuarios</p>
+            <p className="text-[11px]">
+              Intenta cambiar los términos de búsqueda o los filtros seleccionados.
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-4">Usuario (Login)</th>
-                  <th className="py-3 px-4">Nombre Completo</th>
-                  <th className="py-3 px-4">Rol Asignado</th>
-                  <th className="py-3 px-4">Estado</th>
-                  <th className="py-3 px-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {users.map((u) => {
-                  const isMaster = u.username.toLowerCase() === 'superadmin';
-                  return (
-                    <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="font-mono font-bold text-slate-900 flex items-center gap-1.5">
-                          {isMaster ? (
-                            <ShieldCheck className="w-4 h-4 text-[#f2b705]" />
-                          ) : (
-                            <UserCheck className="w-4 h-4 text-blue-600" />
-                          )}
-                          <span>{u.username}</span>
-                        </div>
-                      </td>
+          <table className="w-full table-fixed text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-[#FAF8F5] border-b border-[#E2DCD3] text-[#8C827A] font-black uppercase tracking-wider text-[10px]">
+                <th className="py-3.5 px-4 w-[28%]">Usuario & Credencial</th>
+                <th className="py-3.5 px-4 w-[26%]">Nombre Completo</th>
+                <th className="py-3.5 px-4 w-[16%]">Rol Asignado</th>
+                <th className="py-3.5 px-4 w-[14%]">Estado</th>
+                <th className="py-3.5 px-4 text-right w-[16%]">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EFEAE2]">
+              {filteredUsers.map((u) => {
+                const isMaster =
+                  u.id === 1 ||
+                  u.username.toLowerCase() === 'darinka.arias18@gmail.com' ||
+                  u.role === 'SUPERADMIN';
 
-                      <td className="py-3.5 px-4 font-semibold text-slate-800">
-                        {u.name}
-                      </td>
+                // Initial Avatar letters
+                const initials = (u.name || u.username)
+                  .split(' ')
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase();
 
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide ${
+                return (
+                  <tr key={u.id} className="hover:bg-[#FAF8F5]/80 transition-colors">
+                    {/* 1. Usuario & Credencial */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 ${
                             u.role === 'SUPERADMIN'
-                              ? 'bg-[#10202f] text-[#f2b705]'
-                              : 'bg-blue-100 text-blue-800'
+                              ? 'bg-[#161311] text-[#D4A359] border border-[#D4A359]/30 shadow-xs'
+                              : 'bg-[#FAF8F5] text-[#1A1817] border border-[#E2DCD3]'
                           }`}
                         >
-                          {u.role}
-                        </span>
-                      </td>
+                          {initials}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-mono font-black text-[#1A1817] truncate flex items-center gap-1.5">
+                            <span>{u.username}</span>
+                            {isMaster && (
+                              <span title="Superadmin Maestro" className="inline-flex items-center">
+                                <Crown className="w-3.5 h-3.5 text-[#D4A359] shrink-0" />
+                              </span>
+                            )}
+                          </div>
+                          {u.email && (
+                            <span className="text-[10px] text-[#8C827A] truncate block font-sans">
+                              {u.email}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
 
-                      <td className="py-3.5 px-4">
+                    {/* 2. Nombre Completo */}
+                    <td className="py-3.5 px-4 font-bold text-[#1A1817] truncate">
+                      {u.name}
+                    </td>
+
+                    {/* 3. Rol Asignado */}
+                    <td className="py-3.5 px-4">
+                      {u.role === 'SUPERADMIN' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#161311] text-[#D4A359] border border-[#D4A359]/40 shadow-xs">
+                          <Crown className="w-3 h-3 text-[#D4A359]" />
+                          <span>Superadmin</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#FAF8F5] text-[#1A1817] border border-[#E2DCD3]">
+                          <ShieldCheck className="w-3 h-3 text-[#F85606]" />
+                          <span>Admin</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 4. Estado (Activo / Desactivado) */}
+                    <td className="py-3.5 px-4">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(u)}
+                        disabled={isMaster && u.isActive}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
+                          u.isActive !== false
+                            ? 'bg-[#3E7B44]/15 text-[#3E7B44] border border-[#3E7B44]/30 hover:bg-[#3E7B44]/25 cursor-pointer'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
+                        } ${isMaster && u.isActive ? 'opacity-90 cursor-default' : ''}`}
+                        title={
+                          isMaster && u.isActive
+                            ? 'Cuenta maestra permanentemente activa'
+                            : 'Clic para alternar estado'
+                        }
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            u.isActive !== false ? 'bg-[#3E7B44] animate-pulse' : 'bg-rose-500'
+                          }`}
+                        />
+                        <span>{u.isActive !== false ? 'Activo' : 'Inactivo'}</span>
+                      </button>
+                    </td>
+
+                    {/* 5. Acciones */}
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          onClick={() => handleToggleActive(u)}
-                          disabled={isMaster}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
-                            isMaster
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 opacity-90 cursor-default'
-                              : u.isActive !== false
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
-                          }`}
-                          title={isMaster ? 'Cuenta maestra activa permanente' : 'Alternar estado activo/desactivado'}
+                          onClick={() => openEditModal(u)}
+                          className="px-2.5 py-1.5 rounded-xl border border-[#E2DCD3] hover:border-[#161311] bg-white hover:bg-[#161311] text-[#1A1817] hover:text-[#D4A359] font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                          title="Editar usuario o contraseña"
                         >
-                          {u.isActive !== false ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                          <span>{u.isActive !== false ? 'Activo' : 'Desactivado'}</span>
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Editar</span>
                         </button>
-                      </td>
 
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        {!isMaster && (
                           <button
                             type="button"
-                            onClick={() => openEditModal(u)}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:border-[#10202f] hover:bg-[#10202f] hover:text-[#f2b705] text-slate-700 font-bold text-xs flex items-center gap-1 transition-all"
-                            title="Cambiar contraseña o nombre"
+                            onClick={() => {
+                              setDeleteError('');
+                              setUserToDelete(u);
+                            }}
+                            className="p-1.5 rounded-xl border border-rose-200 hover:border-rose-400 bg-white hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer"
+                            title="Eliminar usuario"
                           >
-                            <Key className="w-3.5 h-3.5" />
-                            <span>Editar</span>
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-
-                          {!isMaster && (
-                            <button
-                              type="button"
-                              onClick={() => setUserToDelete(u)}
-                              className="p-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 transition-colors"
-                              title="Eliminar usuario"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 
       {/* ========================================================
-          MODAL: CREAR NUEVO USUARIO ADMIN
+          MODAL: CREAR NUEVO USUARIO
       ======================================================== */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white text-slate-800 rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#10202f] text-[#f2b705] flex items-center justify-center">
-                  <UserPlus className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white text-[#1A1817] rounded-3xl max-w-lg w-full shadow-2xl border border-[#E2DCD3] p-6 sm:p-7 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#161311] text-[#D4A359] flex items-center justify-center shadow-xs">
+                  <UserPlus className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-extrabold text-[#10202f]">
-                  Crear Nuevo Administrador
-                </h3>
+                <div>
+                  <h3 className="text-base font-black text-[#1A1817]">
+                    Crear Nuevo Usuario
+                  </h3>
+                  <span className="text-[11px] text-[#8C827A]">
+                    Autoriza credenciales de acceso al panel de administración
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="w-7 h-7 rounded-full text-slate-400 hover:text-slate-800 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#8C827A] hover:text-[#1A1817] hover:bg-[#EFEAE2] flex items-center justify-center transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {createError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg">
-                {createError}
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{createError}</span>
               </div>
             )}
 
             <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Nombre Completo*</label>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Nombre Completo *
+                </label>
                 <input
                   type="text"
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Ej. Roberto Morales"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-[#10202f] focus:ring-1 focus:ring-[#10202f]"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
                 />
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Nombre de Usuario (Login)*</label>
-                <input
-                  type="text"
-                  required
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
-                  placeholder="Ej. rmorales"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg font-mono outline-none focus:border-[#10202f] focus:ring-1 focus:ring-[#10202f]"
-                />
-                <span className="text-[10px] text-slate-400 mt-0.5 block">
-                  Sin espacios ni acentos (letras, números, punto o guion).
-                </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-[#1A1817] block mb-1">
+                    Usuario (Login) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newUsername}
+                    onChange={(e) =>
+                      setNewUsername(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '')
+                      )
+                    }
+                    placeholder="ej. rmorales"
+                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
+                  />
+                  <span className="text-[10px] text-[#8C827A] mt-0.5 block">
+                    Solo minúsculas, números o punto.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="font-bold text-[#1A1817] block mb-1">
+                    Correo Electrónico
+                  </label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="rmorales@hobbybolivia.com"
+                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Contraseña de Acceso*</label>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Contraseña de Acceso *
+                </label>
                 <div className="relative">
                   <input
                     type={showCreatePassword ? 'text' : 'password'}
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Contraseña segura"
-                    className="w-full pl-3 pr-10 py-2 text-sm border border-slate-300 rounded-lg font-mono outline-none focus:border-[#10202f] focus:ring-1 focus:ring-[#10202f]"
+                    placeholder="Mínimo 6 caracteres"
+                    className="w-full pl-3.5 pr-10 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCreatePassword(!showCreatePassword)}
-                    className="absolute right-2.5 top-2 p-1 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                    title={showCreatePassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    className="absolute right-3 top-2.5 p-0.5 text-[#8C827A] hover:text-[#1A1817] transition-colors cursor-pointer"
                   >
-                    {showCreatePassword ? <EyeOff className="w-4 h-4 text-slate-700" /> : <Eye className="w-4 h-4" />}
+                    {showCreatePassword ? (
+                      <EyeOff className="w-4 h-4 text-[#1A1817]" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-[#8C827A]" />
+                    )}
                   </button>
                 </div>
               </div>
 
+              {/* Rol Asignado */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Rol de Permisos</label>
-                <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-lg flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-blue-600 text-white font-extrabold text-[10px]">
-                    ADMIN
-                  </span>
-                  <span className="text-[11px] text-slate-600">
-                    Podrá gestionar productos, fotos PNG/JPG de hasta 3MB, categorías y pedidos.
-                  </span>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Rol de Privilegios
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label
+                    onClick={() => setNewRole('ADMIN')}
+                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
+                      newRole === 'ADMIN'
+                        ? 'border-[#D4A359] bg-[#FAF8F5] shadow-xs'
+                        : 'border-[#E2DCD3] bg-white opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-[#1A1817]">ADMIN</span>
+                      <ShieldCheck className="w-4 h-4 text-[#F85606]" />
+                    </div>
+                    <span className="text-[10px] text-[#5C5650] leading-tight">
+                      Gestión de catálogo, productos y cotizaciones.
+                    </span>
+                  </label>
+
+                  <label
+                    onClick={() => setNewRole('SUPERADMIN')}
+                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
+                      newRole === 'SUPERADMIN'
+                        ? 'border-[#D4A359] bg-[#161311] text-[#FAF8F5] shadow-xs'
+                        : 'border-[#E2DCD3] bg-white opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-black text-xs ${newRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#1A1817]'}`}>
+                        SUPERADMIN
+                      </span>
+                      <Crown className={`w-4 h-4 ${newRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#8C827A]'}`} />
+                    </div>
+                    <span className={`text-[10px] leading-tight ${newRole === 'SUPERADMIN' ? 'text-[#A89F91]' : 'text-[#5C5650]'}`}>
+                      Acceso total, usuarios y ajustes del sistema.
+                    </span>
+                  </label>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              {/* Estado Activo */}
+              <div className="pt-1">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newIsActive}
+                    onChange={(e) => setNewIsActive(e.target.checked)}
+                    className="w-4 h-4 accent-[#D4A359] rounded cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-[#1A1817]">
+                    Cuenta activa inmediatamente al guardar
+                  </span>
+                </label>
+              </div>
+
+              <div className="pt-4 border-t border-[#E2DCD3] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-full text-xs font-bold hover:bg-slate-50"
+                  className="px-5 py-2.5 border border-[#E2DCD3] text-[#1A1817] hover:bg-[#FAF8F5] rounded-full text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={createSaving}
-                  className="px-5 py-2.5 rounded-full bg-[#10202f] hover:bg-[#1b3248] text-[#f2b705] font-extrabold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D4A359] to-[#C69755] hover:from-[#C69755] hover:to-[#B8863A] text-[#161311] font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {createSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  {createSaving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5" />
+                  )}
                   <span>{createSaving ? 'Creando...' : 'Crear Usuario'}</span>
                 </button>
               </div>
@@ -542,54 +864,89 @@ export default function AdminUsersPage() {
       )}
 
       {/* ========================================================
-          MODAL: EDITAR / CAMBIAR CONTRASEÑA
+          MODAL: EDITAR USUARIO / CAMBIAR CONTRASEÑA
       ======================================================== */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white text-slate-800 rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#10202f] text-[#f2b705] flex items-center justify-center">
-                  <Key className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white text-[#1A1817] rounded-3xl max-w-lg w-full shadow-2xl border border-[#E2DCD3] p-6 sm:p-7 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#161311] text-[#D4A359] flex items-center justify-center shadow-xs">
+                  <Key className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-[#10202f]">
-                    Modificar Usuario
+                  <h3 className="text-base font-black text-[#1A1817]">
+                    Editar Usuario
                   </h3>
-                  <span className="text-xs font-mono text-slate-500">
-                    @{editingUser.username}
+                  <span className="text-[11px] font-mono text-[#8C827A]">
+                    @{editingUser.username} · ID #{editingUser.id}
                   </span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingUser(null)}
-                className="w-7 h-7 rounded-full text-slate-400 hover:text-slate-800 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#8C827A] hover:text-[#1A1817] hover:bg-[#EFEAE2] flex items-center justify-center transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {editError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg">
-                {editError}
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{editError}</span>
               </div>
             )}
 
             <form onSubmit={handleEditUser} className="space-y-3.5 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Nombre Completo</label>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Nombre Completo *
+                </label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-[#10202f]"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-[#1A1817] block mb-1">
+                    Nombre de Usuario (Login)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editUsername}
+                    onChange={(e) =>
+                      setEditUsername(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '')
+                      )
+                    }
+                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[#1A1817] block mb-1">
+                    Correo Electrónico
+                  </label>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Cambiar contraseña */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
+                <label className="font-bold text-[#1A1817] block mb-1">
                   Nueva Contraseña (Opcional)
                 </label>
                 <div className="relative">
@@ -598,50 +955,105 @@ export default function AdminUsersPage() {
                     value={editPassword}
                     onChange={(e) => setEditPassword(e.target.value)}
                     placeholder="Dejar en blanco para mantener la actual"
-                    className="w-full pl-3 pr-10 py-2 text-sm border border-slate-300 rounded-lg font-mono outline-none focus:border-[#10202f]"
+                    className="w-full pl-3.5 pr-10 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowEditPassword(!showEditPassword)}
-                    className="absolute right-2.5 top-2 p-1 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                    title={showEditPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    className="absolute right-3 top-2.5 p-0.5 text-[#8C827A] hover:text-[#1A1817] transition-colors cursor-pointer"
                   >
-                    {showEditPassword ? <EyeOff className="w-4 h-4 text-slate-700" /> : <Eye className="w-4 h-4" />}
+                    {showEditPassword ? (
+                      <EyeOff className="w-4 h-4 text-[#1A1817]" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-[#8C827A]" />
+                    )}
                   </button>
                 </div>
+                <span className="text-[10px] text-[#8C827A] mt-0.5 block">
+                  Solo escribe si deseas cambiar la contraseña de esta cuenta.
+                </span>
               </div>
 
-              {editingUser.username !== 'superadmin' && (
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Estado de la Cuenta</label>
-                  <label className="flex items-center gap-2 cursor-pointer mt-1">
-                    <input
-                      type="checkbox"
-                      checked={editIsActive}
-                      onChange={(e) => setEditIsActive(e.target.checked)}
-                      className="w-4 h-4 text-[#10202f] rounded"
-                    />
-                    <span className="text-xs text-slate-700 font-semibold">
-                      Cuenta activa (permite iniciar sesión)
+              {/* Rol */}
+              <div>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Rol Asignado
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label
+                    onClick={() => setEditRole('ADMIN')}
+                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
+                      editRole === 'ADMIN'
+                        ? 'border-[#D4A359] bg-[#FAF8F5] shadow-xs'
+                        : 'border-[#E2DCD3] bg-white opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-[#1A1817]">ADMIN</span>
+                      <ShieldCheck className="w-4 h-4 text-[#F85606]" />
+                    </div>
+                    <span className="text-[10px] text-[#5C5650] leading-tight">
+                      Acceso a productos y pedidos.
+                    </span>
+                  </label>
+
+                  <label
+                    onClick={() => setEditRole('SUPERADMIN')}
+                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
+                      editRole === 'SUPERADMIN'
+                        ? 'border-[#D4A359] bg-[#161311] text-[#FAF8F5] shadow-xs'
+                        : 'border-[#E2DCD3] bg-white opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-black text-xs ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#1A1817]'}`}>
+                        SUPERADMIN
+                      </span>
+                      <Crown className={`w-4 h-4 ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#8C827A]'}`} />
+                    </div>
+                    <span className={`text-[10px] leading-tight ${editRole === 'SUPERADMIN' ? 'text-[#A89F91]' : 'text-[#5C5650]'}`}>
+                      Control maestro total.
                     </span>
                   </label>
                 </div>
-              )}
+              </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              {/* Estado Activo (solo si no es la cuenta maestra) */}
+              {editingUser.id !== 1 &&
+                editingUser.username.toLowerCase() !== 'darinka.arias18@gmail.com' && (
+                  <div className="pt-1">
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editIsActive}
+                        onChange={(e) => setEditIsActive(e.target.checked)}
+                        className="w-4 h-4 accent-[#D4A359] rounded cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-[#1A1817]">
+                        Cuenta activa (permite el inicio de sesión)
+                      </span>
+                    </label>
+                  </div>
+                )}
+
+              <div className="pt-4 border-t border-[#E2DCD3] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-full text-xs font-bold hover:bg-slate-50"
+                  className="px-5 py-2.5 border border-[#E2DCD3] text-[#1A1817] hover:bg-[#FAF8F5] rounded-full text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={editSaving}
-                  className="px-5 py-2.5 rounded-full bg-[#10202f] hover:bg-[#1b3248] text-[#f2b705] font-extrabold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D4A359] to-[#C69755] hover:from-[#C69755] hover:to-[#B8863A] text-[#161311] font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  {editSaving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5" />
+                  )}
                   <span>{editSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
                 </button>
               </div>
@@ -654,27 +1066,37 @@ export default function AdminUsersPage() {
           MODAL: CONFIRMAR ELIMINACIÓN DE USUARIO
       ======================================================== */}
       {userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white text-slate-800 rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white text-[#1A1817] rounded-3xl max-w-md w-full shadow-2xl border border-[#E2DCD3] p-6 sm:p-7 space-y-4">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-extrabold text-[#10202f]">
+                <h3 className="text-base font-black text-[#1A1817]">
                   ¿Eliminar este usuario?
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Estás a punto de eliminar la cuenta de <strong className="text-slate-900 font-bold">{userToDelete.name}</strong> (@{userToDelete.username}). Ya no podrá ingresar al panel administrativo.
+                <p className="text-xs text-[#5C5650] leading-relaxed">
+                  Estás a punto de revocar permanentemente los accesos de{' '}
+                  <strong className="text-[#1A1817] font-bold">
+                    {userToDelete.name}
+                  </strong>{' '}
+                  (@{userToDelete.username}).
                 </p>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+            {deleteError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-[#E2DCD3] flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setUserToDelete(null)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-full hover:bg-slate-50 text-xs font-bold transition-colors"
+                className="px-5 py-2.5 border border-[#E2DCD3] text-[#1A1817] hover:bg-[#FAF8F5] rounded-full text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -682,9 +1104,13 @@ export default function AdminUsersPage() {
                 type="button"
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-extrabold flex items-center gap-1.5 shadow-md disabled:opacity-50 transition-colors"
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md transition-colors cursor-pointer disabled:opacity-50"
               >
-                {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                {deleting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
                 <span>{deleting ? 'Eliminando...' : 'Sí, Eliminar'}</span>
               </button>
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   SlidersHorizontal,
   Search,
@@ -24,11 +24,8 @@ import { BrandsStrip } from './BrandsStrip';
 import { CategoryTilesGrid } from './CategoryTilesGrid';
 import { ProductCard } from './ProductCard';
 import { QuickSpecsModal } from './QuickSpecsModal';
-import { PromoBanners } from './PromoBanners';
 import { TrustRibbon } from './TrustRibbon';
-import { DynamicPoliciesModule } from './DynamicPoliciesModule';
 import { Testimonials } from './Testimonials';
-import { NewsletterStrip } from './NewsletterStrip';
 
 import type {
   SiteConfig,
@@ -56,8 +53,95 @@ export function CatalogView({
   initialPolicies = [],
   initialExchangeRate = 6.96
 }: CatalogViewProps) {
-  const [products] = useState<Product[]>(initialItems);
+  const [products, setProducts] = useState<Product[]>(initialItems);
   const [categories] = useState<Category[]>(initialCategories);
+
+  // Sync state if initialItems prop updates
+  useEffect(() => {
+    setProducts(initialItems);
+  }, [initialItems]);
+
+  // Real-time synchronization across browser tabs (Admin <-> Public Catalog)
+  const refreshProducts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/products', { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && Array.isArray(json.data)) {
+          setProducts(json.data);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    // 1. BroadcastChannel for instant inter-tab communication
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('hb_catalog_channel');
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'PRODUCT_UPDATED') {
+          const { id, field, value } = event.data;
+          setProducts((prev) =>
+            prev.map((p) => {
+              if (p.id === id) {
+                return {
+                  ...p,
+                  [field]: value,
+                  ...(field === 'currency' ? { currency: value, display_currency: value } : {})
+                };
+              }
+              return p;
+            })
+          );
+          refreshProducts();
+        }
+      };
+    } catch {
+      // BroadcastChannel fallback
+    }
+
+    // 2. Storage event (fires when another tab updates localStorage)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'hb_catalog_sync') {
+        try {
+          const data = JSON.parse(e.newValue || '{}');
+          if (data?.id) {
+            setProducts((prev) =>
+              prev.map((p) => {
+                if (p.id === data.id) {
+                  return {
+                    ...p,
+                    [data.field]: data.value,
+                    ...(data.field === 'currency' ? { currency: data.value, display_currency: data.value } : {})
+                  };
+                }
+                return p;
+              })
+            );
+          }
+        } catch {
+          // ignore
+        }
+        refreshProducts();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 3. Window focus (when user switches back to catalog tab, auto-refresh)
+    const handleFocus = () => {
+      refreshProducts();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshProducts]);
 
   // Filters State
   const [activeCategorySlug, setActiveCategorySlug] = useState<string>('all');
@@ -67,8 +151,9 @@ export function CatalogView({
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minPriceUsd, setMinPriceUsd] = useState<string>('');
+  const [maxPriceUsd, setMaxPriceUsd] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('popular');
-  const [catalogCurrency, setCatalogCurrency] = useState<'auto' | 'BOB' | 'USD'>('auto');
 
   // Modal & Favorites State
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
@@ -124,9 +209,11 @@ export function CatalogView({
       selectedMaterial !== 'all',
       onlyInStock,
       minPrice !== '',
-      maxPrice !== ''
+      maxPrice !== '',
+      minPriceUsd !== '',
+      maxPriceUsd !== ''
     ].filter(Boolean).length;
-  }, [activeCategorySlug, searchQuery, selectedScale, selectedMaterial, onlyInStock, minPrice, maxPrice]);
+  }, [activeCategorySlug, searchQuery, selectedScale, selectedMaterial, onlyInStock, minPrice, maxPrice, minPriceUsd, maxPriceUsd]);
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -163,6 +250,8 @@ export function CatalogView({
     setOnlyInStock(false);
     setMinPrice('');
     setMaxPrice('');
+    setMinPriceUsd('');
+    setMaxPriceUsd('');
     setSortBy('popular');
   };
 
@@ -208,12 +297,24 @@ export function CatalogView({
         if (stockCount <= 0) return false;
       }
 
-      // Price range
+      // Rate for USD price conversion
+      const rate = initialExchangeRate > 0 ? initialExchangeRate : 6.96;
+      const productUsd = p.price / rate;
+
+      // Price range in Bs.
       if (minPrice && !isNaN(Number(minPrice))) {
         if (p.price < Number(minPrice)) return false;
       }
       if (maxPrice && !isNaN(Number(maxPrice))) {
         if (p.price > Number(maxPrice)) return false;
+      }
+
+      // Price range in USD
+      if (minPriceUsd && !isNaN(Number(minPriceUsd))) {
+        if (productUsd < Number(minPriceUsd)) return false;
+      }
+      if (maxPriceUsd && !isNaN(Number(maxPriceUsd))) {
+        if (productUsd > Number(maxPriceUsd)) return false;
       }
 
       return true;
@@ -238,6 +339,9 @@ export function CatalogView({
     onlyInStock,
     minPrice,
     maxPrice,
+    minPriceUsd,
+    maxPriceUsd,
+    initialExchangeRate,
     sortBy
   ]);
 
@@ -495,6 +599,7 @@ export function CatalogView({
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
+                    step="any"
                     placeholder="Mín"
                     value={minPrice}
                     onChange={(e) => setMinPrice(e.target.value)}
@@ -503,9 +608,36 @@ export function CatalogView({
                   <span className="text-[#8C827A] text-xs">-</span>
                   <input
                     type="number"
+                    step="any"
                     placeholder="Máx"
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value)}
+                    className="w-1/2 text-xs py-2 px-2.5 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Rango de Precios en USD */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
+                  Rango de Precios (USD)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="Mín"
+                    value={minPriceUsd}
+                    onChange={(e) => setMinPriceUsd(e.target.value)}
+                    className="w-1/2 text-xs py-2 px-2.5 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none"
+                  />
+                  <span className="text-[#8C827A] text-xs">-</span>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="Máx"
+                    value={maxPriceUsd}
+                    onChange={(e) => setMaxPriceUsd(e.target.value)}
                     className="w-1/2 text-xs py-2 px-2.5 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none"
                   />
                 </div>
@@ -545,8 +677,8 @@ export function CatalogView({
             {/* Product Grid */}
             <div className="lg:col-span-3">
               
-              {/* Results status bar con selector de moneda */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-[#E2DCD3] text-xs text-[#5C5650]">
+              {/* Results status bar */}
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#E2DCD3] text-xs text-[#5C5650]">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span>
                     Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} repuestos disponibles
@@ -557,51 +689,6 @@ export function CatalogView({
                       {categories.find(c => c.slug === activeCategorySlug)?.name}
                     </span>
                   )}
-                </div>
-
-                {/* Opción de elegir si los productos se muestran en Bs. o en USD */}
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <span className="text-[11px] font-bold text-[#8C827A] uppercase tracking-wider">
-                    Ver en:
-                  </span>
-                  <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-xl shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setCatalogCurrency('auto')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
-                        catalogCurrency === 'auto'
-                          ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                          : 'text-[#8C827A] hover:text-[#1A1817]'
-                      }`}
-                      title="Mostrar cada repuesto en su moneda asignada (Bs. o USD)"
-                    >
-                      Por Repuesto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCatalogCurrency('BOB')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
-                        catalogCurrency === 'BOB'
-                          ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                          : 'text-[#8C827A] hover:text-[#1A1817]'
-                      }`}
-                      title="Mostrar todos los productos en Bolivianos (Bs.)"
-                    >
-                      Bs.
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCatalogCurrency('USD')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
-                        catalogCurrency === 'USD'
-                          ? 'bg-[#128C7E] text-white shadow-xs'
-                          : 'text-[#8C827A] hover:text-[#1A1817]'
-                      }`}
-                      title="Mostrar todos los productos en Dólares ($ USD)"
-                    >
-                      USD
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -621,13 +708,12 @@ export function CatalogView({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5">
                   {filteredProducts.map((prod) => (
                     <ProductCard
                       key={prod.id}
                       product={prod}
                       exchangeRate={initialExchangeRate}
-                      currencyMode={catalogCurrency}
                       onQuickView={(p) => setQuickViewProduct(p)}
                       isFavorite={favorites.includes(prod.id)}
                       onToggleFavorite={toggleFavorite}
@@ -643,20 +729,12 @@ export function CatalogView({
         </div>
       </section>
 
-      {/* 7. Promotional Split Banners (Warm Tech Style) */}
-      <PromoBanners />
 
       {/* 8. Trust Ribbon (4 Guarantees in Dark Block with Gold Icons) */}
       <TrustRibbon />
 
-      {/* 9. Dynamic Policies Module (Connected live to DB) */}
-      <DynamicPoliciesModule initialPolicies={initialPolicies} />
-
       {/* 10. Customer Testimonials */}
       <Testimonials />
-
-      {/* 11. Tech Newsletter Strip */}
-      <NewsletterStrip />
 
       {/* 12. Footer with CTA and Keyword Strip */}
       <Footer config={initialConfig} />
@@ -667,6 +745,7 @@ export function CatalogView({
           product={quickViewProduct}
           isOpen={Boolean(quickViewProduct)}
           onClose={() => setQuickViewProduct(null)}
+          exchangeRate={initialExchangeRate}
         />
       )}
 

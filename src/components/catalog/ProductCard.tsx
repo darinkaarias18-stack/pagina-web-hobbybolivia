@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShoppingCart, Eye, Check } from 'lucide-react';
+import { Eye, Check, Plus } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import { useCart } from '@/context/CartContext';
 
@@ -22,11 +22,11 @@ export function ProductCard({
   currencyMode = 'auto',
   onQuickView
 }: ProductCardProps) {
-  const product = productProp || itemProp;
-  if (!product) return null;
-
   const { addToCart } = useCart();
   const [justAdded, setJustAdded] = useState(false);
+  const product = productProp || itemProp;
+
+  if (!product) return null;
 
   const handleQuickView = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -44,13 +44,15 @@ export function ProductCard({
   const name = product.name || product.title || "Repuesto Hobby Bolivia";
   const systemSku = (product.sku && product.sku.startsWith('HB-')) ? product.sku : `HB-${product.id.toString().padStart(4, '0')}`;
 
-  // Determinación de si se muestra en USD o en Bs.
-  const isUsd = currencyMode === 'USD' || (currencyMode !== 'BOB' && product.currency === 'USD');
-  const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+  // Determinación de precio en USD o Bs. según selección "Mostrar en"
+  const isUsd =
+    String(product.currency || '').trim().toUpperCase() === 'USD' ||
+    String((product as any).display_currency || '').trim().toUpperCase() === 'USD';
+  const rate = exchangeRate > 0 ? exchangeRate : 11.8552;
   const usdPrice = (product.price / rate).toFixed(2);
   const bsPrice = product.price.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  // Solo se permite mostrar badge si es "Popular" (o el más pedido) o "Nuevo", nada más
+  // Badges: Popular o Nuevo
   const showPopular = product.badge === 'Popular' || product.badge === 'Best Seller';
   const showNuevo = product.badge === 'Nuevo';
   const validBadge = showPopular ? 'Popular' : (showNuevo ? 'Nuevo' : null);
@@ -58,25 +60,25 @@ export function ProductCard({
   return (
     <div
       onClick={() => handleQuickView()}
-      className="group relative rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] text-center p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+      className="group relative rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] p-3 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between cursor-pointer"
       title="Clic para ver detalles y cotizar"
     >
-      {/* Solo mostrar badge si es Popular o Nuevo, nada más */}
-      {validBadge && (
-        <span
-          className={`absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border select-none ${
-            validBadge === 'Popular'
-              ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]/60 shadow-xs'
-              : 'bg-[#D4A359] text-[#161311] border-[#D4A359]'
-          }`}
-          title={validBadge === 'Popular' ? 'Repuesto Popular · El más pedido' : 'Nuevo Repuesto'}
-        >
-          {validBadge}
-        </span>
-      )}
+      {/* 1. Caja de Imagen Rediseñada y Compacta (h-32) */}
+      <div className="w-full h-32 bg-white rounded-xl p-2 flex items-center justify-center relative border border-[#EBE5DB] overflow-hidden">
+        {/* Etiqueta / Badge en esquina superior derecha */}
+        {validBadge && (
+          <span
+            className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-xs border select-none ${
+              validBadge === 'Popular'
+                ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]/60'
+                : 'bg-[#D4A359] text-[#161311] border-[#D4A359]'
+            }`}
+            title={validBadge === 'Popular' ? 'Repuesto Popular · El más pedido' : 'Nuevo Repuesto'}
+          >
+            {validBadge}
+          </span>
+        )}
 
-      {/* 1. Imagen del Producto */}
-      <div className="w-full h-44 bg-white rounded-2xl p-3 flex items-center justify-center relative border border-[#EBE5DB] overflow-hidden">
         <img
           src={imageSource}
           alt={name}
@@ -86,78 +88,62 @@ export function ProductCard({
         />
       </div>
 
-      {/* 2. Código asignado por el sistema, 3. Nombre del Repuesto, 4. Precio */}
-      <div className="pt-3 flex-1 flex flex-col justify-between">
+      {/* 2. Textos: SKU y Nombre */}
+      <div className="pt-2 flex-1 flex flex-col justify-between">
         <div>
-          {/* Código asignado por el sistema */}
-          <span className="inline-block text-[11px] font-mono font-black text-[#D4A359] tracking-wider uppercase">
+          <span className="inline-block text-[10px] font-mono font-bold text-[#D4A359] tracking-wider uppercase">
             {systemSku}
           </span>
 
-          {/* Nombre del Repuesto */}
           <h3
-            className="mt-1 font-extrabold text-sm sm:text-base text-[#1A1817] group-hover:text-[#D4A359] transition-colors line-clamp-2 leading-snug"
+            className="mt-0.5 font-semibold text-xs text-[#1A1817] group-hover:text-[#D4A359] transition-colors line-clamp-2 leading-snug"
             title={name}
           >
             {name}
           </h3>
         </div>
 
-        {/* Precio (en Bs. o en USD según la opción elegida) */}
-        <div className="mt-3 pt-2.5 border-t border-[#E8E2D8]">
-          {isUsd ? (
-            <div>
-              <span className="text-base sm:text-lg font-black text-[#1A1817]">
-                ${usdPrice} <span className="text-xs font-bold text-[#8C827A]">USD</span>
+        {/* 3. Fila Horizontal de Precio y Acción */}
+        <div className="mt-2.5 pt-2 border-t border-[#E8E2D8] flex items-center justify-between gap-1.5">
+          {/* Bloque de Precio: Muestra exactamente Bs. o USD según columna "Mostrar en" */}
+          <div className="min-w-0 flex-1 text-left">
+            {isUsd ? (
+              <span className="text-sm font-black text-[#1A1817] block leading-tight">
+                ${usdPrice} <span className="text-[10px] font-bold text-[#8C827A]">USD</span>
               </span>
-              <span className="block text-[11px] text-[#8C827A] font-semibold mt-0.5">
-                ≈ Bs. {bsPrice}
-              </span>
-            </div>
-          ) : (
-            <div>
-              <span className="text-base sm:text-lg font-black text-[#1A1817]">
+            ) : (
+              <span className="text-sm font-black text-[#1A1817] block leading-tight">
                 Bs. {bsPrice}
               </span>
-              <span className="block text-[11px] text-[#8C827A] font-semibold mt-0.5">
-                ≈ ${usdPrice} USD
-              </span>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Acciones: Carrito y Ojovisor */}
-        <div className="mt-3">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={handleAddToCart}
-              type="button"
-              className={`flex-1 py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer ${
-                justAdded
-                  ? 'bg-[#3E7B44] text-white'
-                  : 'bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] active:scale-[0.98]'
-              }`}
-            >
-              {justAdded ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>¡Añadido!</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="w-3.5 h-3.5 text-[#D4A359]" />
-                  <span>Añadir</span>
-                </>
-              )}
-            </button>
-
+          {/* Botones de Acción Compactos */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={handleQuickView}
               type="button"
-              title="Ver más detalles sobre el producto"
-              className="py-2.5 px-3 rounded-xl bg-white hover:bg-[#EBE5DB] text-[#1A1817] flex items-center justify-center border border-[#E2DCD3] transition-colors cursor-pointer shrink-0"
+              title="Vista rápida del repuesto"
+              className="p-1.5 rounded-lg bg-white hover:bg-[#EBE5DB] text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3] transition-colors cursor-pointer"
             >
-              <Eye className="w-4 h-4 text-[#5C5650] hover:text-[#1A1817]" />
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={handleAddToCart}
+              type="button"
+              title={justAdded ? "¡Añadido al carrito!" : "Añadir al carrito"}
+              className={`p-2 rounded-xl font-bold transition-all shadow-xs flex items-center justify-center cursor-pointer ${
+                justAdded
+                  ? 'bg-[#3E7B44] text-white'
+                  : 'bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] active:scale-95'
+              }`}
+            >
+              {justAdded ? (
+                <Check className="w-3.5 h-3.5 text-white" />
+              ) : (
+                <Plus className="w-3.5 h-3.5" />
+              )}
             </button>
           </div>
         </div>

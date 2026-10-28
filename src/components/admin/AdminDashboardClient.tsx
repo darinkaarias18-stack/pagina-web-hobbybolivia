@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Package,
@@ -16,7 +16,6 @@ import {
   Save,
   RotateCcw,
   SlidersHorizontal,
-  FileText,
   CheckCircle2,
   Plane,
   Activity,
@@ -26,16 +25,12 @@ import {
   Loader2,
   Boxes
 } from 'lucide-react';
-import type { Product, Category, Policy } from '@/lib/types';
+import type { Product, Category } from '@/lib/types';
 
 export function AdminDashboardClient() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Active Tab: 'products' | 'policies'
-  const [activeTab, setActiveTab] = useState<'products' | 'policies'>('products');
 
   // Exchange Rate State in Dashboard
   const [exchangeRate, setExchangeRate] = useState<number>(6.96);
@@ -44,6 +39,7 @@ export function AdminDashboardClient() {
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [brandFilter, setBrandFilter] = useState('all');
 
   // Inline Fast Editing state
   const [inlineLoadingId, setInlineLoadingId] = useState<number | null>(null);
@@ -51,6 +47,7 @@ export function AdminDashboardClient() {
   // Create / Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [usdPriceInput, setUsdPriceInput] = useState<string>('');
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -122,12 +119,6 @@ export function AdminDashboardClient() {
     }
   };
 
-  // Policy Editor State
-  const [selectedPolicySlug, setSelectedPolicySlug] = useState('envios');
-  const [policyFormTitle, setPolicyFormTitle] = useState('');
-  const [policyFormContent, setPolicyFormContent] = useState('');
-  const [policySaving, setPolicySaving] = useState(false);
-
   // Delete Confirmation State
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -141,16 +132,14 @@ export function AdminDashboardClient() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes, polRes, rateRes] = await Promise.all([
+      const [prodRes, catRes, rateRes] = await Promise.all([
         fetch('/api/products?t=' + Date.now(), { cache: 'no-store' }),
         fetch('/api/categories?t=' + Date.now(), { cache: 'no-store' }),
-        fetch('/api/policies?t=' + Date.now(), { cache: 'no-store' }),
         fetch('/api/exchange-rate?t=' + Date.now(), { cache: 'no-store' })
       ]);
 
       const prodData = await prodRes.json();
       const catData = await catRes.json();
-      const polData = await polRes.json();
       const rateData = await rateRes.json();
 
       if (prodData.success) setProducts(prodData.data);
@@ -158,15 +147,6 @@ export function AdminDashboardClient() {
       if (rateData.success && rateData.data) {
         setExchangeRate(Number(rateData.data.exchangeRate) || 6.96);
         setAutoUpdate(rateData.data.autoUpdate !== false);
-      }
-      if (polData.success) {
-        setPolicies(polData.data);
-        const currentPol = polData.data.find((p: Policy) => p.slug === selectedPolicySlug) || polData.data[0];
-        if (currentPol) {
-          setSelectedPolicySlug(currentPol.slug);
-          setPolicyFormTitle(currentPol.title);
-          setPolicyFormContent(currentPol.content);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -199,6 +179,21 @@ export function AdminDashboardClient() {
         setProducts(prev =>
           prev.map(p => (p.id === id ? { ...p, [field]: value, ...(field === 'currency' ? { currency: value, display_currency: value } : {}) } : p))
         );
+
+        // Sincronizar en tiempo real con cualquier pestaña abierta de la tienda pública
+        try {
+          const channel = new BroadcastChannel('hb_catalog_channel');
+          channel.postMessage({ type: 'PRODUCT_UPDATED', id, field, value });
+          channel.close();
+        } catch {
+          // ignore
+        }
+        try {
+          localStorage.setItem('hb_catalog_sync', JSON.stringify({ id, field, value }));
+        } catch {
+          // ignore
+        }
+
         const msg = field === 'currency'
           ? `Repuesto configurado para mostrarse en ${value === 'USD' ? 'Dólares ($ USD)' : 'Bolivianos (Bs.)'}`
           : `${field === 'price' ? 'Precio' : 'Stock'} actualizado`;
@@ -237,6 +232,7 @@ export function AdminDashboardClient() {
       brand: 'Dubro',
       description: ''
     });
+    setUsdPriceInput('');
     setIsModalOpen(true);
   };
 
@@ -263,51 +259,10 @@ export function AdminDashboardClient() {
       brand: product.brand || 'Dubro',
       description: product.description || ''
     });
+    const initialBs = product.price || 0;
+    const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+    setUsdPriceInput(initialBs > 0 ? (initialBs / rate).toFixed(2) : '');
     setIsModalOpen(true);
-  };
-
-  // Save Policy Handler
-  const handleSelectPolicy = (slug: string) => {
-    setSelectedPolicySlug(slug);
-    const pol = policies.find(p => p.slug === slug);
-    if (pol) {
-      setPolicyFormTitle(pol.title);
-      setPolicyFormContent(pol.content);
-    }
-  };
-
-  const handleSavePolicy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPolicySaving(true);
-    try {
-      const res = await fetch('/api/policies', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: selectedPolicySlug,
-          title: policyFormTitle,
-          content: policyFormContent
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast("Política actualizada y sincronizada en tiempo real");
-        setPolicies(prev =>
-          prev.map(p =>
-            p.slug === selectedPolicySlug
-              ? { ...p, title: policyFormTitle, content: policyFormContent }
-              : p
-          )
-        );
-      } else {
-        showToast(data.error || "Error al guardar política", "error");
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("Error de conexión al guardar", "error");
-    } finally {
-      setPolicySaving(false);
-    }
   };
 
   // Submit Product Form (Create or Edit)
@@ -401,19 +356,30 @@ export function AdminDashboardClient() {
     }
   };
 
+  // Unique brands list for classification
+  const availableBrands = useMemo(() => {
+    const list = products.map(p => p.brand).filter((b): b is string => Boolean(b && b.trim()));
+    return Array.from(new Set(list)).sort();
+  }, [products]);
+
   // Filtered Products (Table Rows)
   const filteredProducts = products.filter(p => {
     const term = searchTerm.toLowerCase().trim();
     const matchSearch =
       !term ||
       (p.name || p.title || '').toLowerCase().includes(term) ||
-      (p.sku || '').toLowerCase().includes(term);
+      (p.sku || '').toLowerCase().includes(term) ||
+      (p.brand || '').toLowerCase().includes(term);
 
     const matchCategory =
       categoryFilter === 'all' ||
       (p.category_id || p.categoryId) === Number(categoryFilter);
 
-    return matchSearch && matchCategory;
+    const matchBrand =
+      brandFilter === 'all' ||
+      (p.brand || 'Dubro').toLowerCase() === brandFilter.toLowerCase();
+
+    return matchSearch && matchCategory && matchBrand;
   });
 
   // Metrics in function of the table below (filteredProducts)
@@ -429,7 +395,7 @@ export function AdminDashboardClient() {
   const lowStockCount = filteredProducts.filter(p => (p.stock !== undefined ? Number(p.stock) : (Number(p.stockQuantity) || 0)) < 5).length;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-5 lg:p-6 space-y-6 w-full mx-auto">
       
       {/* Toast Notification */}
       {toast && (
@@ -555,45 +521,22 @@ export function AdminDashboardClient() {
         </div>
       </div>
 
-      {/* Navigation Tabs between Product Management & Policies */}
-      <div className="flex items-center gap-2 border-b border-[#E2DCD3] pt-2">
-        <button
-          onClick={() => setActiveTab('products')}
-          type="button"
-          className={`flex items-center gap-2 px-6 py-3 font-black text-xs uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeTab === 'products'
-              ? 'border-[#D4A359] text-[#1A1817]'
-              : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
-          }`}
-        >
+      {/* Product Management (CRUD & Inline Editing) */}
+      <div className="flex items-center justify-between border-b border-[#E2DCD3] pb-3 pt-2">
+        <div className="flex items-center gap-2 font-black text-xs uppercase tracking-wider text-[#1A1817]">
           <Package className="w-4 h-4 text-[#D4A359]" />
           <span>Catálogo de Repuestos & Edición en Línea ({products.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('policies')}
-          type="button"
-          className={`flex items-center gap-2 px-6 py-3 font-black text-xs uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeTab === 'policies'
-              ? 'border-[#D4A359] text-[#1A1817]'
-              : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
-          }`}
-        >
-          <FileText className="w-4 h-4 text-[#D4A359]" />
-          <span>Gestor de Políticas en Tiempo Real</span>
-        </button>
+        </div>
       </div>
 
-      {/* 2. TAB: PRODUCT MANAGEMENT (CRUD & INLINE EDITING) */}
-      {activeTab === 'products' && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           
-          {/* Controls: Search & Category filter */}
+          {/* Controls: Search, Category & Brand filter */}
           <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E2DCD3] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
             <div className="relative w-full sm:w-80">
               <input
                 type="text"
-                placeholder="Buscar por SKU o Nombre..."
+                placeholder="Buscar por SKU, Nombre o Marca..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none"
@@ -601,16 +544,30 @@ export function AdminDashboardClient() {
               <Search className="w-4 h-4 text-[#8C827A] absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold w-full sm:w-auto"
+                className="text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold flex-1 sm:flex-initial"
               >
                 <option value="all">Todas las Categorías</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={brandFilter}
+                onChange={(e) => setBrandFilter(e.target.value)}
+                className="text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold flex-1 sm:flex-initial"
+                title="Clasificar por Marca"
+              >
+                <option value="all">Todas las Marcas</option>
+                {availableBrands.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
                   </option>
                 ))}
               </select>
@@ -628,44 +585,44 @@ export function AdminDashboardClient() {
 
           {/* Table Container */}
           <div className="bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+            <div className="w-full overflow-x-auto xl:overflow-x-visible">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase text-[10px] font-black tracking-wider">
-                    <th className="py-3.5 px-4">Producto / Repuesto</th>
-                    <th className="py-3.5 px-3">SKU</th>
-                    <th className="py-3.5 px-3">Categoría</th>
-                    <th className="py-3.5 px-3">Precio (Bs.)</th>
-                    <th className="py-3.5 px-3">Precio en USD</th>
-                    <th className="py-3.5 px-3 text-center">Mostrar en</th>
-                    <th className="py-3.5 px-3">Stock</th>
-                    <th className="py-3.5 px-4 text-right">Acciones</th>
+                  <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase text-[9.5px] font-black tracking-wider">
+                    <th className="py-3 px-3">Producto / Repuesto</th>
+                    <th className="py-3 px-2">SKU</th>
+                    <th className="py-3 px-2">Categoría</th>
+                    <th className="py-3 px-2">Marca</th>
+                    <th className="py-3 px-2 text-center">Precio (Bs.)</th>
+                    <th className="py-3 px-2 text-center">Precio USD</th>
+                    <th className="py-3 px-2 text-center">Mostrar en</th>
+                    <th className="py-3 px-2 text-center">Stock</th>
+                    <th className="py-3 px-3 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2DCD3]">
                   {filteredProducts.map((p) => {
                     const imgSrc = p.image_url || (p.images && p.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
-                    const isSaving = inlineLoadingId === p.id;
                     const catName = categories.find(c => c.id === (p.category_id || p.categoryId))?.name || 'General';
 
                     return (
                       <tr key={p.id} className="hover:bg-white/80 transition-colors">
                         
                         {/* Name + Image (STRICT RULE: bg-white, object-contain) */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-white p-1 border border-[#E2DCD3] flex items-center justify-center shrink-0">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-lg bg-white p-0.5 border border-[#E2DCD3] flex items-center justify-center shrink-0">
                               <img
                                 src={imgSrc}
                                 alt={p.name || p.title}
                                 className="max-h-full max-w-full object-contain"
                               />
                             </div>
-                            <div className="min-w-0">
-                              <span className="font-extrabold text-[#1A1817] block truncate max-w-xs">
+                            <div className="min-w-0 flex-1">
+                              <span className="font-extrabold text-[#1A1817] text-xs block truncate max-w-[160px] xl:max-w-[220px]" title={p.name || p.title}>
                                 {p.name || p.title}
                               </span>
-                              <span className="text-[10px] text-[#5C5650] block truncate max-w-xs">
+                              <span className="text-[10px] text-[#5C5650] block truncate max-w-[160px] xl:max-w-[220px]">
                                 {p.specs_line || p.material}
                               </span>
                             </div>
@@ -673,52 +630,53 @@ export function AdminDashboardClient() {
                         </td>
 
                         {/* SKU */}
-                        <td className="py-3 px-3 font-mono font-bold text-[#D4A359] whitespace-nowrap">
+                        <td className="py-2.5 px-2 font-mono font-bold text-[#D4A359] text-[11px] whitespace-nowrap">
                           {(p.sku && p.sku.startsWith('HB-')) ? p.sku : `HB-${p.id.toString().padStart(4, '0')}`}
                         </td>
 
                         {/* Category */}
-                        <td className="py-3 px-3 text-[#5C5650] whitespace-nowrap">
-                          <span className="block font-bold text-[#1A1817]">{catName}</span>
+                        <td className="py-2.5 px-2 text-[#5C5650]">
+                          <span className="block font-bold text-[#1A1817] text-[11px] truncate max-w-[110px]" title={catName}>
+                            {catName}
+                          </span>
                         </td>
 
-                        {/* Fast Inline Edit: Precio (Bs.) */}
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-1">
-                            <span className="text-[#8C827A] font-bold text-[10px]">Bs.</span>
-                            <input
-                              type="number"
-                              step="0.5"
-                              defaultValue={p.price}
-                              onBlur={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (!isNaN(val) && val !== p.price) {
-                                  handleInlineUpdate(p.id, 'price', val);
-                                }
-                              }}
-                              className="w-20 p-1.5 font-bold text-[#1A1817] bg-white border border-[#E2DCD3] rounded-lg focus:border-[#D4A359] outline-none text-xs"
-                            />
-                          </div>
+                        {/* Marca */}
+                        <td className="py-2.5 px-2 whitespace-nowrap">
+                          <span
+                            onClick={() => setBrandFilter(brandFilter === (p.brand || 'Dubro') ? 'all' : (p.brand || 'Dubro'))}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md border font-bold text-[10px] shadow-2xs transition-all cursor-pointer ${
+                              brandFilter === (p.brand || 'Dubro')
+                                ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]'
+                                : 'bg-white text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359]'
+                            }`}
+                            title={`Clic para filtrar solo repuestos de ${p.brand || 'Dubro'}`}
+                          >
+                            {p.brand || 'Dubro'}
+                          </span>
                         </td>
 
-                        {/* Precio en USD (calculado según TC Oficial) */}
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <div className="flex items-center gap-1 font-mono font-bold text-xs">
-                            <span className="text-[#8C827A] text-[10px] font-sans">$</span>
-                            <span className="text-[#1A1817]">
-                              {(exchangeRate > 0 ? (p.price / exchangeRate) : 0).toFixed(2)}
-                            </span>
-                            <span className="text-[9px] text-[#8C827A] font-sans uppercase">USD</span>
-                          </div>
+                        {/* Precio (Bs.) - Solo número, no editable inline */}
+                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                          <span className="font-mono font-bold text-xs text-[#1A1817]">
+                            {Number(p.price).toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* Precio USD - Solo número */}
+                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                          <span className="font-mono font-bold text-xs text-[#1A1817]">
+                            {(exchangeRate > 0 ? (p.price / exchangeRate) : 0).toFixed(2)}
+                          </span>
                         </td>
 
                         {/* Opción de elegir si el producto se mostrará en Bs. o en USD */}
-                        <td className="py-3 px-3 text-center whitespace-nowrap">
-                          <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-xl shadow-2xs">
+                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                          <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-lg shadow-2xs">
                             <button
                               type="button"
                               onClick={() => handleInlineUpdate(p.id, 'currency', 'Bs.')}
-                              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all cursor-pointer ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${
                                 (p.currency || 'Bs.') === 'Bs.'
                                   ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                                   : 'text-[#8C827A] hover:text-[#1A1817]'
@@ -730,7 +688,7 @@ export function AdminDashboardClient() {
                             <button
                               type="button"
                               onClick={() => handleInlineUpdate(p.id, 'currency', 'USD')}
-                              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all cursor-pointer ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${
                                 p.currency === 'USD'
                                   ? 'bg-[#128C7E] text-white shadow-xs'
                                   : 'text-[#8C827A] hover:text-[#1A1817]'
@@ -742,46 +700,29 @@ export function AdminDashboardClient() {
                           </div>
                         </td>
 
-                        {/* Fast Inline Edit: Stock */}
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              key={`${p.id}-stock-${p.stock}`}
-                              type="number"
-                              defaultValue={p.stock !== undefined ? p.stock : (p.stockQuantity || 0)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  (e.target as HTMLInputElement).blur();
-                                }
-                              }}
-                              onBlur={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val) && val !== p.stock) {
-                                  handleInlineUpdate(p.id, 'stock', val);
-                                }
-                              }}
-                              className={`w-16 p-1.5 font-bold rounded-lg border text-xs focus:border-[#D4A359] outline-none ${
-                                (p.stock || p.stockQuantity || 0) < 5
-                                  ? 'bg-[#F85606]/10 text-[#F85606] border-[#F85606]/30'
-                                  : 'bg-white text-[#1A1817] border-[#E2DCD3]'
-                              }`}
-                            />
-                            {isSaving && <span className="text-[10px] text-[#D4A359] animate-pulse">Guardando...</span>}
-                          </div>
+                        {/* Stock - Solo número */}
+                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                          <span
+                            className={`inline-block px-2 py-0.5 font-mono font-bold text-xs rounded-md ${
+                              (p.stock !== undefined ? p.stock : (p.stockQuantity || 0)) < 5
+                                ? 'bg-[#F85606]/15 text-[#F85606] font-black'
+                                : 'text-[#1A1817]'
+                            }`}
+                          >
+                            {p.stock !== undefined ? p.stock : (p.stockQuantity || 0)}
+                          </span>
                         </td>
 
-
-
                         {/* Actions */}
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => openEditModal(p)}
                               className="p-1.5 rounded-lg text-[#5C5650] hover:text-[#1A1817] hover:bg-white transition-colors cursor-pointer"
                               title="Editar repuesto completo"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
@@ -789,7 +730,7 @@ export function AdminDashboardClient() {
                               className="p-1.5 rounded-lg text-[#8C827A] hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                               title="Eliminar repuesto"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -803,89 +744,13 @@ export function AdminDashboardClient() {
           </div>
 
         </div>
-      )}
-
-      {/* 3. TAB: POLICIES MANAGER (PUT /api/policies) */}
-      {activeTab === 'policies' && (
-        <div className="bg-[#FAF8F5] p-6 sm:p-8 rounded-3xl border border-[#E2DCD3] shadow-sm space-y-6">
-          <div>
-            <h3 className="font-black text-lg text-[#1A1817] tracking-tight uppercase">
-              Gestor de Políticas Oficiales de Hobby Bolivia
-            </h3>
-            <p className="text-xs text-[#5C5650] mt-0.5">
-              Actualiza las condiciones de embalaje frágil en tubos de PVC, envíos a toda Bolivia, garantías y devoluciones en tiempo real.
-            </p>
-          </div>
-
-          {/* Policy Selector Buttons */}
-          <div className="flex flex-wrap gap-2">
-            {policies.map((pol) => (
-              <button
-                key={pol.slug}
-                type="button"
-                onClick={() => handleSelectPolicy(pol.slug)}
-                className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  selectedPolicySlug === pol.slug
-                    ? 'bg-[#211E1C] text-[#FAF8F5] border border-[#D4A359]/40 shadow-sm font-black'
-                    : 'bg-white text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3]'
-                }`}
-              >
-                {pol.title}
-              </button>
-            ))}
-          </div>
-
-          {/* Policy Editor Form */}
-          <form onSubmit={handleSavePolicy} className="space-y-4 pt-2">
-            <div>
-              <label className="block text-xs font-bold text-[#1A1817] mb-1">
-                Título Oficial de la Política
-              </label>
-              <input
-                type="text"
-                required
-                value={policyFormTitle}
-                onChange={(e) => setPolicyFormTitle(e.target.value)}
-                className="w-full text-xs p-3 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1A1817] mb-1">
-                Contenido / Términos de la Política (Markdown y texto enriquecido)
-              </label>
-              <textarea
-                rows={9}
-                required
-                value={policyFormContent}
-                onChange={(e) => setPolicyFormContent(e.target.value)}
-                className="w-full text-xs p-3 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none leading-relaxed font-mono"
-              ></textarea>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] text-[#8C827A]">
-                Los cambios se guardan y sincronizan automáticamente con la web pública.
-              </span>
-              <button
-                type="submit"
-                disabled={policySaving}
-                className="px-6 py-3 bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider rounded-full shadow-md flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <Save className="w-4 h-4 text-[#161311]" />
-                <span>{policySaving ? 'Guardando...' : 'Guardar Cambios de Política'}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* MODAL: ADD / EDIT PRODUCT */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs">
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E2DCD3] max-h-[92vh] flex flex-col overflow-hidden"
+            className="w-full max-w-3xl bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E2DCD3] max-h-[92vh] flex flex-col overflow-hidden"
           >
             {/* Modal Header */}
             <div className="p-5 border-b border-[#E2DCD3] flex items-center justify-between bg-white">
@@ -942,13 +807,13 @@ export function AdminDashboardClient() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
                 <div>
                   <label className="block font-bold text-[#1A1817] mb-1">Categoría *</label>
                   <select
                     value={formData.categoryId}
                     onChange={(e) => setFormData({ ...formData, categoryId: Number(e.target.value) })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-semibold"
+                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-semibold text-xs"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -959,6 +824,36 @@ export function AdminDashboardClient() {
                 </div>
 
                 <div>
+                  <label className="block font-bold text-[#1A1817] mb-1">Marca *</label>
+                  <input
+                    type="text"
+                    list="brands-datalist"
+                    placeholder="Ej. Dubro"
+                    value={formData.brand}
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-semibold text-xs"
+                    required
+                  />
+                  <datalist id="brands-datalist">
+                    {availableBrands.map((b) => (
+                      <option key={b} value={b} />
+                    ))}
+                    <option value="Dubro" />
+                    <option value="Great Planes" />
+                    <option value="APC Propellers" />
+                    <option value="Hobbywing Tech" />
+                    <option value="TowerPro" />
+                    <option value="Tattu Gens Ace" />
+                    <option value="E-flite" />
+                    <option value="Futaba" />
+                    <option value="Sunnysky" />
+                    <option value="Spektrum RC" />
+                    <option value="AcroFlight" />
+                    <option value="AeroCarbon" />
+                  </datalist>
+                </div>
+
+                <div>
                   <label className="block font-bold text-[#1A1817] mb-1">Precio en Bs. *</label>
                   <input
                     type="number"
@@ -966,9 +861,46 @@ export function AdminDashboardClient() {
                     required
                     placeholder="220"
                     value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold"
+                    onChange={(e) => {
+                      const newBs = e.target.value;
+                      setFormData({ ...formData, price: newBs });
+                      const num = parseFloat(newBs);
+                      const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+                      if (!isNaN(num) && num > 0) {
+                        setUsdPriceInput((num / rate).toFixed(2));
+                      } else {
+                        setUsdPriceInput('');
+                      }
+                    }}
+                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold text-xs"
                   />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#1A1817] mb-1">Precio en USD</label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-xs text-[#8C827A] pointer-events-none">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="18.59"
+                      value={usdPriceInput}
+                      onChange={(e) => {
+                        const newUsd = e.target.value;
+                        setUsdPriceInput(newUsd);
+                        const num = parseFloat(newUsd);
+                        const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+                        if (!isNaN(num) && num > 0) {
+                          setFormData({ ...formData, price: (num * rate).toFixed(1) });
+                        } else if (newUsd === '') {
+                          setFormData({ ...formData, price: '' });
+                        }
+                      }}
+                      className="w-full pl-6 pr-2.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold text-xs"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -1003,14 +935,14 @@ export function AdminDashboardClient() {
 
                 <div>
                   <label className="block font-bold text-[#1A1817] mb-1">
-                    Stock Disponible <span className="text-[#8C827A] font-normal text-[11px]">(Opcional)</span>
+                    Stock Disponible
                   </label>
                   <input
                     type="number"
                     placeholder="15"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold"
+                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold text-xs"
                   />
                 </div>
               </div>

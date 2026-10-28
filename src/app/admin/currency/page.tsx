@@ -2,25 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Coins,
   DollarSign,
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
-  ArrowRight,
   ShieldCheck,
   Clock,
   Globe,
   ArrowLeftRight,
   Save,
-  Sliders,
-  Check,
-  ExternalLink
+  Sliders
 } from 'lucide-react';
 import type { ExchangeRateConfig } from '@/lib/types';
 
 export default function CurrencySettingsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,7 +49,7 @@ export default function CurrencySettingsPage() {
   };
 
   // Fetch Exchange Rate from API
-  const fetchRateConfig = async (refresh = false) => {
+  const fetchRateConfig = React.useCallback(async (refresh = false) => {
     if (refresh) setSyncing(true);
     else setLoading(true);
 
@@ -67,7 +66,6 @@ export default function CurrencySettingsPage() {
           setCacheHours(json.data.cacheExpiresInHours);
         }
 
-        // Update live calculator with active rate
         const rate = Number(json.data.exchangeRate) || 6.96;
         setCalcBob((50 * rate).toFixed(2));
 
@@ -77,17 +75,22 @@ export default function CurrencySettingsPage() {
       } else {
         showToast(json.error || 'No se pudo obtener el tipo de cambio', 'error');
       }
-    } catch (err: any) {
+    } catch {
       showToast('Error de red al conectar con el servicio de tipo de cambio', 'error');
     } finally {
       setLoading(false);
       setSyncing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    const role = localStorage.getItem('hb_user_role');
+    if (role && role !== 'SUPERADMIN') {
+      router.replace('/admin');
+      return;
+    }
     fetchRateConfig();
-  }, []);
+  }, [fetchRateConfig, router]);
 
   // Save changes to API
   const handleSave = async (e?: React.FormEvent) => {

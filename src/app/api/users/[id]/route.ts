@@ -1,10 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserById, saveUser, deleteUser } from '@/lib/db';
+import { getUserById, updateUserRecord, deleteUserRecord } from '@/lib/db';
+import { requireSuperAdmin } from '@/lib/auth';
 
-function isSuperAdmin(request: NextRequest): boolean {
-  const auth = request.cookies.get('hb_admin_auth')?.value;
-  const role = request.cookies.get('hb_user_role')?.value;
-  return auth === 'authenticated' && role === 'SUPERADMIN';
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authCheck = await requireSuperAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
+    const { id } = await params;
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return NextResponse.json({ success: false, error: "ID de usuario inválido" }, { status: 400 });
+    }
+
+    const user = await getUserById(userId);
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Usuario no encontrado" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
+  } catch (error: any) {
+    console.error("Error in GET /api/users/[id]:", error);
+    return NextResponse.json({ success: false, error: "Error al consultar el usuario" }, { status: 500 });
+  }
 }
 
 export async function PUT(
@@ -12,57 +45,38 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!isSuperAdmin(request)) {
-      return NextResponse.json(
-        { success: false, error: 'Acceso denegado. Se requiere rol SUPERADMIN.' },
-        { status: 403 }
-      );
-    }
+    const authCheck = await requireSuperAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
 
     const { id } = await params;
-    const numId = parseInt(id, 10);
-    if (isNaN(numId)) {
-      return NextResponse.json({ success: false, error: 'ID de usuario inválido' }, { status: 400 });
-    }
-
-    const existingUser = await getUserById(numId);
-    if (!existingUser) {
-      return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 });
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return NextResponse.json({ success: false, error: "ID de usuario inválido" }, { status: 400 });
     }
 
     const body = await request.json();
-    const { name, password, isActive, role } = body;
+    const updated = await updateUserRecord(userId, body);
 
-    const isMaster = existingUser.username.toLowerCase() === 'superadmin';
-
-    const updatePayload: Record<string, unknown> = {
-      id: numId
-    };
-
-    if (name !== undefined) updatePayload.name = name.trim();
-    if (password && password.trim().length > 0) updatePayload.password = password.trim();
-    if (isActive !== undefined) updatePayload.isActive = isMaster ? true : Boolean(isActive);
-    if (role && !isMaster) updatePayload.role = role;
-
-    const updated = await saveUser(updatePayload);
+    if (!updated) {
+      return NextResponse.json({ success: false, error: "Usuario no encontrado para actualizar" }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,
+      message: "Usuario actualizado correctamente",
       data: {
         id: updated.id,
         name: updated.name,
         username: updated.username,
+        email: updated.email,
         role: updated.role,
         isActive: updated.isActive,
         updatedAt: updated.updatedAt
       }
     });
-  } catch (error) {
-    console.error('Error in PUT /api/users/[id]:', error);
-    return NextResponse.json(
-      { success: false, error: 'Error al actualizar usuario' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error("Error in PUT /api/users/[id]:", error);
+    return NextResponse.json({ success: false, error: error.message || "Error al actualizar usuario" }, { status: 500 });
   }
 }
 
@@ -71,45 +85,33 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!isSuperAdmin(request)) {
-      return NextResponse.json(
-        { success: false, error: 'Acceso denegado. Se requiere rol SUPERADMIN.' },
-        { status: 403 }
-      );
-    }
+    const authCheck = await requireSuperAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
 
     const { id } = await params;
-    const numId = parseInt(id, 10);
-    if (isNaN(numId)) {
-      return NextResponse.json({ success: false, error: 'ID de usuario inválido' }, { status: 400 });
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return NextResponse.json({ success: false, error: "ID de usuario inválido" }, { status: 400 });
     }
 
-    const existingUser = await getUserById(numId);
-    if (!existingUser) {
-      return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 });
-    }
+    try {
+      const deleted = await deleteUserRecord(userId);
+      if (!deleted) {
+        return NextResponse.json({ success: false, error: "Usuario no encontrado" }, { status: 404 });
+      }
 
-    if (existingUser.username.toLowerCase() === 'superadmin') {
+      return NextResponse.json({
+        success: true,
+        message: "Usuario eliminado correctamente"
+      });
+    } catch (err: any) {
       return NextResponse.json(
-        { success: false, error: 'No se puede eliminar la cuenta principal SUPERADMIN' },
+        { success: false, error: err.message || "No fue posible eliminar el usuario" },
         { status: 400 }
       );
     }
-
-    const success = await deleteUser(numId);
-    if (!success) {
-      return NextResponse.json(
-        { success: false, error: 'No se pudo eliminar el usuario' },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({ success: true, message: 'Usuario eliminado exitosamente' });
-  } catch (error) {
-    console.error('Error in DELETE /api/users/[id]:', error);
-    return NextResponse.json(
-      { success: false, error: 'Error al eliminar usuario' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error("Error in DELETE /api/users/[id]:", error);
+    return NextResponse.json({ success: false, error: "Error al eliminar usuario" }, { status: 500 });
   }
 }

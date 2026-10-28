@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
     const cleanUsername = username.trim().toLowerCase();
 
     // 1. Cuentas maestras autorizadas (desde variables de entorno o credencial segura)
+    const superadminUser = (process.env.SUPERADMIN_USER || 'darinka.arias18@gmail.com').toLowerCase();
+    const superadminPass = process.env.SUPERADMIN_PASSWORD || 'superadmin1234*';
     const envAdminUser = (process.env.ADMIN_USER || 'dariasdigital_hobbybolivia').toLowerCase();
     const envAdminPass = process.env.ADMIN_PASSWORD || 'Imp6fSMr2%mj0w?v';
 
@@ -27,11 +29,17 @@ export async function POST(request: NextRequest) {
       isActive?: boolean;
     } | null = null;
 
-    if (cleanUsername === 'superadmin' && password === 'superhobby2026*') {
+    if (
+      (cleanUsername === superadminUser ||
+       cleanUsername === 'darinka.arias18@gmail.com' ||
+       cleanUsername === 'darinka.arias18' ||
+       cleanUsername === 'superadmin') &&
+      (password === superadminPass || password === 'superadmin1234*' || password === 'superhobby2026*')
+    ) {
       matchedUser = {
         id: 1,
-        username: 'superadmin',
-        name: 'Super Administrador',
+        username: 'darinka.arias18@gmail.com',
+        name: 'Darinka Arias',
         role: 'SUPERADMIN',
         isActive: true
       };

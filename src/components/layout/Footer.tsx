@@ -17,20 +17,6 @@ export function Footer({ config }: FooterProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const keywords = [
-    "Conectores E/Z Dubro",
-    "Alambres Push-Rod 2-56",
-    "Clevises de Precisión",
-    "Hélices Eléctricas APC",
-    "Motores Brushless Outrunner",
-    "Variadores ESC con BEC",
-    "Micro Servos Piñonería Metálica",
-    "Tubos de Fibra de Carbono",
-    "Trenes de Aterrizaje Escala",
-    "Baterías LiPo Alta Descarga",
-    "Envíos Blindados a Toda Bolivia"
-  ];
-
   return (
     <footer className="bg-[#161311] text-[#A89F91] text-xs border-t border-[#2D2622]">
       
@@ -51,15 +37,23 @@ export function Footer({ config }: FooterProps) {
             </div>
           </div>
 
-          <a
-            href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}?text=Hola%20Hobby%20Bolivia,%20necesito%20asesoría%20sobre%20un%20repuesto.`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-extrabold text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#D4A359]/20 flex items-center gap-2 hover:scale-[1.02]"
+          <Link
+            href="/#catalogo"
+            onClick={(e) => {
+              const el = document.getElementById('catalogo');
+              if (el) {
+                e.preventDefault();
+                el.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] !text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#D4A359]/20 flex items-center gap-2 hover:scale-[1.02] cursor-pointer shrink-0"
+            style={{ color: '#161311' }}
           >
-            <span>Consultar con un Técnico</span>
-            <ArrowRight className="w-4 h-4 text-[#161311]" />
-          </a>
+            <span className="font-black !text-[#161311]" style={{ color: '#161311' }}>
+              Explorar Catálogo de Repuestos
+            </span>
+            <ArrowRight className="w-4 h-4 !text-[#161311]" style={{ color: '#161311' }} />
+          </Link>
         </div>
       </div>
 
@@ -132,16 +126,16 @@ export function Footer({ config }: FooterProps) {
             </h5>
             <ul className="space-y-2.5 text-[#A89F91]">
               <li>
-                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Envíos y Embalaje Frágil</a>
+                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Envíos y Embalaje Frágil</Link>
               </li>
               <li>
-                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Garantía de Repuestos</a>
+                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Garantía de Repuestos</Link>
               </li>
               <li>
-                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Cambios por Compatibilidad</a>
+                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Cambios por Compatibilidad</Link>
               </li>
               <li>
-                <a href="#politicas" className="hover:text-[#D4A359] transition-colors">Privacidad de Clientes</a>
+                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Privacidad de Clientes</Link>
               </li>
               <li>
                 <Link href="/libro-de-reclamaciones" className="hover:text-[#D4A359] transition-colors">Libro de Reclamaciones</Link>
@@ -186,17 +180,7 @@ export function Footer({ config }: FooterProps) {
         </div>
       </div>
 
-      {/* 3. Franja Inferior en Crema con Palabras Clave separadas por Puntos (•) */}
-      <div className="bg-[#F5F2EB] py-3.5 px-4 border-t border-[#E2DCD3] text-[#5C5650] text-[11px]">
-        <div className="w-full max-w-[1320px] mx-auto flex flex-wrap items-center justify-center gap-2 text-center font-medium">
-          {keywords.map((kw, i) => (
-            <React.Fragment key={kw}>
-              <span className="hover:text-[#1A1817] transition-colors">{kw}</span>
-              {i < keywords.length - 1 && <span className="text-[#D4A359] font-bold">•</span>}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
+
 
       {/* 4. Bottom Copyright Strip */}
       <div className="bg-[#100D0B] py-3 px-4 border-t border-[#241F1C]">
@@ -206,7 +190,6 @@ export function Footer({ config }: FooterProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-[#D4A359] font-mono">Precios en Bolivianos (Bs.)</span>
             <button
               onClick={scrollToTop}
               type="button"

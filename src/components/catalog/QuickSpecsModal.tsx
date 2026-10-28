@@ -9,14 +9,20 @@ interface QuickSpecsModalProps {
   product: Product | null;
   isOpen?: boolean;
   onClose: () => void;
+  exchangeRate?: number;
 }
 
-export function QuickSpecsModal({ product, onClose }: QuickSpecsModalProps) {
+export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: QuickSpecsModalProps) {
   const { addToCart } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
   if (!product) return null;
+
+  const isUsd = product.currency === 'USD' || (product as any).display_currency === 'USD';
+  const rate = exchangeRate > 0 ? exchangeRate : 6.96;
+  const usdPrice = (product.price / rate).toFixed(2);
+  const bsPrice = product.price.toFixed(2);
 
   const handleAdd = () => {
     addToCart(product, qty);
@@ -88,19 +94,8 @@ export function QuickSpecsModal({ product, onClose }: QuickSpecsModalProps) {
             <div className="mt-3 inline-flex items-center gap-2 bg-[#211E1C] text-white px-4 py-1.5 rounded-full shadow-sm">
               <span className="text-xs uppercase font-extrabold text-[#D4A359]">Precio:</span>
               <span className="text-base font-black text-white">
-                {product.currency === 'USD'
-                  ? `$ ${(product.price / 11.84).toFixed(2)} USD`
-                  : `Bs. ${product.price.toFixed(2)}`}
+                {isUsd ? `$ ${usdPrice} USD` : `Bs. ${bsPrice}`}
               </span>
-              {product.currency === 'USD' ? (
-                <span className="text-xs text-[#8C827A] font-medium">
-                  (≈ Bs. {product.price.toFixed(2)})
-                </span>
-              ) : (
-                <span className="text-xs text-[#8C827A] font-medium">
-                  (≈ $ {(product.price / 11.84).toFixed(2)} USD)
-                </span>
-              )}
             </div>
 
             {/* Technical Specifications Grid */}

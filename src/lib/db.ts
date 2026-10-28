@@ -19,6 +19,7 @@ import type {
   ClaimRecord,
   OrderStatus,
   User,
+  UserRole,
   Policy,
   ExchangeRateConfig
 } from './types';
@@ -28,10 +29,10 @@ const DATA_FILE = path.join(DATA_DIR, 'db.json');
 
 export const DEFAULT_SUPERADMIN: User = {
   id: 1,
-  name: "Super Administrador",
-  username: "superadmin",
-  email: "superadmin@hobbybolivia.com",
-  password: "superhobby2026*",
+  name: "Darinka Arias",
+  username: "darinka.arias18@gmail.com",
+  email: "darinka.arias18@gmail.com",
+  password: "superadmin1234*",
   role: "SUPERADMIN",
   isActive: true,
   createdAt: "2026-01-01T00:00:00.000Z"
@@ -408,9 +409,9 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
       // Insertar Administradores
       await conn.query(`
         INSERT INTO admin_users (id, username, email, password_hash, role)
-        VALUES (1, 'superadmin', 'superadmin@hobbybolivia.com', 'superhobby2026*', 'SUPERADMIN'),
+        VALUES (1, 'darinka.arias18@gmail.com', 'darinka.arias18@gmail.com', 'superadmin1234*', 'SUPERADMIN'),
                (2, 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN')
-        ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash)
+        ON DUPLICATE KEY UPDATE username=VALUES(username), email=VALUES(email), password_hash=VALUES(password_hash), role=VALUES(role)
       `);
     }
 
@@ -546,6 +547,25 @@ export function getLocalStore(): LocalDatabase {
         updatedAt: new Date().toISOString()
       };
       saveLocalStore(parsed);
+    }
+    if (!parsed.users || parsed.users.length === 0) {
+      parsed.users = [DEFAULT_SUPERADMIN];
+      saveLocalStore(parsed);
+    } else {
+      const darinkaUser = parsed.users.find(u =>
+        u.email?.toLowerCase() === 'darinka.arias18@gmail.com' ||
+        u.username?.toLowerCase() === 'darinka.arias18@gmail.com'
+      );
+      if (!darinkaUser) {
+        parsed.users.unshift(DEFAULT_SUPERADMIN);
+        saveLocalStore(parsed);
+      } else if (darinkaUser.password !== 'superadmin1234*' || darinkaUser.role !== 'SUPERADMIN') {
+        darinkaUser.name = 'Darinka Arias';
+        darinkaUser.password = 'superadmin1234*';
+        darinkaUser.role = 'SUPERADMIN';
+        darinkaUser.isActive = true;
+        saveLocalStore(parsed);
+      }
     }
 
     return parsed;
@@ -1007,7 +1027,7 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
         `UPDATE products SET
           sku = ?, name = ?, price = ?, old_price = ?, stock = ?,
           specs_line = ?, material = ?, scale = ?, badge = ?,
-          image_url = ?, is_active = ?, description = ?
+          image_url = ?, is_active = ?, brand = ?, description = ?
          WHERE id = ?`,
         [
           updated.sku,
@@ -1021,6 +1041,7 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
           updated.badge || null,
           updated.image_url,
           updated.is_active ? 1 : 0,
+          updated.brand || 'Hobby Bolivia',
           updated.description || '',
           id
         ]
@@ -1364,8 +1385,158 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 
   const store = getLocalStore();
   const clean = username.trim().toLowerCase();
-  const user = store.users?.find(u => u.username?.toLowerCase() === clean || u.email?.toLowerCase() === clean);
+  const user = store.users?.find(u =>
+    u.username?.toLowerCase() === clean ||
+    u.email?.toLowerCase() === clean ||
+    (clean === 'darinka.arias18' && (u.username?.toLowerCase() === 'darinka.arias18@gmail.com' || u.email?.toLowerCase() === 'darinka.arias18@gmail.com'))
+  );
   return user || null;
+}
+
+export async function getAllUsers(): Promise<User[]> {
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM admin_users ORDER BY id ASC');
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: Number(r.id),
+          name: r.name || (r.username === 'superadmin' ? 'Super Administrador' : r.username),
+          username: r.username,
+          email: r.email || `${r.username}@hobbybolivia.com`,
+          role: (r.role || 'ADMIN') as UserRole,
+          isActive: r.is_active !== undefined ? Boolean(r.is_active) : true,
+          createdAt: r.created_at || new Date().toISOString()
+        }));
+      }
+    } catch (e) {
+      console.warn('[MySQL getAllUsers Warning]:', e);
+    }
+  }
+
+  const store = getLocalStore();
+  if (!store.users || store.users.length === 0) {
+    store.users = [DEFAULT_SUPERADMIN];
+    saveLocalStore(store);
+  }
+  return store.users;
+}
+
+export async function getUserById(id: number): Promise<User | null> {
+  const users = await getAllUsers();
+  return users.find(u => u.id === id) || null;
+}
+
+export async function createUserRecord(userData: Partial<User>): Promise<User> {
+  const store = getLocalStore();
+  if (!store.users) store.users = [];
+
+  const nextId = store.users.length > 0 ? Math.max(...store.users.map(u => u.id), 0) + 1 : 1;
+  const now = new Date().toISOString();
+
+  const newUser: User = {
+    id: nextId,
+    name: userData.name || userData.username || 'Usuario Admin',
+    username: (userData.username || userData.email || `admin_${nextId}`).trim().toLowerCase(),
+    email: (userData.email || userData.username || '').trim().toLowerCase(),
+    password: userData.password || 'admin1234*',
+    role: (userData.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as UserRole,
+    isActive: userData.isActive !== undefined ? Boolean(userData.isActive) : true,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  // 1. MySQL si está disponible
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        `INSERT INTO admin_users (id, username, email, password_hash, role)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE email=VALUES(email), role=VALUES(role)`,
+        [newUser.id, newUser.username, newUser.email, newUser.password, newUser.role]
+      );
+    } catch (e) {
+      console.warn('[MySQL createUserRecord Warning]:', e);
+    }
+  }
+
+  // 2. Almacenamiento local
+  store.users.push(newUser);
+  saveLocalStore(store);
+  return newUser;
+}
+
+export async function updateUserRecord(id: number, data: Partial<User>): Promise<User | null> {
+  const store = getLocalStore();
+  if (!store.users) store.users = [];
+  const index = store.users.findIndex(u => u.id === id);
+  if (index === -1) return null;
+
+  const current = store.users[index];
+  const now = new Date().toISOString();
+
+  const updated: User = {
+    ...current,
+    ...data,
+    id,
+    name: data.name !== undefined ? data.name : current.name,
+    username: data.username !== undefined ? data.username.trim().toLowerCase() : current.username,
+    email: data.email !== undefined ? data.email.trim().toLowerCase() : current.email,
+    role: data.role !== undefined ? (data.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') : current.role,
+    isActive: data.isActive !== undefined ? Boolean(data.isActive) : current.isActive,
+    password: data.password && data.password.trim() ? data.password.trim() : current.password,
+    updatedAt: now
+  };
+
+  // 1. MySQL si está disponible
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query(
+        `UPDATE admin_users SET username = ?, email = ?, password_hash = ?, role = ? WHERE id = ?`,
+        [updated.username, updated.email, updated.password, updated.role, id]
+      );
+    } catch (e) {
+      console.warn('[MySQL updateUserRecord Warning]:', e);
+    }
+  }
+
+  // 2. Almacenamiento local
+  store.users[index] = updated;
+  saveLocalStore(store);
+  return updated;
+}
+
+export async function deleteUserRecord(id: number): Promise<boolean> {
+  const store = getLocalStore();
+  if (!store.users) return false;
+
+  const user = store.users.find(u => u.id === id);
+  if (!user) return false;
+
+  // Validación de seguridad: no permitir eliminar al único SUPERADMIN
+  if (user.role === 'SUPERADMIN') {
+    const activeSuperadmins = store.users.filter(u => u.role === 'SUPERADMIN' && u.isActive);
+    if (activeSuperadmins.length <= 1) {
+      throw new Error("No es posible eliminar al único Superadministrador del sistema.");
+    }
+  }
+
+  // 1. MySQL si está disponible
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      await pool.query('DELETE FROM admin_users WHERE id = ?', [id]);
+    } catch (e) {
+      console.warn('[MySQL deleteUserRecord Warning]:', e);
+    }
+  }
+
+  // 2. Almacenamiento local
+  store.users = store.users.filter(u => u.id !== id);
+  saveLocalStore(store);
+  return true;
 }
 
 // ============================================================================
@@ -1441,54 +1612,15 @@ export async function updateClaimStatus(id: number, status: any, adminNotes?: st
   return store.claims[index];
 }
 
-export async function getUsers(): Promise<User[]> {
-  const store = getLocalStore();
-  return store.users || [DEFAULT_SUPERADMIN];
-}
-
-export async function getUserById(id: number): Promise<User | null> {
-  const store = getLocalStore();
-  return store.users?.find(u => u.id === id) || null;
-}
-
+export const getUsers = getAllUsers;
 export async function saveUser(data: Partial<User>): Promise<User> {
-  const store = getLocalStore();
-  if (!store.users) store.users = [DEFAULT_SUPERADMIN];
   if (data.id) {
-    const idx = store.users.findIndex(u => u.id === data.id);
-    if (idx !== -1) {
-      store.users[idx] = { ...store.users[idx], ...data, updatedAt: new Date().toISOString() };
-      saveLocalStore(store);
-      return store.users[idx];
-    }
+    const updated = await updateUserRecord(data.id, data);
+    if (updated) return updated;
   }
-  const newId = store.users.length > 0 ? Math.max(...store.users.map(u => u.id)) + 1 : 1;
-  const newUser: User = {
-    id: newId,
-    name: data.name || "Usuario",
-    username: data.username || `user${newId}`,
-    email: data.email,
-    password: data.password || "password",
-    role: data.role || "ADMIN",
-    isActive: data.isActive !== undefined ? data.isActive : true,
-    createdAt: new Date().toISOString()
-  };
-  store.users.push(newUser);
-  saveLocalStore(store);
-  return newUser;
+  return createUserRecord(data);
 }
-
-export async function deleteUser(id: number): Promise<boolean> {
-  const store = getLocalStore();
-  if (id === 1) return false;
-  const initCount = store.users.length;
-  store.users = store.users.filter(u => u.id !== id);
-  if (store.users.length !== initCount) {
-    saveLocalStore(store);
-    return true;
-  }
-  return false;
-}
+export const deleteUser = deleteUserRecord;
 
 export async function saveBanner(data: Partial<Banner>): Promise<Banner> {
   const store = getLocalStore();

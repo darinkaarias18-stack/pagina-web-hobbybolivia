@@ -6,6 +6,7 @@ import {
   convertBobToUsd,
   CACHE_DURATION_MS
 } from '@/lib/exchange-rate';
+import { requireSuperAdmin } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +50,9 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const authCheck = await requireSuperAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     const { exchangeRate, autoUpdate, source } = body;
 

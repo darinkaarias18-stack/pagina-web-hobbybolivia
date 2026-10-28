@@ -101,8 +101,6 @@ export function CategoryTilesGrid({
               <div>
                 <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 justify-center sm:justify-start">
                   <span>MANTÉN TU FLOTA EN EL AIRE</span>
-                  <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
-                  <span className="hidden sm:inline-block text-[#D4A359] text-xs">Precios en Bolivianos (Bs.)</span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-[#E2DCD3]/80">
                   Envíos blindados con entrega rápida a toda Bolivia (La Paz, Santa Cruz, Cochabamba y el resto del país).

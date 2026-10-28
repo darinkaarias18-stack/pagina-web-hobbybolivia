@@ -6,16 +6,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Plane,
   LayoutDashboard,
-  Layers,
-  FileText,
   ShoppingBag,
   Settings,
   ExternalLink,
   Menu,
   X,
   LogOut,
-  Database,
-  Coins
+  Coins,
+  Users
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [userRole, setUserRole] = useState<'SUPERADMIN' | 'ADMIN' | null>(null);
 
   // Verify authentication
   useEffect(() => {
@@ -32,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    const checkSession = () => {
+    const checkSession = async () => {
       const logged =
         localStorage.getItem('hb_admin_logged') === 'true' ||
         document.cookie.includes('hb_admin_auth=authenticated');
@@ -40,6 +39,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (!logged) {
         router.replace('/login?redirect=' + encodeURIComponent(pathname));
         return;
+      }
+
+      const storedRole = localStorage.getItem('hb_user_role') as 'SUPERADMIN' | 'ADMIN' | null;
+      if (storedRole) {
+        setUserRole(storedRole);
+      }
+
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setUserRole(data.user.role);
+            localStorage.setItem('hb_user_role', data.user.role);
+          }
+        }
+      } catch (err) {
+        console.error('Error verifying auth/me session:', err);
       }
 
       setCheckingAuth(false);
@@ -77,14 +94,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const navItems = [
-    { label: 'Dashboard & Productos', href: '/admin', icon: LayoutDashboard },
-    { label: 'Gestor de Políticas', href: '/admin/policies', icon: FileText },
-    { label: 'Categorías', href: '/admin/categories', icon: Layers },
-    { label: 'Pedidos & Cotizaciones', href: '/admin/quotes', icon: ShoppingBag },
-    { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins },
-    { label: 'Configuración de Tienda', href: '/admin/settings', icon: Settings }
+  const allNavItems = [
+    { label: 'Dashboard & Productos', href: '/admin', icon: LayoutDashboard, superadminOnly: false },
+    { label: 'Pedidos & Cotizaciones', href: '/admin/quotes', icon: ShoppingBag, superadminOnly: false },
+    { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins, superadminOnly: true },
+    { label: 'Gestión de Usuarios', href: '/admin/users', icon: Users, superadminOnly: true },
+    { label: 'Configuración de Tienda', href: '/admin/settings', icon: Settings, superadminOnly: false }
   ];
+
+  const navItems = allNavItems.filter((item) => !item.superadminOnly || userRole === 'SUPERADMIN');
 
   return (
     <div className="min-h-screen bg-[#F5F2EB] text-[#1A1817] flex flex-col md:flex-row">
@@ -122,9 +140,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </span>
             </Link>
             <div className="flex items-center gap-2 mt-2 px-0.5">
-              <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-pulse" />
+              <span className={`w-2 h-2 rounded-full ${userRole === 'SUPERADMIN' ? 'bg-[#D4A359]' : 'bg-[#3E7B44]'} animate-pulse`} />
               <span className="text-[10px] font-black text-[#D4A359] uppercase tracking-wider">
-                Panel Warm Tech Activo
+                {userRole === 'SUPERADMIN' ? 'Superadmin · Acceso Total' : 'Panel Administrador'}
               </span>
             </div>
           </div>
@@ -184,7 +202,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto min-h-screen bg-[#F5F2EB]">
+      <main className="flex-1 min-w-0 overflow-y-auto min-h-screen bg-[#F5F2EB]">
         {children}
       </main>
 

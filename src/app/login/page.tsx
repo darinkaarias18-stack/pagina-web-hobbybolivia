@@ -87,14 +87,14 @@ function LoginForm() {
 
         <form onSubmit={handleLogin} className="space-y-4 text-xs">
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Usuario</label>
+            <label className="font-bold text-slate-700 block mb-1">Usuario o Correo Electrónico</label>
             <div className="relative">
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="superadmin"
+                placeholder="ej. darinka.arias18@gmail.com"
                 className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl bg-slate-50 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium transition-all"
               />
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />

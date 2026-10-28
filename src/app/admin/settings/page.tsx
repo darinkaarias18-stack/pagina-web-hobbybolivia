@@ -1,22 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Store,
-  Palette,
   Image as ImageIcon,
   Layout,
-  FileText,
   Save,
-  Check,
   Loader2,
   Sparkles,
-  RefreshCw,
   Eye,
-  QrCode,
-  Coins
+  QrCode
 } from 'lucide-react';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 import type { SiteConfig } from '@/lib/types';
@@ -38,7 +32,6 @@ export default function AdminSettingsPage() {
 
   // 2. Web Images
   const [logoUrl, setLogoUrl] = useState('');
-  const [heroBannerUrl, setHeroBannerUrl] = useState('');
 
   // 3. Payment QR (QR Simple Bolivia)
   const [paymentQrUrl, setPaymentQrUrl] = useState('/images/payment/qr_simple_hobbybolivia.svg');
@@ -62,46 +55,6 @@ export default function AdminSettingsPage() {
   const [shippingPolicy, setShippingPolicy] = useState('');
   const [returnsPolicy, setReturnsPolicy] = useState('');
 
-  // Presets definition
-  const presets = [
-    {
-      id: 'floreria',
-      name: 'Florería & Detalles',
-      desc: 'Rosa Carmesí + Verde Botánico',
-      primary: '#E11D48',
-      secondary: '#064E3B',
-      accent: '#F43F5E',
-      previewBg: 'from-[#E11D48] to-[#064E3B]'
-    },
-    {
-      id: 'ferreteria',
-      name: 'Catálogo Industrial / Ferretería',
-      desc: 'Naranja Intenso + Azul Oscuro Slate',
-      primary: '#EA580C',
-      secondary: '#0F172A',
-      accent: '#2563EB',
-      previewBg: 'from-[#EA580C] to-[#0F172A]'
-    },
-    {
-      id: 'tech',
-      name: 'Tecnología / Moderno',
-      desc: 'Azul Real + Gris Pizarra',
-      primary: '#2563EB',
-      secondary: '#1E293B',
-      accent: '#3B82F6',
-      previewBg: 'from-[#2563EB] to-[#1E293B]'
-    },
-    {
-      id: 'classic',
-      name: 'Editorial / Clásico',
-      desc: 'Dorado Elegante + Azul Noche',
-      primary: '#EAB308',
-      secondary: '#0F172A',
-      accent: '#CA8A04',
-      previewBg: 'from-[#EAB308] to-[#0F172A]'
-    }
-  ];
-
   useEffect(() => {
     const role = localStorage.getItem('hb_user_role') || 'ADMIN';
     if (role !== 'SUPERADMIN') {
@@ -115,24 +68,23 @@ export default function AdminSettingsPage() {
         if (data.success && data.data) {
           const c: SiteConfig = data.data;
           setCompanyName(c.companyName || 'Hobby Bolivia');
-          setSubtitle(c.subtitle || 'Aeromodelismo & R/C');
-          setCurrency(c.currency || '$us');
+          setSubtitle(c.subtitle || 'Repuestos y componentes de precisión para aeromodelismo & R/C');
+          setCurrency(c.currency || 'Bs.');
           setWhatsappNumber(c.whatsappNumber || '+591 77293446');
           setContactEmail(c.contactEmail || 'contacto@hobbybolivia.com');
-          setTopBarText(c.topBarText || '');
+          setTopBarText(c.topBarText || 'Hobby Bolivia: Repuestos y componentes de precisión para aeromodelismo | Envíos a todo el país');
           setDomain(c.domain || 'https://hobbybolivia.com');
 
           setLogoUrl(c.logoUrl || '');
-          setHeroBannerUrl(c.heroBannerUrl || '');
 
           setPaymentQrUrl(c.paymentQrUrl || '/images/payment/qr_simple_hobbybolivia.svg');
           setPaymentQrInstructions(c.paymentQrInstructions || '');
           setEnablePaymentQr(c.enablePaymentQr !== false);
 
-          setThemePreset(c.themePreset || 'ferreteria');
-          setPrimaryColor(c.primaryColor || '#e04f26');
-          setSecondaryColor(c.secondaryColor || '#162544');
-          setAccentColor(c.accentColor || '#2563eb');
+          setThemePreset(c.themePreset || 'warm-tech');
+          setPrimaryColor(c.primaryColor || '#D4A359');
+          setSecondaryColor(c.secondaryColor || '#161311');
+          setAccentColor(c.accentColor || '#F85606');
 
           setCardStyle(c.cardStyle || 'with_button');
           setDesktopColumns(c.desktopColumns || 6);
@@ -145,17 +97,7 @@ export default function AdminSettingsPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, []);
-
-  const applyPreset = (presetId: string) => {
-    const p = presets.find((x) => x.id === presetId);
-    if (p) {
-      setThemePreset(p.id);
-      setPrimaryColor(p.primary);
-      setSecondaryColor(p.secondary);
-      setAccentColor(p.accent);
-    }
-  };
+  }, [router]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,7 +114,7 @@ export default function AdminSettingsPage() {
         topBarText,
         domain,
         logoUrl: logoUrl.trim() || null,
-        heroBannerUrl: heroBannerUrl.trim() || null,
+        heroBannerUrl: null,
         paymentQrUrl: paymentQrUrl.trim() || null,
         paymentQrInstructions: paymentQrInstructions.trim() || null,
         enablePaymentQr,
@@ -209,37 +151,40 @@ export default function AdminSettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-16 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
-        <Loader2 className="w-5 h-5 animate-spin text-[#162544]" />
-        <span>Cargando configuración de la tienda...</span>
+      <div className="p-16 text-center text-xs text-[#8C827A] flex items-center justify-center gap-2">
+        <Loader2 className="w-5 h-5 animate-spin text-[#D4A359]" />
+        <span className="font-bold">Cargando configuración de la tienda...</span>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl space-y-8 pb-16">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto pb-24">
+      {/* Header Top Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
         <div>
-          <span className="text-xs font-bold text-[#e04f26] uppercase tracking-wider block">
-            Personalización & Apariencia
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#162544] tracking-tight">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#F85606] animate-pulse" />
+            <span className="text-xs font-black uppercase tracking-wider text-[#D4A359]">
+              Personalización & Apariencia · Hobby Bolivia
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
             Configuración de la Tienda
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[#8C827A] mt-1">
             Modifica la identidad, logotipo, temas de color y estructura visual del catálogo público.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 rounded-full border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+            className="px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors flex items-center gap-1.5"
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Eye className="w-3.5 h-3.5 text-[#D4A359]" />
             <span>Ver Catálogo en Vivo ↗</span>
           </a>
 
@@ -247,17 +192,17 @@ export default function AdminSettingsPage() {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2.5 rounded-full bg-[#162544] hover:bg-[#1d2b53] text-white text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer"
+            className="px-5 py-2.5 rounded-full bg-[#161311] hover:bg-[#D4A359] text-white hover:text-[#161311] font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-[#D4A359]" />}
             <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
           </button>
         </div>
       </div>
 
       {successMsg && (
-        <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-green-800 text-xs sm:text-sm font-semibold flex items-center gap-2 animate-fade-in shadow-xs">
-          <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+        <div className="p-4 rounded-2xl bg-[#3E7B44]/15 border border-[#3E7B44]/30 text-[#1E4D2B] text-xs sm:text-sm font-bold flex items-center gap-3 animate-fade-in shadow-xs">
+          <div className="w-7 h-7 rounded-full bg-[#3E7B44] text-white flex items-center justify-center font-black flex-shrink-0">
             ✓
           </div>
           <span>{successMsg}</span>
@@ -268,194 +213,169 @@ export default function AdminSettingsPage() {
         {/* ========================================================
             1. IDENTIDAD DEL NEGOCIO
         ======================================================== */}
-        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-[#162544]/10 text-[#162544] flex items-center justify-center">
+        <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-[#FAF8F5]">
+            <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
               <Store className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#162544]">1. Identidad del Negocio</h2>
-              <p className="text-xs text-slate-400">Datos principales de la marca, moneda y líneas de contacto.</p>
+              <h2 className="text-base font-black text-[#1A1817]">1. Identidad del Negocio</h2>
+              <p className="text-xs text-[#8C827A]">Datos principales de la marca, moneda y canales oficiales de contacto.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Nombre de la Tienda*</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
+            <div className="lg:col-span-4">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
+                Nombre de la Tienda*
+              </label>
               <input
                 type="text"
                 required
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Ej. Hobby Bolivia"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] placeholder:text-[#A89F91] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all"
               />
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Subtítulo / Rubro Comercial*</label>
+            <div className="lg:col-span-8">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
+                Subtítulo / Rubro Comercial*
+              </label>
               <input
                 type="text"
                 required
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                placeholder="Ej. Aeromodelismo & R/C o Florería & Detalles"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                placeholder="Ej. Repuestos de precisión, drones & aeromodelismo"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] placeholder:text-[#A89F91] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all"
               />
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Moneda del Catálogo*</label>
+            <div className="lg:col-span-4">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
+                Moneda del Catálogo*
+              </label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all cursor-pointer"
               >
-                <option value="$us">Dólares Americanos ($us)</option>
                 <option value="Bs.">Bolivianos (Bs.)</option>
+                <option value="$us">Dólares Americanos ($us)</option>
               </select>
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Número de WhatsApp (con +591)*</label>
+            <div className="lg:col-span-4">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
+                Número de WhatsApp (con +591)*
+              </label>
               <input
                 type="text"
                 required
                 value={whatsappNumber}
                 onChange={(e) => setWhatsappNumber(e.target.value)}
                 placeholder="+591 77293446"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] placeholder:text-[#A89F91] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all font-mono"
               />
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Correo Electrónico de Contacto</label>
+            <div className="lg:col-span-4">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
+                Correo Electrónico de Contacto
+              </label>
               <input
                 type="email"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
                 placeholder="contacto@hobbybolivia.com"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] placeholder:text-[#A89F91] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all"
               />
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Texto de la Barra Superior (Top Bar)</label>
+            <div className="lg:col-span-12">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
+                Texto de la Barra Superior (Top Bar)
+              </label>
               <input
                 type="text"
                 value={topBarText}
                 onChange={(e) => setTopBarText(e.target.value)}
-                placeholder="Envíos a todo el país..."
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                placeholder="Ej. Envíos a toda Bolivia | Atención personalizada"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] placeholder:text-[#A89F91] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all"
               />
             </div>
 
-            {/* Quick Link to Exchange Rate Configuration */}
-            <div className="sm:col-span-2 lg:col-span-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#D4A359]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#D4A359]/20 text-[#B88738] flex items-center justify-center shrink-0">
-                  <Coins className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-[#1A1817] flex items-center gap-2">
-                    <span>Tipo de Cambio Oficial (USD a BOB)</span>
-                    <span className="text-[10px] font-mono font-bold bg-[#D4A359]/20 text-[#9E6C21] px-2 py-0.5 rounded-full">
-                      Sincronización 24h
-                    </span>
-                  </h4>
-                  <p className="text-[11px] text-[#5C554E] mt-0.5">
-                    Configuración de tasa oficial de cambio, modo automático vía API o sobrescritura manual con simulador en tiempo real.
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/admin/currency"
-                className="text-xs font-black text-white bg-[#F85606] hover:bg-[#d44500] px-4 py-2 rounded-xl transition-all shadow-xs shrink-0 flex items-center gap-1.5"
-              >
-                <span>Administrar Tipo de Cambio →</span>
-              </Link>
-            </div>
+
           </div>
         </section>
 
         {/* ========================================================
-            2. IMÁGENES DE LA WEB (LOGOTIPO Y HERO BANNER)
+            2. LOGOTIPO OFICIAL DE LA WEB
         ======================================================== */}
-        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-[#e04f26]/10 text-[#e04f26] flex items-center justify-center">
+        <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-[#FAF8F5]">
+            <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
               <ImageIcon className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#162544]">2. Imágenes Oficiales de la Web</h2>
-              <p className="text-xs text-slate-400">Sube tus archivos de imagen directamente desde tu PC o pega enlaces externos.</p>
+              <h2 className="text-base font-black text-[#1A1817]">2. Logotipo Oficial de la Web</h2>
+              <p className="text-xs text-[#8C827A]">Sube el logotipo que se mostrará en la cabecera principal, menú y pie de página del catálogo.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Uploader Logotipo */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <ImageUploader
-                label="Logotipo de la Tienda (Header y Footer)"
-                value={logoUrl}
-                onChange={setLogoUrl}
-                recommendedSize="Proporción recomendada: Cuadrado 512x512 px o formato horizontal transparente (PNG, SVG, WebP)."
-              />
-            </div>
-
-            {/* Uploader Hero Banner */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <ImageUploader
-                label="Imagen del Banner Principal (Hero)"
-                value={heroBannerUrl}
-                onChange={setHeroBannerUrl}
-                recommendedSize="Recomendado: 1200x600 px o similar para la portada principal del catálogo."
-              />
-            </div>
+          <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3]">
+            <ImageUploader
+              label="Logotipo Oficial (Header y Footer)"
+              value={logoUrl}
+              onChange={setLogoUrl}
+              recommendedSize="Proporción recomendada: 512x512 px o formato horizontal con fondo transparente (PNG, SVG, WebP)."
+            />
           </div>
         </section>
 
         {/* ========================================================
             3. CONFIGURACIÓN DE PAGO CON QR (QR SIMPLE BOLIVIA)
         ======================================================== */}
-        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#F85606]/10 text-[#F85606] flex items-center justify-center">
+        <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-[#FAF8F5] flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
                 <QrCode className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-[#162544]">3. Cobro con QR Simple (Bolivia)</h2>
-                <p className="text-xs text-slate-400">Publica el código QR bancario que se mostrará en el carrito para que tus clientes paguen al instante.</p>
+                <h2 className="text-base font-black text-[#1A1817]">3. Cobro con QR Simple (Bolivia)</h2>
+                <p className="text-xs text-[#8C827A]">Publica el código QR bancario para que tus clientes completen pagos al instante en el carrito.</p>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 transition-colors">
+            <label className="flex items-center gap-2.5 cursor-pointer bg-[#FAF8F5] hover:bg-white px-3.5 py-2 rounded-xl border border-[#E2DCD3] transition-colors shadow-xs">
               <input
                 type="checkbox"
                 checked={enablePaymentQr}
                 onChange={(e) => setEnablePaymentQr(e.target.checked)}
-                className="w-4 h-4 rounded text-[#F85606] focus:ring-[#F85606]"
+                className="w-4 h-4 rounded text-[#D4A359] focus:ring-0 accent-[#D4A359] cursor-pointer"
               />
-              <span className="text-xs font-bold text-slate-700">Habilitar QR en Carrito</span>
+              <span className="text-xs font-black text-[#1A1817]">Habilitar QR en Carrito</span>
             </label>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             {/* Uploader QR */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
               <ImageUploader
                 label="Imagen del Código QR Bancario"
                 value={paymentQrUrl}
                 onChange={setPaymentQrUrl}
-                recommendedSize="Sube la captura de tu QR Simple generado desde tu app bancaria (Banco Unión, BCP, BNB, Mercantil, etc.). Formato PNG, JPG o WEBP."
+                recommendedSize="Sube la captura de tu QR Simple generado desde tu banco (Banco Unión, BCP, BNB, Mercantil, etc.)."
               />
             </div>
 
             {/* Instrucciones & Vista Previa */}
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
+                <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
                   Datos de Cuenta / Instrucciones para el Comprador:
                 </label>
                 <textarea
@@ -463,25 +383,26 @@ export default function AdminSettingsPage() {
                   value={paymentQrInstructions}
                   onChange={(e) => setPaymentQrInstructions(e.target.value)}
                   placeholder="Ej: Titular: Hobby Bolivia SRL&#10;Banco: Banco Unión&#10;Cuenta en Bs.: 100000XXXX&#10;Por favor adjunta tu comprobante al enviar la orden por WhatsApp."
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544] focus:ring-1 focus:ring-[#162544]"
+                  className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all text-[#1A1817]"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Este texto se mostrará directamente debajo del QR en el carrito de compras.
+                <p className="text-[11px] text-[#8C827A] mt-1.5">
+                  Este texto se mostrará directamente debajo del QR en el cajón del carrito de compras.
                 </p>
               </div>
 
               {/* Vista previa en vivo */}
               {paymentQrUrl && (
-                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#D4A359]/40 flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] flex items-center gap-4">
                   <div className="w-24 h-24 bg-white p-1 rounded-xl border border-[#E2DCD3] flex items-center justify-center shrink-0 shadow-xs">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={paymentQrUrl} alt="Vista previa QR" className="max-h-full max-w-full object-contain" />
                   </div>
                   <div className="text-xs space-y-1">
-                    <span className="inline-block px-2 py-0.5 rounded-full bg-[#3E7B44] text-white text-[10px] font-bold">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-[#3E7B44]/15 border border-[#3E7B44]/30 text-[#1E4D2B] text-[10px] font-black uppercase">
                       ✓ QR Configurado
                     </span>
-                    <p className="font-bold text-[#1A1817]">Vista previa en el Carrito</p>
-                    <p className="text-[11px] text-slate-600 whitespace-pre-line line-clamp-3">
+                    <p className="font-black text-[#1A1817]">Vista previa en el Carrito</p>
+                    <p className="text-[11px] text-[#5C554E] whitespace-pre-line line-clamp-3">
                       {paymentQrInstructions || 'Titular: Hobby Bolivia\nEnvía tu comprobante con tu orden por WhatsApp.'}
                     </p>
                   </div>
@@ -492,207 +413,57 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* ========================================================
-            4. SELECTOR DE TEMA Y COLORES (PRESETS DE APARIENCIA)
-        ======================================================== */}
-        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-[#2563eb]/10 text-[#2563eb] flex items-center justify-center">
-              <Palette className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-[#162544]">3. Selector de Tema y Colores (Presets)</h2>
-              <p className="text-xs text-slate-400">Aplica una paleta preconfigurada con 1 solo clic o personaliza los colores exactos.</p>
-            </div>
-          </div>
-
-          {/* 4 Presets de 1 clic */}
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-3">Temas Rápidos de 1 Clic:</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              {presets.map((p) => {
-                const isActive = themePreset === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => applyPreset(p.id)}
-                    className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col justify-between min-h-[105px] ${
-                      isActive
-                        ? 'border-[#162544] ring-2 ring-[#162544]/20 shadow-md bg-slate-50'
-                        : 'border-slate-200 hover:border-slate-300 hover:shadow-xs bg-white'
-                    }`}
-                  >
-                    <div>
-                      {/* Gradient preview bar */}
-                      <div className={`w-full h-3 rounded-full bg-gradient-to-r ${p.previewBg} mb-2 shadow-xs`} />
-                      <span className="text-xs font-bold text-[#162544] block leading-tight">
-                        {p.name}
-                      </span>
-                      <span className="text-[11px] text-slate-400 block mt-0.5 leading-tight">
-                        {p.desc}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: p.primary }} />
-                        <span className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: p.secondary }} />
-                      </div>
-                      {isActive && (
-                        <span className="text-[10px] font-extrabold uppercase text-[#16a34a] flex items-center gap-0.5">
-                          <Check className="w-3 h-3" /> Activo
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Color Pickers Custom */}
-          <div className="pt-2 border-t border-slate-100">
-            <label className="text-xs font-bold text-slate-700 block mb-3">Ajuste Fino de Colores (Personalizado):</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Primary Color */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-slate-800 block">Color Primario (Botones)</span>
-                  <span className="text-[11px] text-slate-400">Pestañas, botones y acentos</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => {
-                      setPrimaryColor(e.target.value);
-                      setThemePreset('custom');
-                    }}
-                    className="w-9 h-9 rounded-lg cursor-pointer border border-slate-300 p-0.5 bg-white"
-                  />
-                  <input
-                    type="text"
-                    value={primaryColor}
-                    onChange={(e) => {
-                      setPrimaryColor(e.target.value);
-                      setThemePreset('custom');
-                    }}
-                    className="w-20 px-2 py-1 text-xs font-mono uppercase bg-white border border-slate-300 rounded outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Secondary Color */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-slate-800 block">Color de Cabecera</span>
-                  <span className="text-[11px] text-slate-400">Cinta de navegación y banners</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={secondaryColor}
-                    onChange={(e) => {
-                      setSecondaryColor(e.target.value);
-                      setThemePreset('custom');
-                    }}
-                    className="w-9 h-9 rounded-lg cursor-pointer border border-slate-300 p-0.5 bg-white"
-                  />
-                  <input
-                    type="text"
-                    value={secondaryColor}
-                    onChange={(e) => {
-                      setSecondaryColor(e.target.value);
-                      setThemePreset('custom');
-                    }}
-                    className="w-20 px-2 py-1 text-xs font-mono uppercase bg-white border border-slate-300 rounded outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Accent Color */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-slate-800 block">Color de Acento</span>
-                  <span className="text-[11px] text-slate-400">Subrayados y enlaces</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={accentColor}
-                    onChange={(e) => {
-                      setAccentColor(e.target.value);
-                      setThemePreset('custom');
-                    }}
-                    className="w-9 h-9 rounded-lg cursor-pointer border border-slate-300 p-0.5 bg-white"
-                  />
-                  <input
-                    type="text"
-                    value={accentColor}
-                    onChange={(e) => {
-                      setAccentColor(e.target.value);
-                      setThemePreset('custom');
-                    }}
-                    className="w-20 px-2 py-1 text-xs font-mono uppercase bg-white border border-slate-300 rounded outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================
             4. OPCIONES DE DISEÑO DEL CATÁLOGO PÚBLICO
         ======================================================== */}
-        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+        <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-[#FAF8F5]">
+            <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
               <Layout className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#162544]">4. Opciones de Diseño del Catálogo Público</h2>
-              <p className="text-xs text-slate-400">Controla el estilo de tarjetas, cantidad de columnas y elementos visibles.</p>
+              <h2 className="text-base font-black text-[#1A1817]">4. Opciones de Diseño del Catálogo Público</h2>
+              <p className="text-xs text-[#8C827A]">Controla el estilo de tarjetas, cantidad de columnas y elementos visibles en la tienda.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card Style Selector */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-              <label className="text-xs font-bold text-slate-800 block">
+            <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
                 Estilo de Tarjetas de Producto:
               </label>
 
-              <div className="space-y-2">
-                <label className="flex items-start gap-2.5 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-slate-300">
+              <div className="space-y-2.5">
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-[#E2DCD3] cursor-pointer hover:border-[#D4A359] transition-colors shadow-xs">
                   <input
                     type="radio"
                     name="cardStyle"
                     value="with_button"
                     checked={cardStyle === 'with_button'}
                     onChange={() => setCardStyle('with_button')}
-                    className="mt-0.5"
+                    className="mt-0.5 accent-[#D4A359]"
                   />
                   <div>
-                    <span className="text-xs font-bold text-[#162544] block">Con botón &quot;+ Añadir&quot;</span>
-                    <span className="text-[11px] text-slate-400 leading-tight block">
-                      Permite compras y cotizaciones rápidas directas al carrito.
+                    <span className="text-xs font-black text-[#1A1817] block">Con botón &quot;+ Añadir&quot;</span>
+                    <span className="text-[11px] text-[#8C827A] leading-tight block mt-0.5">
+                      Permite compras y cotizaciones directas al carrito.
                     </span>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-2.5 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-slate-300">
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-[#E2DCD3] cursor-pointer hover:border-[#D4A359] transition-colors shadow-xs">
                   <input
                     type="radio"
                     name="cardStyle"
                     value="catalog_only"
                     checked={cardStyle === 'catalog_only'}
                     onChange={() => setCardStyle('catalog_only')}
-                    className="mt-0.5"
+                    className="mt-0.5 accent-[#D4A359]"
                   />
                   <div>
-                    <span className="text-xs font-bold text-[#162544] block">Estilo catálogo simple</span>
-                    <span className="text-[11px] text-slate-400 leading-tight block">
-                      Solo muestra fotografía, título y precio para consulta visual.
+                    <span className="text-xs font-black text-[#1A1817] block">Estilo catálogo simple</span>
+                    <span className="text-[11px] text-[#8C827A] leading-tight block mt-0.5">
+                      Muestra fotografía, título y precio para consulta visual.
                     </span>
                   </div>
                 </label>
@@ -700,43 +471,43 @@ export default function AdminSettingsPage() {
             </div>
 
             {/* Columns Count */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-              <label className="text-xs font-bold text-slate-800 block">
-                Columnas en Pantalla Grande (Escritorio):
+            <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
+                Columnas en Escritorio:
               </label>
 
               <select
                 value={desktopColumns}
                 onChange={(e) => setDesktopColumns(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:border-[#162544]"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-[#E2DCD3] rounded-xl outline-none focus:border-[#D4A359] focus:ring-2 focus:ring-[#D4A359]/20 text-[#1A1817] cursor-pointer shadow-xs"
               >
                 <option value={3}>3 productos por fila (Tarjetas Grandes)</option>
                 <option value={4}>4 productos por fila (Estándar E-commerce)</option>
                 <option value={6}>6 productos por fila (Estilo Galba Compacto)</option>
               </select>
 
-              <span className="text-[11px] text-slate-400 block">
-                En pantallas móviles se ajusta automáticamente a 2 columnas para comodidad táctil.
+              <span className="text-[11px] text-[#8C827A] block">
+                En pantallas móviles se adapta automáticamente a 2 columnas para una navegación ágil.
               </span>
             </div>
 
             {/* Top Bar Switch */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-              <label className="text-xs font-bold text-slate-800 block">
+            <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
+              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
                 Barra Superior de Anuncios:
               </label>
 
-              <label className="flex items-center gap-3 p-3 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-slate-300">
+              <label className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#E2DCD3] cursor-pointer hover:border-[#D4A359] transition-colors shadow-xs">
                 <input
                   type="checkbox"
                   checked={showTopBar}
                   onChange={(e) => setShowTopBar(e.target.checked)}
-                  className="w-4 h-4 text-[#e04f26] rounded focus:ring-0"
+                  className="w-4 h-4 text-[#D4A359] rounded focus:ring-0 accent-[#D4A359] cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-bold text-[#162544] block">Mostrar barra superior</span>
-                  <span className="text-[11px] text-slate-400 block">
-                    Muestra redes sociales a la izquierda y teléfono/email a la derecha.
+                  <span className="text-xs font-black text-[#1A1817] block">Mostrar barra superior</span>
+                  <span className="text-[11px] text-[#8C827A] block mt-0.5">
+                    Muestra redes sociales, contacto y anuncio de envíos.
                   </span>
                 </div>
               </label>
@@ -745,18 +516,25 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* Bottom Save Bar */}
-        <div className="sticky bottom-4 bg-[#162544] text-white p-4 rounded-2xl shadow-xl flex items-center justify-between gap-4 z-20">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#e04f26]" />
-            <span className="text-xs sm:text-sm font-semibold">
-              Guarda tus cambios para sincronizar la base de datos y la web pública.
-            </span>
+        <div className="sticky bottom-4 bg-[#161311] text-[#FAF8F5] p-4 sm:p-5 rounded-3xl border border-[#2D2622] shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/20 text-[#D4A359] flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-[#D4A359]" />
+            </div>
+            <div>
+              <span className="text-xs sm:text-sm font-black text-white block">
+                Sincronización Inmediata
+              </span>
+              <span className="text-[11px] text-[#A89F91] block">
+                Guarda los cambios para reflejarlos de inmediato en el catálogo público y la base de datos.
+              </span>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2.5 rounded-full bg-[#e04f26] hover:bg-[#c93e18] text-white text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
+            className="px-7 py-3 rounded-full bg-[#F85606] hover:bg-[#D44500] text-white text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg hover:scale-[1.02] disabled:opacity-50 cursor-pointer shrink-0"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{saving ? 'Guardando...' : 'Guardar Todo Ahora'}</span>
