@@ -44,10 +44,14 @@ export function ProductCard({
   const name = product.name || product.title || "Repuesto Hobby Bolivia";
   const systemSku = (product.sku && product.sku.startsWith('HB-')) ? product.sku : `HB-${product.id.toString().padStart(4, '0')}`;
 
-  // Determinación de precio en USD o Bs. según selección "Mostrar en"
+  // Determinación de precio en USD o Bs. según selección "Mostrar en" o moneda global del catálogo
   const isUsd =
-    String(product.currency || '').trim().toUpperCase() === 'USD' ||
-    String((product as any).display_currency || '').trim().toUpperCase() === 'USD';
+    currencyMode === 'USD'
+      ? true
+      : currencyMode === 'BOB'
+        ? false
+        : String(product.currency || '').trim().toUpperCase() === 'USD' ||
+        String((product as any).display_currency || '').trim().toUpperCase() === 'USD';
   const rate = exchangeRate > 0 ? exchangeRate : 11.8552;
   const usdPrice = (product.price / rate).toFixed(2);
   const bsPrice = product.price.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

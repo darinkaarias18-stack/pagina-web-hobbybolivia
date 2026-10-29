@@ -276,14 +276,15 @@ export function CatalogView({
         if (cat && catId !== cat.id) return false;
       }
 
-      // Keyword / SKU search
+      // Keyword / SKU / Brand search
       if (searchQuery.trim()) {
         const term = searchQuery.toLowerCase().trim();
         const matchesName = (p.name || p.title || '').toLowerCase().includes(term);
         const matchesSku = (p.sku || '').toLowerCase().includes(term);
+        const matchesBrand = (p.brand || '').toLowerCase().includes(term);
         const matchesSpecs = (p.specs_line || '').toLowerCase().includes(term);
         const matchesModels = (p.compatible_models || '').toLowerCase().includes(term);
-        if (!matchesName && !matchesSku && !matchesSpecs && !matchesModels) return false;
+        if (!matchesName && !matchesSku && !matchesBrand && !matchesSpecs && !matchesModels) return false;
       }
 
       // Scale filter
@@ -358,7 +359,9 @@ export function CatalogView({
     <div className="min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817] overflow-x-hidden">
 
       {/* 1. Top Utility Bar (Carbón #161311 & Dorado #D4A359) */}
-      <TopBar config={siteConfig} exchangeRate={initialExchangeRate} />
+      {siteConfig?.showTopBar !== false && (
+        <TopBar config={siteConfig} exchangeRate={initialExchangeRate} />
+      )}
 
       {/* 2. Sticky Main Header with Logo & Cart */}
       <Header
@@ -731,6 +734,13 @@ export function CatalogView({
                       key={prod.id}
                       product={prod}
                       exchangeRate={initialExchangeRate}
+                      currencyMode={
+                        siteConfig?.currency === 'USD' || siteConfig?.currency === '$us'
+                          ? 'USD'
+                          : siteConfig?.currency === 'Bs.'
+                            ? 'BOB'
+                            : 'auto'
+                      }
                       onQuickView={(p) => setQuickViewProduct(p)}
                       isFavorite={favorites.includes(prod.id)}
                       onToggleFavorite={toggleFavorite}
@@ -753,8 +763,16 @@ export function CatalogView({
       {/* 10. Customer Testimonials */}
       <Testimonials />
 
-      {/* 12. Footer with CTA and Keyword Strip */}
-      <Footer config={siteConfig} />
+      {/* 12. Footer with CTA, Popular Products & Brands */}
+      <Footer
+        config={siteConfig}
+        products={products}
+        onSelectProduct={(p) => setQuickViewProduct(p)}
+        onSelectBrand={(brand) => {
+          setActiveCategorySlug('all');
+          setSearchQuery(brand);
+        }}
+      />
 
       {/* Quick Specs Technical Modal */}
       {quickViewProduct && (

@@ -1,17 +1,66 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { Plane, Phone, Mail, MapPin, ArrowRight, ArrowUp } from 'lucide-react';
-import type { SiteConfig } from '@/lib/types';
+import type { SiteConfig, Product } from '@/lib/types';
 
 interface FooterProps {
   config?: SiteConfig | null;
+  products?: Product[];
+  onSelectProduct?: (product: Product) => void;
+  onSelectBrand?: (brand: string) => void;
 }
 
-export function Footer({ config }: FooterProps) {
+const DEFAULT_POPULAR_PRODUCTS = [
+  'Conectores E/Z Dubro (12)',
+  'Bisagras de Nylon c/Pin Acero (15)',
+  'Hélice APC 11x5.5E Thin Electric',
+  'ESC Brushless 40A 2-4S c/BEC',
+  'Micro Servo MG90S Piñonería Metálica',
+  'Tren de Aterrizaje Fibra de Carbono'
+];
+
+const DEFAULT_BRANDS = [
+  'Dubro',
+  'Great Planes',
+  'APC Propellers',
+  'Hobbywing Tech',
+  'TowerPro',
+  'Tattu Gens Ace'
+];
+
+export function Footer({
+  config,
+  products = [],
+  onSelectProduct,
+  onSelectBrand
+}: FooterProps) {
   const whatsapp = config?.whatsappNumber || "+591 77293446";
   const email = config?.contactEmail || "contacto@hobbybolivia.com";
+
+  // Lista de los más vendidos / Populares
+  const popularItems = useMemo(() => {
+    const active = products.filter((p) => p.is_active !== false && p.isActive !== false);
+    const tagged = active.filter(
+      (p) => p.badge === 'Popular' || p.badge === 'Best Seller'
+    );
+    const list = tagged.length > 0 ? tagged : active;
+    return list.slice(0, 6);
+  }, [products]);
+
+  // Listado de marcas disponibles en el catálogo
+  const brandList = useMemo(() => {
+    const active = products.filter((p) => p.is_active !== false && p.isActive !== false);
+    const uniqueBrands = Array.from(
+      new Set(
+        active
+          .map((p) => (p.brand || '').trim())
+          .filter(Boolean)
+      )
+    );
+    return uniqueBrands.length > 0 ? uniqueBrands.slice(0, 6) : DEFAULT_BRANDS;
+  }, [products]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -103,54 +152,67 @@ export function Footer({ config }: FooterProps) {
             </div>
           </div>
 
-          {/* Categorías Principales */}
+          {/* Populares (Los más vendidos) */}
           <div>
             <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
-              Sistemas
+              Populares
             </h5>
             <ul className="space-y-2.5 text-[#A89F91]">
-              <li>
-                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Conectores E/Z & Mandos</a>
-              </li>
-              <li>
-                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Varillaje Push-Rod & Clevises</a>
-              </li>
-              <li>
-                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Motores Brushless & ESC</a>
-              </li>
-              <li>
-                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Hélices APC & Spinners CNC</a>
-              </li>
-              <li>
-                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Micro Servos MG90S</a>
-              </li>
-              <li>
-                <a href="#catalogo" className="hover:text-[#D4A359] transition-colors">Trenes en Fibra de Carbono</a>
-              </li>
+              {popularItems.length > 0
+                ? popularItems.map((item) => {
+                  const itemName = item.name || item.title || 'Repuesto Popular';
+                  return (
+                    <li key={item.id}>
+                      <a
+                        href="#catalogo"
+                        onClick={(e) => {
+                          if (onSelectProduct) {
+                            e.preventDefault();
+                            onSelectProduct(item);
+                          }
+                        }}
+                        className="hover:text-[#D4A359] transition-colors line-clamp-1 block"
+                        title={itemName}
+                      >
+                        {itemName}
+                      </a>
+                    </li>
+                  );
+                })
+                : DEFAULT_POPULAR_PRODUCTS.map((label) => (
+                  <li key={label}>
+                    <a href="#catalogo" className="hover:text-[#D4A359] transition-colors line-clamp-1 block">
+                      {label}
+                    </a>
+                  </li>
+                ))}
             </ul>
           </div>
 
-          {/* Políticas & Soporte */}
+          {/* Marcas */}
           <div>
             <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
-              Garantía & Ayuda
+              Marcas
             </h5>
             <ul className="space-y-2.5 text-[#A89F91]">
-              <li>
-                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Envíos y Embalaje Frágil</Link>
-              </li>
-              <li>
-                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Garantía de Repuestos</Link>
-              </li>
-              <li>
-                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Cambios por Compatibilidad</Link>
-              </li>
-              <li>
-                <Link href="/politicas" className="hover:text-[#D4A359] transition-colors">Privacidad de Clientes</Link>
-              </li>
-              <li>
-                <Link href="/libro-de-reclamaciones" className="hover:text-[#D4A359] transition-colors">Libro de Reclamaciones</Link>
-              </li>
+              {brandList.map((brand) => (
+                <li key={brand}>
+                  <a
+                    href="#catalogo"
+                    onClick={(e) => {
+                      if (onSelectBrand) {
+                        e.preventDefault();
+                        onSelectBrand(brand);
+                        const el = document.getElementById('catalogo');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="hover:text-[#D4A359] transition-colors block"
+                  >
+                    {brand}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 

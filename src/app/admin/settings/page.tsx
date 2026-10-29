@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Store,
@@ -11,7 +12,9 @@ import {
   Sparkles,
   Eye,
   QrCode,
-  Plane
+  Plane,
+  ArrowLeftRight,
+  ExternalLink
 } from 'lucide-react';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 import type { SiteConfig } from '@/lib/types';
@@ -36,7 +39,9 @@ export default function AdminSettingsPage() {
 
   // 3. Payment QR (QR Simple Bolivia)
   const [paymentQrUrl, setPaymentQrUrl] = useState('/images/payment/qr_simple_hobbybolivia.svg');
-  const [paymentQrInstructions, setPaymentQrInstructions] = useState('');
+  const [paymentQrInstructions, setPaymentQrInstructions] = useState(
+    'Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp.'
+  );
   const [enablePaymentQr, setEnablePaymentQr] = useState(true);
 
   // 4. Theme Presets & Custom Colors
@@ -50,18 +55,52 @@ export default function AdminSettingsPage() {
   const [desktopColumns, setDesktopColumns] = useState<number>(6);
   const [showTopBar, setShowTopBar] = useState<boolean>(true);
 
+  // Live Currency Calculator State
+  const [exchangeRate, setExchangeRate] = useState<number>(11.997);
+  const [rateDateStr, setRateDateStr] = useState<string>('');
+  const [calcUsd, setCalcUsd] = useState<string>('50');
+  const [calcBob, setCalcBob] = useState<string>('599.85');
+  const [calcDirection, setCalcDirection] = useState<'USD_TO_BOB' | 'BOB_TO_USD'>('USD_TO_BOB');
+
   // 5. Policies
   const [termsPolicy, setTermsPolicy] = useState('');
   const [privacyPolicy, setPrivacyPolicy] = useState('');
   const [shippingPolicy, setShippingPolicy] = useState('');
   const [returnsPolicy, setReturnsPolicy] = useState('');
 
+  const handleUsdChange = (val: string) => {
+    setCalcUsd(val);
+    const num = parseFloat(val) || 0;
+    const currentRate = exchangeRate || 11.997;
+    setCalcBob((num * currentRate).toFixed(2));
+  };
+
+  const handleBobChange = (val: string) => {
+    setCalcBob(val);
+    const num = parseFloat(val) || 0;
+    const currentRate = exchangeRate || 11.997;
+    setCalcUsd((num / currentRate).toFixed(2));
+  };
+
   useEffect(() => {
-    const role = localStorage.getItem('hb_user_role') || 'ADMIN';
-    if (role !== 'SUPERADMIN') {
-      router.replace('/admin/items');
-      return;
-    }
+    setRateDateStr(
+      new Date().toLocaleDateString('es-BO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    );
+
+    fetch('/api/exchange-rate?t=' + Date.now(), { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((rateJson) => {
+        if (rateJson?.success && rateJson?.data?.exchangeRate) {
+          const r = Number(rateJson.data.exchangeRate) || 11.997;
+          setExchangeRate(r);
+          setCalcBob((50 * r).toFixed(2));
+        }
+      })
+      .catch(() => { });
 
     fetch('/api/settings')
       .then((res) => res.json())
@@ -79,7 +118,11 @@ export default function AdminSettingsPage() {
           setLogoUrl(c.logoUrl || '');
 
           setPaymentQrUrl(c.paymentQrUrl || '/images/payment/qr_simple_hobbybolivia.svg');
-          setPaymentQrInstructions(c.paymentQrInstructions || '');
+          setPaymentQrInstructions(
+            c.paymentQrInstructions && !c.paymentQrInstructions.includes('Banco Unión')
+              ? c.paymentQrInstructions
+              : 'Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp.'
+          );
           setEnablePaymentQr(c.enablePaymentQr !== false);
 
           setThemePreset(c.themePreset || 'warm-tech');
@@ -234,29 +277,28 @@ export default function AdminSettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-[#F85606] animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[#D4A359]" />
             <span className="text-xs font-black uppercase tracking-wider text-[#D4A359]">
-              Personalización & Apariencia · Hobby Bolivia
+              Panel de Control · Hobby Bolivia
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
-            Configuración de la Tienda
+            Configuración General
           </h1>
           <p className="text-xs text-[#8C827A] mt-1">
-            Modifica la identidad, logotipo, temas de color y estructura visual del catálogo público.
+            Modifica la identidad del negocio, cobro con QR y el diseño de columnas del catálogo público.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <a
+          <Link
             href="/"
             target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors flex items-center gap-1.5"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
           >
-            <Eye className="w-3.5 h-3.5 text-[#D4A359]" />
-            <span>Ver Catálogo en Vivo ↗</span>
-          </a>
+            <span>Ver Tienda Pública</span>
+            <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
+          </Link>
 
           <button
             type="button"
@@ -325,15 +367,16 @@ export default function AdminSettingsPage() {
 
             <div className="lg:col-span-4">
               <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
-                Moneda del Catálogo*
+                Moneda Predeterminada del Catálogo*
               </label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all cursor-pointer"
               >
-                <option value="Bs.">Bolivianos (Bs.)</option>
-                <option value="$us">Dólares Americanos ($us)</option>
+                <option value="auto">Automática (Según cada producto)</option>
+                <option value="Bs.">Todo en Bolivianos (Bs.)</option>
+                <option value="USD">Todo en Dólares (USD)</option>
               </select>
             </div>
 
@@ -382,57 +425,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* ========================================================
-            2. LOGOTIPO OFICIAL DE LA WEB
-        ======================================================== */}
-        <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-[#FAF8F5] flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
-                <ImageIcon className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-[#1A1817]">2. Logotipo Oficial de la Web</h2>
-                <p className="text-xs text-[#8C827A]">Sube o cambia el logotipo cuando lo desees; se actualiza al instante en cabecera, menú y pie de página.</p>
-              </div>
-            </div>
-
-            {/* Vista Previa en Vivo del Header con el Logo Actual */}
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-[#161311] border border-[#2D2622] shadow-xs">
-              <span className="text-[10px] font-bold text-[#A89F91] uppercase tracking-wider mr-1">
-                Vista previa en web:
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center text-[#D4A359] overflow-hidden shrink-0">
-                {logoUrl && logoUrl !== 'https://hobbybolivia.com/icon.svg' && logoUrl !== '/icon.svg' ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={logoUrl}
-                    alt="Logo Preview"
-                    className="w-full h-full object-contain bg-white p-0.5"
-                  />
-                ) : (
-                  <Plane className="w-4 h-4 -rotate-45 text-[#D4A359]" />
-                )}
-              </div>
-              <span className="font-black text-xs tracking-tight text-[#D4A359]">
-                {companyName.split(' ')[0] || 'HOBBY'}{' '}
-                <span className="text-[#FAF8F5]">{companyName.split(' ').slice(1).join(' ') || 'BOLIVIA'}</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3]">
-            <ImageUploader
-              label="Logotipo Oficial (Header y Footer)"
-              value={logoUrl}
-              onChange={setLogoUrl}
-              onUploadSuccess={handleInstantLogoUpdate}
-              recommendedSize="Proporción recomendada: 512x512 px o formato horizontal con fondo transparente (PNG, SVG, WebP, JPG)."
-            />
-          </div>
-        </section>
-
-        {/* ========================================================
-            3. CONFIGURACIÓN DE PAGO CON QR (QR SIMPLE BOLIVIA)
+            2. CONFIGURACIÓN DE PAGO CON QR (QR SIMPLE BOLIVIA)
         ======================================================== */}
         <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-[#FAF8F5] flex-wrap gap-3">
@@ -441,7 +434,7 @@ export default function AdminSettingsPage() {
                 <QrCode className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-base font-black text-[#1A1817]">3. Cobro con QR Simple (Bolivia)</h2>
+                <h2 className="text-base font-black text-[#1A1817]">2. Cobro con QR Simple (Bolivia)</h2>
                 <p className="text-xs text-[#8C827A]">Publica o cambia el código QR bancario cuando desees para pagos al instante en el carrito.</p>
               </div>
             </div>
@@ -488,7 +481,7 @@ export default function AdminSettingsPage() {
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
-                    Datos de Cuenta / Instrucciones para el Comprador:
+                    Instrucciones para el Comprador:
                   </label>
                   <button
                     type="button"
@@ -500,14 +493,14 @@ export default function AdminSettingsPage() {
                   </button>
                 </div>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={paymentQrInstructions}
                   onChange={(e) => setPaymentQrInstructions(e.target.value)}
-                  placeholder="Ej: Titular: Hobby Bolivia SRL&#10;Banco: Banco Unión&#10;Cuenta en Bs.: 100000XXXX&#10;Por favor adjunta tu comprobante al enviar la orden por WhatsApp."
+                  placeholder="Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp."
                   className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all text-[#1A1817]"
                 />
-                <p className="text-[11px] text-[#8C827A] mt-1.5">
-                  Este texto se mostrará directamente debajo del QR en el cajón del carrito de compras.
+                <p className="text-[11px] text-[#3E7B44] font-bold mt-1.5">
+                  Las instrucciones para realizar la compra se coordinarán únicamente por WhatsApp.
                 </p>
               </div>
 
@@ -529,7 +522,7 @@ export default function AdminSettingsPage() {
                     </span>
                     <p className="font-black text-[#1A1817]">Vista previa en el Carrito</p>
                     <p className="text-[11px] text-[#5C554E] whitespace-pre-line line-clamp-3">
-                      {paymentQrInstructions || 'Titular: Hobby Bolivia\nEnvía tu comprobante con tu orden por WhatsApp.'}
+                      {paymentQrInstructions || 'Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp.'}
                     </p>
                   </div>
                 </div>
@@ -543,58 +536,328 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* ========================================================
-            4. OPCIONES DE DISEÑO DEL CATÁLOGO PÚBLICO
+            3. MÓDULO DE CONFIGURACIÓN GENERAL (DISEÑO DEL CATÁLOGO & CALCULADORA)
         ======================================================== */}
         <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-[#FAF8F5]">
-            <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
-              <Layout className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-base font-black text-[#1A1817]">4. Opciones de Diseño del Catálogo Público</h2>
-              <p className="text-xs text-[#8C827A]">Controla la cantidad de columnas visibles por fila en la tienda.</p>
+          <div className="flex items-center justify-between gap-3 pb-4 border-b border-[#FAF8F5] flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shrink-0 border border-[#D4A359]/40">
+                <Layout className="w-4 h-4 text-[#D4A359]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-black text-[#1A1817]">3. Módulo de Configuración General</h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#211E1C] text-[#D4A359]">
+                    Tiempo Real
+                  </span>
+                </div>
+                <p className="text-xs text-[#8C827A]">
+                  Controla las columnas por fila, la moneda del catálogo público y simula precios con la calculadora de conversión.
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="max-w-md">
-            {/* Columns Count */}
-            <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
-              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
-                Columnas en Escritorio:
-              </label>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div className="space-y-4">
+              {/* Opción 1: Columnas en Escritorio */}
+              <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
+                    Columnas por Fila (Escritorio):
+                  </label>
+                  <span className="text-[10px] font-bold text-[#8C827A]">
+                    Actual: {desktopColumns} col.
+                  </span>
+                </div>
 
-              <select
-                value={desktopColumns}
-                onChange={async (e) => {
-                  const cols = Number(e.target.value);
-                  setDesktopColumns(cols);
-                  try {
-                    const res = await fetch('/api/settings', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ desktopColumns: cols })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                      broadcastConfigChange(data.data);
-                      setSuccessMsg(`¡Diseño actualizado a ${cols} productos por fila en escritorio!`);
-                      setTimeout(() => setSuccessMsg(''), 4000);
+                <div className="grid grid-cols-4 gap-2">
+                  {[3, 4, 6, 8].map((cols) => (
+                    <button
+                      key={cols}
+                      type="button"
+                      onClick={async () => {
+                        setDesktopColumns(cols);
+                        try {
+                          const res = await fetch('/api/settings', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ desktopColumns: cols })
+                          });
+                          const data = await res.json();
+                          if (res.ok && data.success) {
+                            broadcastConfigChange(data.data);
+                            setSuccessMsg(`¡Diseño actualizado a ${cols} productos por fila en escritorio!`);
+                            setTimeout(() => setSuccessMsg(''), 4000);
+                          }
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      className={`py-2.5 px-2 rounded-xl font-black text-xs border transition-all cursor-pointer ${desktopColumns === cols
+                        ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359] shadow-xs'
+                        : 'bg-white text-[#5C5650] hover:text-[#1A1817] border-[#E2DCD3]'
+                        }`}
+                    >
+                      {cols} Col.
+                    </button>
+                  ))}
+                </div>
+
+                <select
+                  value={desktopColumns}
+                  onChange={async (e) => {
+                    const cols = Number(e.target.value);
+                    setDesktopColumns(cols);
+                    try {
+                      const res = await fetch('/api/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ desktopColumns: cols })
+                      });
+                      const data = await res.json();
+                      if (res.ok && data.success) {
+                        broadcastConfigChange(data.data);
+                        setSuccessMsg(`¡Diseño actualizado a ${cols} productos por fila en escritorio!`);
+                        setTimeout(() => setSuccessMsg(''), 4000);
+                      }
+                    } catch {
+                      // ignore
                     }
-                  } catch {
-                    // ignore
-                  }
-                }}
-                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-[#E2DCD3] rounded-xl outline-none focus:border-[#D4A359] focus:ring-2 focus:ring-[#D4A359]/20 text-[#1A1817] cursor-pointer shadow-xs"
-              >
-                <option value={3}>3 productos por fila (Tarjetas Grandes)</option>
-                <option value={4}>4 productos por fila (Estándar E-commerce)</option>
-                <option value={6}>6 productos por fila (Estilo Galba Compacto)</option>
-                <option value={8}>8 productos por fila (Vista Ultra Compacta)</option>
-              </select>
+                  }}
+                  className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-[#E2DCD3] rounded-xl outline-none focus:border-[#D4A359] focus:ring-2 focus:ring-[#D4A359]/20 text-[#1A1817] cursor-pointer shadow-xs"
+                >
+                  <option value={3}>3 productos por fila (Tarjetas Grandes)</option>
+                  <option value={4}>4 productos por fila (Estándar E-commerce)</option>
+                  <option value={6}>6 productos por fila (Estilo Galba Compacto)</option>
+                  <option value={8}>8 productos por fila (Vista Ultra Compacta)</option>
+                </select>
 
-              <span className="text-[11px] text-[#8C827A] block">
-                En pantallas móviles se adapta automáticamente a 2 columnas para una navegación ágil.
-              </span>
+                <span className="text-[11px] text-[#8C827A] block">
+                  En pantallas móviles se adapta automáticamente a 2 columnas para una navegación ágil.
+                </span>
+              </div>
+
+              {/* Opción 2: Moneda Predeterminada del Catálogo Público */}
+              <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
+                <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
+                  Moneda del Catálogo Público:
+                </label>
+                <p className="text-[11px] text-[#8C827A]">
+                  Define si el catálogo respeta la moneda individual de cada repuesto o fuerza una moneda global:
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'auto', label: 'Por Producto' },
+                    { value: 'Bs.', label: 'Todo en Bs.' },
+                    { value: 'USD', label: 'Todo en USD' }
+                  ].map((opt) => {
+                    const isActive =
+                      (opt.value === 'USD' && (currency === 'USD' || currency === '$us')) ||
+                      currency === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={async () => {
+                          setCurrency(opt.value);
+                          try {
+                            const res = await fetch('/api/settings', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ currency: opt.value })
+                            });
+                            const data = await res.json();
+                            if (res.ok && data.success) {
+                              broadcastConfigChange(data.data);
+                              setSuccessMsg(
+                                opt.value === 'auto'
+                                  ? 'Moneda configurada según cada producto individual'
+                                  : `Moneda global del catálogo fijada en ${opt.label}`
+                              );
+                              setTimeout(() => setSuccessMsg(''), 4000);
+                            }
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        className={`py-2.5 px-2 rounded-xl font-black text-xs border transition-all cursor-pointer ${isActive
+                          ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359] shadow-xs'
+                          : 'bg-white text-[#5C5650] hover:text-[#1A1817] border-[#E2DCD3]'
+                          }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Calculadora de Conversión (USD ⇄ Bs.) */}
+            <div className="bg-[#161311] text-[#FAF8F5] p-6 rounded-3xl border border-[#2D2622] shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-[#2D2622] flex-wrap">
+                <div className="flex items-center gap-2">
+                  <ArrowLeftRight className="w-4 h-4 text-[#D4A359]" />
+                  <h3 className="font-black text-sm tracking-tight text-[#FAF8F5]">
+                    Calculadora de Conversión
+                  </h3>
+                </div>
+
+                {/* Selector rápido de dirección: USD a Bs. | Bs. a USD */}
+                <div className="inline-flex items-center p-0.5 bg-[#211E1C] border border-[#3D352E] rounded-xl text-[10px] font-black">
+                  <button
+                    type="button"
+                    onClick={() => setCalcDirection('USD_TO_BOB')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${calcDirection === 'USD_TO_BOB'
+                      ? 'bg-[#D4A359] text-[#161311]'
+                      : 'text-[#A89F91] hover:text-[#FAF8F5]'
+                      }`}
+                  >
+                    USD → Bs.
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalcDirection('BOB_TO_USD')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${calcDirection === 'BOB_TO_USD'
+                      ? 'bg-[#D4A359] text-[#161311]'
+                      : 'text-[#A89F91] hover:text-[#FAF8F5]'
+                      }`}
+                  >
+                    Bs. → USD
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-4 space-y-1.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#211E1C] border border-[#D4A359]/40 text-[10px] font-bold text-[#D4A359]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#3E7B44] animate-pulse" />
+                  <span>
+                    Tipo de cambio actualizado a la fecha{rateDateStr ? ` (${rateDateStr})` : ''}: 1 USD = Bs. {exchangeRate}
+                  </span>
+                </div>
+                <p className="text-xs text-[#A89F91]">
+                  Convierte al instante de Dólares a Bolivianos o de Bolivianos a Dólares con el tipo de cambio vigente.
+                </p>
+              </div>
+
+              <div className="space-y-3.5">
+                {calcDirection === 'USD_TO_BOB' ? (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1">
+                        Monto en Dólares (USD)
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-xs font-mono text-[#A89F91]">$us</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={calcUsd}
+                          onChange={(e) => handleUsdChange(e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 bg-[#211E1C] border border-[#3D352E] rounded-xl text-sm font-black text-[#FAF8F5] focus:border-[#D4A359] outline-none"
+                          placeholder="50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCalcDirection((prev) =>
+                            prev === 'USD_TO_BOB' ? 'BOB_TO_USD' : 'USD_TO_BOB'
+                          )
+                        }
+                        title="Invertir conversión (Bs. ⇄ USD)"
+                        className="w-7 h-7 rounded-full bg-[#211E1C] hover:bg-[#D4A359] border border-[#3D352E] text-[#D4A359] hover:text-[#161311] flex items-center justify-center text-xs transition-colors cursor-pointer"
+                      >
+                        ⇅
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1">
+                        Equivalente en Bolivianos (Bs.)
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-xs font-mono text-[#D4A359]">Bs.</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={calcBob}
+                          onChange={(e) => handleBobChange(e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 bg-[#211E1C] border border-[#3D352E] rounded-xl text-sm font-black text-[#D4A359] focus:border-[#D4A359] outline-none"
+                          placeholder="599.85"
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1">
+                        Monto en Bolivianos (Bs.)
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-xs font-mono text-[#A89F91]">Bs.</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={calcBob}
+                          onChange={(e) => handleBobChange(e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 bg-[#211E1C] border border-[#3D352E] rounded-xl text-sm font-black text-[#FAF8F5] focus:border-[#D4A359] outline-none"
+                          placeholder="599.85"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCalcDirection((prev) =>
+                            prev === 'USD_TO_BOB' ? 'BOB_TO_USD' : 'USD_TO_BOB'
+                          )
+                        }
+                        title="Invertir conversión (USD ⇄ Bs.)"
+                        className="w-7 h-7 rounded-full bg-[#211E1C] hover:bg-[#D4A359] border border-[#3D352E] text-[#D4A359] hover:text-[#161311] flex items-center justify-center text-xs transition-colors cursor-pointer"
+                      >
+                        ⇅
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-[#D4A359] mb-1">
+                        Equivalente en Dólares (USD)
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-xs font-mono text-[#D4A359]">$us</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={calcUsd}
+                          onChange={(e) => handleUsdChange(e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 bg-[#211E1C] border border-[#3D352E] rounded-xl text-sm font-black text-[#D4A359] focus:border-[#D4A359] outline-none"
+                          placeholder="50.00"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#2D2622] text-[11px] text-[#A89F91] text-center">
+                {calcDirection === 'USD_TO_BOB' ? (
+                  <>
+                    Fórmula: <code>Precio en Bs. = USD × {exchangeRate}</code>
+                  </>
+                ) : (
+                  <>
+                    Fórmula: <code>Precio en USD = Bs. ÷ {exchangeRate}</code>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </section>

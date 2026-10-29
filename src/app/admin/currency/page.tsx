@@ -27,8 +27,8 @@ export default function CurrencySettingsPage() {
     exchangeRate: 6.96,
     autoUpdate: true,
     source: 'API Oficial',
-    lastChecked: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    lastChecked: '',
+    updatedAt: ''
   });
 
   // Local Form State

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllUsers, createUserRecord } from '@/lib/db';
 import { requireSuperAdmin } from '@/lib/auth';
+import { sendAdminCredentialsEmail } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,48 +41,69 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    if (!body.name || !body.username || !body.password) {
+    const rawGmail = (body.username || body.email || '').trim().toLowerCase();
+    const rawPassword = (body.password || '').trim();
+    const rawName = (body.name || '').trim();
+
+    if (!rawName || !rawGmail || !rawPassword) {
       return NextResponse.json(
-        { success: false, error: "El nombre, nombre de usuario y contraseña son obligatorios." },
+        { success: false, error: "El nombre completo, correo Gmail de usuario y contraseña son obligatorios." },
         { status: 400 }
       );
     }
 
-    // Comprobar si ya existe un usuario con ese username
+    // Regla obligatoria: el usuario para un nuevo Admin debe ser un correo @gmail.com válido
+    const gmailRegex = /^[a-z0-9._%+-]+@gmail\.com$/i;
+    if (!gmailRegex.test(rawGmail)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Por regla del sistema, el usuario debe ser un correo válido de Gmail (ejemplo@gmail.com), a donde se enviarán los accesos."
+        },
+        { status: 400 }
+      );
+    }
+
+    // Comprobar si ya existe un usuario con ese correo Gmail
     const existingUsers = await getAllUsers();
-    const cleanUsername = body.username.trim().toLowerCase();
-    const cleanEmail = (body.email || '').trim().toLowerCase();
-
-    const usernameExists = existingUsers.some(u => u.username?.toLowerCase() === cleanUsername);
-    if (usernameExists) {
+    const userExists = existingUsers.some(
+      u => u.username?.toLowerCase() === rawGmail || u.email?.toLowerCase() === rawGmail
+    );
+    if (userExists) {
       return NextResponse.json(
-        { success: false, error: "El nombre de usuario ya está registrado en el sistema." },
+        { success: false, error: "Este correo Gmail ya está registrado como usuario en el sistema." },
         { status: 400 }
       );
     }
 
-    if (cleanEmail) {
-      const emailExists = existingUsers.some(u => u.email?.toLowerCase() === cleanEmail);
-      if (emailExists) {
-        return NextResponse.json(
-          { success: false, error: "El correo electrónico ya está registrado en el sistema." },
-          { status: 400 }
-        );
-      }
-    }
-
+    // Al crear un nuevo usuario desde el panel, su rol es exclusivamente ADMIN
     const newUser = await createUserRecord({
-      name: body.name.trim(),
-      username: cleanUsername,
-      email: cleanEmail || `${cleanUsername}@hobbybolivia.com`,
-      password: body.password.trim(),
-      role: body.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN',
+      name: rawName,
+      username: rawGmail,
+      email: rawGmail,
+      password: rawPassword,
+      role: 'ADMIN',
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : true
+    });
+
+    const origin =
+      request.headers.get('origin') ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      'http://localhost:3000';
+    const loginUrl = `${origin.replace(/\/$/, '')}/login`;
+
+    const emailDispatch = await sendAdminCredentialsEmail({
+      toEmail: rawGmail,
+      adminName: newUser.name,
+      username: rawGmail,
+      password: rawPassword,
+      loginUrl
     });
 
     return NextResponse.json({
       success: true,
-      message: "Usuario creado exitosamente",
+      message: `Usuario Administrador creado exitosamente. Accesos preparados para ${rawGmail}.`,
+      emailDispatch,
       data: {
         id: newUser.id,
         name: newUser.name,

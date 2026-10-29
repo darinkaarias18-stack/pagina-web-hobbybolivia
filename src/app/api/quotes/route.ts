@@ -23,29 +23,33 @@ export async function POST(request: NextRequest) {
       customerName,
       customerPhone,
       recipientName,
+      deliveryCity,
       deliveryDate,
       deliveryTimeSlot,
       deliveryAddress,
       cardMessage,
+      customerNotes,
       items,
       total
     } = body;
 
-    if (!customerName || !customerPhone || !recipientName || !deliveryDate || !deliveryAddress || !items || items.length === 0) {
+    if (!customerName || !customerPhone || !items || items.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Missing required order fields (customer, recipient, date, address, items)" },
+        { success: false, error: "Faltan datos obligatorios del pedido (cliente, teléfono o productos)." },
         { status: 400 }
       );
     }
 
-    const result = await createQuoteOrder({
+    const order = await createQuoteOrder({
       customerName,
       customerPhone,
-      recipientName,
-      deliveryDate,
+      recipientName: recipientName || customerName,
+      deliveryCity: deliveryCity || "La Paz",
+      deliveryDate: deliveryDate || new Date().toLocaleDateString('es-BO'),
       deliveryTimeSlot: deliveryTimeSlot || "Horario a coordinar",
-      deliveryAddress,
+      deliveryAddress: deliveryAddress || "A coordinar por WhatsApp",
       cardMessage: cardMessage || "",
+      customerNotes: customerNotes || cardMessage || "",
       items,
       total: Number(total) || 0,
       status: "PENDING"
@@ -53,9 +57,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      orderCode: result.order.orderCode,
-      order: result.order,
-      whatsappUrl: result.whatsappUrl
+      orderCode: order.orderCode,
+      data: order,
+      order
     }, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/quotes:", error);
@@ -69,13 +73,13 @@ export async function PUT(request: NextRequest) {
     if (authCheck instanceof NextResponse) return authCheck;
 
     const body = await request.json();
-    const { orderCode, status } = body;
+    const { orderCode, id, status } = body;
 
-    if (!orderCode || !status) {
+    if ((!orderCode && !id) || !status) {
       return NextResponse.json({ success: false, error: "orderCode and status are required" }, { status: 400 });
     }
 
-    const updated = await updateQuoteOrderStatus(orderCode, status as OrderStatus);
+    const updated = await updateQuoteOrderStatus(orderCode || id, status as OrderStatus);
     if (!updated) {
       return NextResponse.json({ success: false, error: "Order not found" }, { status: 404 });
     }

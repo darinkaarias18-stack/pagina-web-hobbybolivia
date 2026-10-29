@@ -37,6 +37,7 @@ export function AdminDashboardClient() {
   // Exchange Rate State in Dashboard
   const [exchangeRate, setExchangeRate] = useState<number>(6.96);
   const [autoUpdate, setAutoUpdate] = useState<boolean>(true);
+  const [todayDateStr, setTodayDateStr] = useState<string>('');
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -231,6 +232,13 @@ export function AdminDashboardClient() {
 
 
   useEffect(() => {
+    setTodayDateStr(
+      new Date().toLocaleDateString('es-BO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    );
     fetchData();
   }, []);
 
@@ -516,7 +524,7 @@ export function AdminDashboardClient() {
           >
             <Coins className="w-4 h-4 text-[#D4A359]" />
             <span>
-              TC Oficial ({new Date().toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })}):
+              TC Oficial{todayDateStr ? ` (${todayDateStr})` : ''}:
             </span>
             <span className="font-mono font-black text-[#1A1817]">
               Bs. {exchangeRate.toFixed(2)}
@@ -572,8 +580,8 @@ export function AdminDashboardClient() {
 
         {/* 3. Valor Total del Inventario (Columna: Precio) */}
         <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#F85606]/10 text-[#F85606] flex items-center justify-center shrink-0 border border-[#F85606]/20">
-            <span className="text-lg font-black text-[#F85606]">Bs.</span>
+          <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shrink-0 border border-[#D4A359]/30">
+            <span className="text-lg font-black text-[#D4A359]">Bs.</span>
           </div>
           <div>
             <span className="text-[10px] font-black text-[#8C827A] uppercase tracking-wider">
@@ -596,7 +604,7 @@ export function AdminDashboardClient() {
                 Total Stock
               </span>
               {lowStockCount > 0 && (
-                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-[#F85606]/15 text-[#F85606] border border-[#F85606]/30">
+                <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-[#D4A359]/20 text-[#8A6220] border border-[#D4A359]/40">
                   {lowStockCount} bajo stock
                 </span>
               )}
@@ -682,7 +690,6 @@ export function AdminDashboardClient() {
                   <th className="py-3 px-2">Marca</th>
                   <th className="py-3 px-2 text-center">Precio (Bs.)</th>
                   <th className="py-3 px-2 text-center">Precio USD</th>
-                  <th className="py-3 px-2 text-center">Mostrar en</th>
                   <th className="py-3 px-2 text-center">Stock</th>
                   <th className="py-3 px-2 text-center">Visibilidad</th>
                   <th className="py-3 px-3 text-right rounded-tr-2xl">Acciones</th>
@@ -756,34 +763,6 @@ export function AdminDashboardClient() {
                         <span className="font-mono font-bold text-xs text-[#1A1817]">
                           {(exchangeRate > 0 ? (p.price / exchangeRate) : 0).toFixed(2)}
                         </span>
-                      </td>
-
-                      {/* Opción de elegir si el producto se mostrará en Bs. o en USD */}
-                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                        <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-lg shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => handleInlineUpdate(p.id, 'currency', 'Bs.')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${(p.currency || 'Bs.') === 'Bs.'
-                              ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                              : 'text-[#8C827A] hover:text-[#1A1817]'
-                              }`}
-                            title="Mostrar este producto en Bolivianos (Bs.) en el catálogo público"
-                          >
-                            Bs.
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleInlineUpdate(p.id, 'currency', 'USD')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${p.currency === 'USD'
-                              ? 'bg-[#128C7E] text-white shadow-xs'
-                              : 'text-[#8C827A] hover:text-[#1A1817]'
-                              }`}
-                            title="Mostrar este producto en Dólares ($ USD) en el catálogo público"
-                          >
-                            USD
-                          </button>
-                        </div>
                       </td>
 
                       {/* Stock - Solo número */}
@@ -864,383 +843,419 @@ export function AdminDashboardClient() {
 
       {/* MODAL: ADD / EDIT PRODUCT */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs">
+        <div
+          onClick={() => setIsModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/75 backdrop-blur-xs animate-in fade-in duration-150"
+        >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-3xl bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E2DCD3] max-h-[92vh] flex flex-col overflow-hidden"
+            className="w-full max-w-4xl bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E2DCD3] max-h-[94vh] flex flex-col overflow-hidden"
           >
             {/* Modal Header */}
-            <div className="p-5 border-b border-[#E2DCD3] flex items-center justify-between bg-white">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#F85606] flex items-center justify-center text-white">
-                  <Plane className="w-4 h-4 -rotate-45" />
+            <div className="px-6 py-4 border-b border-[#E2DCD3] flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center text-[#D4A359] shadow-xs">
+                  <Plane className="w-4 h-4 -rotate-45 text-[#D4A359]" />
                 </div>
-                <h3 className="font-black text-base text-[#1A1817] uppercase tracking-wide">
-                  {editingProduct ? 'Editar Repuesto Aeronáutico' : 'Agregar Nuevo Repuesto'}
-                </h3>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#D4A359] block">
+                    Catálogo Oficial Hobby Bolivia
+                  </span>
+                  <h3 className="font-black text-base sm:text-lg text-[#1A1817] uppercase tracking-tight leading-tight">
+                    {editingProduct ? 'Editar Repuesto Aeronáutico' : 'Agregar Nuevo Repuesto'}
+                  </h3>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full text-[#8C827A] hover:text-[#1A1817] hover:bg-[#FAF8F5]"
+                className="p-2 rounded-full text-[#8C827A] hover:text-[#1A1817] hover:bg-[#FAF8F5] transition-colors cursor-pointer"
+                title="Cerrar ventana"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleProductSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
+            <form onSubmit={handleProductSubmit} className="p-6 overflow-y-auto space-y-6 text-xs">
+              {/* Input oculto para selección de archivos del sistema */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleImageFile(e.target.files[0]);
+                  }
+                }}
+              />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Nombre del Repuesto *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej. Conectores E/Z Dubro (12)"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block font-bold text-[#1A1817]">SKU Oficial</label>
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] uppercase tracking-wider font-mono">
-                      Asignado por el sistema
+              {/* Layout Principal en 2 Columnas: Izquierda Imagen Grande | Derecha Datos del Repuesto */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* COLUMNA IZQUIERDA (5/12): FOTO DEL REPUESTO EN FORMATO GRANDE */}
+                <div className="lg:col-span-5 flex flex-col space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="font-black text-[#1A1817] text-xs uppercase tracking-wider">
+                      Foto del Repuesto / Producto *
+                    </label>
+                    <span className="text-[10px] font-bold text-[#8C827A]">
+                      Vista Previa Oficial
                     </span>
                   </div>
-                  <input
-                    type="text"
-                    readOnly
-                    value={formData.sku}
-                    className="w-full p-2.5 bg-[#F2EDE4] border border-[#DCD6CC] rounded-xl outline-none font-mono font-black uppercase tracking-wider text-[#1A1817] cursor-not-allowed select-none"
-                    title="Código oficial generado automáticamente por el sistema. No editable."
-                  />
-                  <span className="text-[10px] text-[#8C827A] mt-1 block">
-                    Identificador único no editable generado por el sistema.
-                  </span>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Categoría *</label>
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: Number(e.target.value) })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-semibold text-xs"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Marca *</label>
-                  <input
-                    type="text"
-                    list="brands-datalist"
-                    placeholder="Ej. Dubro"
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-semibold text-xs"
-                    required
-                  />
-                  <datalist id="brands-datalist">
-                    {availableBrands.map((b) => (
-                      <option key={b} value={b} />
-                    ))}
-                    <option value="Dubro" />
-                    <option value="Great Planes" />
-                    <option value="APC Propellers" />
-                    <option value="Hobbywing Tech" />
-                    <option value="TowerPro" />
-                    <option value="Tattu Gens Ace" />
-                    <option value="E-flite" />
-                    <option value="Futaba" />
-                    <option value="Sunnysky" />
-                    <option value="Spektrum RC" />
-                    <option value="AcroFlight" />
-                    <option value="AeroCarbon" />
-                  </datalist>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Precio en Bs. *</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    required
-                    placeholder="220"
-                    value={formData.price}
-                    onChange={(e) => {
-                      const newBs = e.target.value;
-                      setFormData({ ...formData, price: newBs });
-                      const num = parseFloat(newBs);
-                      const rate = exchangeRate > 0 ? exchangeRate : 11.84;
-                      if (!isNaN(num) && num > 0) {
-                        setUsdPriceInput((num / rate).toFixed(2));
-                      } else {
-                        setUsdPriceInput('');
-                      }
-                    }}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">Precio en USD</label>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-xs text-[#8C827A] pointer-events-none">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="18.59"
-                      value={usdPriceInput}
-                      onChange={(e) => {
-                        const newUsd = e.target.value;
-                        setUsdPriceInput(newUsd);
-                        const num = parseFloat(newUsd);
-                        const rate = exchangeRate > 0 ? exchangeRate : 11.84;
-                        if (!isNaN(num) && num > 0) {
-                          setFormData({ ...formData, price: (num * rate).toFixed(1) });
-                        } else if (newUsd === '') {
-                          setFormData({ ...formData, price: '' });
-                        }
-                      }}
-                      className="w-full pl-6 pr-2.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">
-                    Mostrar en Tienda *
-                  </label>
-                  <div className="flex items-center gap-1 p-1 bg-[#F2EDE4] border border-[#DCD6CC] rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, currency: 'Bs.' })}
-                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${(formData.currency || 'Bs.') === 'Bs.'
-                        ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                        : 'text-[#5C5650] hover:text-[#1A1817]'
-                        }`}
-                    >
-                      Bs.
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, currency: 'USD' })}
-                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${formData.currency === 'USD'
-                        ? 'bg-[#128C7E] text-white shadow-xs'
-                        : 'text-[#5C5650] hover:text-[#1A1817]'
-                        }`}
-                    >
-                      USD
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#1A1817] mb-1">
-                    Stock Disponible
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="15"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-bold text-xs"
-                  />
-                </div>
-              </div>
-
-
-
-              <div>
-                <label className="block font-bold text-[#1A1817] mb-1">
-                  Línea de Especificaciones Técnicas <span className="text-[#8C827A] font-normal text-[11px]">(Opcional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej. Paso Alambre hasta 2mm | Prisionero Allen | 12 Pcs"
-                  value={formData.specs_line}
-                  onChange={(e) => setFormData({ ...formData, specs_line: e.target.value })}
-                  className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none"
-                />
-              </div>
-
-              {/* ZONA DE CARGA DE IMÁGENES (DROPZONE + PREVIEW) */}
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
-                  <label className="block font-bold text-[#1A1817] text-xs uppercase tracking-wider">
-                    Foto del Repuesto / Producto *
-                  </label>
-                </div>
-
-                {/* Input oculto para selección de archivos del sistema */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleImageFile(e.target.files[0]);
-                    }
-                  }}
-                />
-
-                {/* Si ya existe imagen cargada: Miniatura de previsualización con subir y eliminar */}
-                {formData.image_url ? (
-                  <div className="p-3.5 bg-white border border-[#E2DCD3] rounded-2xl flex items-center justify-between gap-4 shadow-2xs">
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-16 h-16 rounded-xl bg-[#FAF8F5] border border-[#E2DCD3] overflow-hidden shrink-0 flex items-center justify-center relative">
+                  {formData.image_url ? (
+                    <div className="bg-white border border-[#E2DCD3] rounded-2xl p-4 shadow-xs flex flex-col gap-3.5">
+                      {/* Contenedor grande de la imagen sin mostrar rutas ni nombres de archivo */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragging(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handleImageFile(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`w-full h-64 sm:h-72 rounded-xl bg-white border-2 transition-all flex items-center justify-center relative overflow-hidden cursor-pointer group ${isDragging
+                          ? 'border-[#D4A359] bg-[#D4A359]/5'
+                          : 'border-[#EBE5DB] hover:border-[#D4A359]'
+                          }`}
+                        title="Haz clic o arrastra una imagen aquí para cambiar la foto"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={formData.image_url}
-                          alt="Previsualización"
-                          className="w-full h-full object-contain p-1"
+                          alt={formData.name || 'Vista previa del repuesto'}
+                          className="max-h-full max-w-full w-full h-full object-contain p-3 transition-transform duration-300 group-hover:scale-105"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = '/images/placeholder.webp';
                           }}
                         />
+
                         {isUploadingImage && (
-                          <div className="absolute inset-0 bg-black/60 backdrop-blur-2xs flex items-center justify-center">
-                            <Loader2 className="w-5 h-5 text-[#D4A359] animate-spin" />
+                          <div className="absolute inset-0 bg-[#161311]/70 backdrop-blur-2xs flex flex-col items-center justify-center gap-2 text-white">
+                            <Loader2 className="w-7 h-7 text-[#D4A359] animate-spin" />
+                            <span className="text-xs font-bold">Optimizando imagen...</span>
                           </div>
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-[#1A1817] truncate">
-                            {formData.image_url.split('/').pop() || 'Foto del repuesto'}
-                          </span>
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[#3E7B44]/15 text-[#3E7B44] border border-[#3E7B44]/30">
-                            WebP
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-[#8C827A] truncate font-mono mt-0.5">
-                          {formData.image_url}
-                        </p>
+
+                      {/* Botones de Acción debajo de la imagen grande */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingImage}
+                          className="py-2.5 px-3 rounded-xl bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                        >
+                          <UploadCloud className="w-4 h-4 text-[#D4A359] group-hover:text-[#161311]" />
+                          <span>Cambiar Foto</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, image_url: '' }))}
+                          disabled={isUploadingImage}
+                          className="py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black uppercase tracking-wider border border-red-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Eliminar</span>
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploadingImage}
-                        className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#E2DCD3] text-[#1A1817] text-xs font-bold border border-[#DCD6CC] transition-colors cursor-pointer flex items-center gap-1.5"
-                        title="Subir nueva foto"
-                      >
-                        <UploadCloud className="w-3.5 h-3.5 text-[#D4A359]" />
-                        <span>Subir</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
-                        disabled={isUploadingImage}
-                        className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold border border-red-200 transition-colors cursor-pointer flex items-center gap-1"
-                        title="Eliminar imagen"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Eliminar</span>
-                      </button>
+                  ) : (
+                    /* Dropzone grande cuando no hay imagen */
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleImageFile(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`w-full h-72 border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${isDragging
+                        ? 'border-[#D4A359] bg-[#D4A359]/10 scale-[1.01]'
+                        : 'border-[#D0C7BC] bg-white hover:border-[#D4A359]'
+                        }`}
+                    >
+                      {isUploadingImage ? (
+                        <div className="py-2 flex flex-col items-center gap-2.5">
+                          <Loader2 className="w-9 h-9 text-[#D4A359] animate-spin" />
+                          <span className="text-xs font-bold text-[#1A1817]">
+                            Subiendo y optimizando imagen...
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-14 h-14 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shadow-sm border border-[#D4A359]/40">
+                            <UploadCloud className="w-7 h-7 text-[#D4A359]" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs sm:text-sm font-black text-[#1A1817]">
+                              Haz clic para subir o arrastra la foto aquí
+                            </p>
+                            <p className="text-[11px] text-[#8C827A]">
+                              Formatos permitidos: JPG, PNG o WebP
+                            </p>
+                          </div>
+                          <span className="mt-1 px-4 py-2 rounded-xl bg-[#FAF8F5] border border-[#E2DCD3] text-[#1A1817] font-bold text-xs">
+                            Seleccionar Archivo
+                          </span>
+                        </>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  /* Zona de carga amplia y visual (Dropzone) */
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsDragging(true);
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                        handleImageFile(e.dataTransfer.files[0]);
-                      }
-                    }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragging
-                      ? 'border-[#D4A359] bg-[#D4A359]/10 scale-[1.01]'
-                      : 'border-[#D0C7BC] bg-[#FAF8F5] hover:bg-white hover:border-[#D4A359]'
-                      }`}
-                  >
-                    {isUploadingImage ? (
-                      <div className="py-2 flex flex-col items-center gap-2">
-                        <Loader2 className="w-8 h-8 text-[#D4A359] animate-spin" />
-                        <span className="text-xs font-bold text-[#1A1817]">
-                          Optimizando y convirtiendo a WebP...
+                  )}
+
+                  {imageError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs font-bold text-red-600 animate-in fade-in">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+                      <span>{imageError}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* COLUMNA DERECHA (7/12): INFORMACIÓN TÉCNICA, PRECIOS Y DESCRIPCIÓN */}
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Fila 1: Nombre del Repuesto + SKU Oficial */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+                    <div className="sm:col-span-8">
+                      <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                        Nombre del Repuesto *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. Conectores E/Z Dubro (12)"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] font-semibold focus:border-[#D4A359] outline-none shadow-2xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-4">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px]">
+                          SKU Oficial
+                        </label>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] uppercase font-mono">
+                          Sistema
                         </span>
                       </div>
-                    ) : (
-                      <>
-                        <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shadow-xs">
-                          <UploadCloud className="w-6 h-6 text-[#D4A359]" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-[#1A1817]">
-                            <span className="text-[#D4A359] underline decoration-[#D4A359]">Haz clic para buscar</span> o arrastra y suelta tu foto aquí
-                          </p>
-                          <p className="text-[11px] text-[#8C827A] mt-0.5">
-                            Formatos web: .jpg, .jpeg, .png, .webp
-                          </p>
-                        </div>
-                      </>
-                    )}
+                      <input
+                        type="text"
+                        readOnly
+                        value={formData.sku}
+                        className="w-full px-3.5 py-2.5 bg-[#EFEAE2] border border-[#DCD6CC] rounded-xl outline-none font-mono font-black uppercase tracking-wider text-[#1A1817] cursor-not-allowed select-none"
+                        title="Código oficial generado automáticamente por el sistema."
+                      />
+                    </div>
                   </div>
-                )}
 
-                {/* Alerta de validación si excede 2 MB o formato inválido */}
-                {imageError && (
-                  <div className="mt-2 p-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs font-bold text-red-600 animate-in fade-in">
-                    <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
-                    <span>{imageError}</span>
+                  {/* Fila 2: Categoría, Marca y Stock Disponible */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+                    <div className="sm:col-span-5">
+                      <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                        Categoría *
+                      </label>
+                      <select
+                        value={formData.categoryId}
+                        onChange={(e) =>
+                          setFormData({ ...formData, categoryId: Number(e.target.value) })
+                        }
+                        className="w-full px-3 py-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-semibold text-xs text-[#1A1817] shadow-2xs cursor-pointer"
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-4">
+                      <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                        Marca *
+                      </label>
+                      <input
+                        type="text"
+                        list="brands-datalist"
+                        placeholder="Ej. Dubro"
+                        value={formData.brand}
+                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-semibold text-xs text-[#1A1817] shadow-2xs"
+                        required
+                      />
+                      <datalist id="brands-datalist">
+                        {availableBrands.map((b) => (
+                          <option key={b} value={b} />
+                        ))}
+                        <option value="Dubro" />
+                        <option value="Great Planes" />
+                        <option value="APC Propellers" />
+                        <option value="Hobbywing Tech" />
+                        <option value="TowerPro" />
+                        <option value="Tattu Gens Ace" />
+                        <option value="E-flite" />
+                        <option value="Futaba" />
+                        <option value="Sunnysky" />
+                        <option value="Spektrum RC" />
+                        <option value="AcroFlight" />
+                        <option value="AeroCarbon" />
+                      </datalist>
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                        Stock Disponible
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="15"
+                        value={formData.stock}
+                        onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-mono font-bold text-xs text-[#1A1817] shadow-2xs"
+                      />
+                    </div>
                   </div>
-                )}
+
+                  {/* Fila 3: Bloque de Precios y Moneda perfectamente alineado */}
+                  <div className="p-4 rounded-2xl bg-white border border-[#E2DCD3] shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A]">
+                        Configuración de Precio y Moneda
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-[#5C5650]">
+                        TC: 1 USD = Bs. {exchangeRate.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-end">
+                      <div>
+                        <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                          Precio en Bs. *
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-[#8C827A] pointer-events-none">
+                            Bs.
+                          </span>
+                          <input
+                            type="number"
+                            step="0.5"
+                            required
+                            placeholder="220.00"
+                            value={formData.price}
+                            onChange={(e) => {
+                              const newBs = e.target.value;
+                              setFormData({ ...formData, price: newBs });
+                              const num = parseFloat(newBs);
+                              const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+                              if (!isNaN(num) && num > 0) {
+                                setUsdPriceInput((num / rate).toFixed(2));
+                              } else {
+                                setUsdPriceInput('');
+                              }
+                            }}
+                            className="w-full pl-9 pr-3 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl focus:bg-white focus:border-[#D4A359] outline-none font-mono font-bold text-xs text-[#1A1817]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                          Precio en USD
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-[#8C827A] pointer-events-none">
+                            $
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="18.59"
+                            value={usdPriceInput}
+                            onChange={(e) => {
+                              const newUsd = e.target.value;
+                              setUsdPriceInput(newUsd);
+                              const num = parseFloat(newUsd);
+                              const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+                              if (!isNaN(num) && num > 0) {
+                                setFormData({ ...formData, price: (num * rate).toFixed(1) });
+                              } else if (newUsd === '') {
+                                setFormData({ ...formData, price: '' });
+                              }
+                            }}
+                            className="w-full pl-7 pr-3 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl focus:bg-white focus:border-[#D4A359] outline-none font-mono font-bold text-xs text-[#1A1817]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fila 4: Línea de Especificaciones Técnicas */}
+                  <div>
+                    <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                      Línea de Especificaciones Técnicas{' '}
+                      <span className="text-[#8C827A] font-semibold normal-case text-[11px]">
+                        (Opcional)
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Paso Alambre hasta 2mm | Prisionero Allen | 12 Pcs"
+                      value={formData.specs_line}
+                      onChange={(e) => setFormData({ ...formData, specs_line: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-medium text-[#1A1817] shadow-2xs"
+                    />
+                  </div>
+
+                  {/* Fila 5: Descripción Detallada */}
+                  <div>
+                    <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                      Descripción Detallada
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Información sobre compatibilidad de montaje y recomendaciones técnicas..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none font-medium text-[#1A1817] leading-relaxed shadow-2xs"
+                    ></textarea>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-[#1A1817] mb-1">Descripción Detallada</label>
-                <textarea
-                  rows={3}
-                  placeholder="Información sobre compatibilidad de montaje y recomendaciones técnicas..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-2.5 bg-white border border-[#E2DCD3] rounded-xl focus:border-[#D4A359] outline-none"
-                ></textarea>
-              </div>
-
-              <div className="pt-3 border-t border-[#E2DCD3] flex items-center justify-end gap-2.5">
+              {/* Pie del Modal */}
+              <div className="pt-4 border-t border-[#E2DCD3] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-full border border-[#E2DCD3] text-[#5C5650] hover:bg-white font-bold"
+                  className="px-5 py-2.5 rounded-full border border-[#E2DCD3] bg-white text-[#5C5650] hover:text-[#1A1817] font-bold transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black uppercase tracking-wider shadow-md"
+                  className="px-7 py-2.5 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] font-black uppercase tracking-wider shadow-md transition-all cursor-pointer"
                 >
                   {editingProduct ? 'Guardar Cambios' : 'Crear Repuesto'}
                 </button>
               </div>
-
             </form>
           </div>
         </div>

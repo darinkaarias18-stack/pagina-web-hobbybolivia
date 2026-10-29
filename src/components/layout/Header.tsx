@@ -116,15 +116,14 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
               </div>
             </button>
 
-            {/* CTA Button: Comprar Ahora -> */}
-            <button
-              type="button"
-              onClick={openDrawer}
+            {/* CTA Button: Comprar Ahora -> #catalogo */}
+            <a
+              href="#catalogo"
               className="hidden md:inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs tracking-wide transition-all shadow-md hover:scale-[1.02] cursor-pointer"
             >
               <span>Comprar Ahora</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </a>
 
             {/* Mobile Menu Toggle */}
             <button
@@ -156,14 +155,13 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
             ))}
           </nav>
 
-          <button
-            type="button"
-            onClick={openDrawer}
+          <a
+            href="#catalogo"
             className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-[10px] tracking-wide transition-all shadow-sm shrink-0 cursor-pointer"
           >
             <span>Comprar Ahora</span>
             <ArrowRight className="w-3 h-3" />
-          </button>
+          </a>
         </div>
 
         {/* Mobile Navigation Drawer */}
@@ -189,17 +187,14 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
             </div>
 
             <div className="pt-2 border-t border-[#2D2622] flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  openDrawer();
-                }}
+              <a
+                href="#catalogo"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-2.5 px-4 rounded-xl bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
-                <span>Comprar Ahora (Bs. {subtotal.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                <span>Comprar Ahora</span>
                 <ArrowRight className="w-4 h-4" />
-              </button>
+              </a>
 
               <Link
                 href="/login?reauth=1"

@@ -34,7 +34,7 @@ En Hobby Bolivia protegemos sus datos personales. La información de contacto, n
 - Garantía de 30 días contra defectos de fabricación en componentes mecánicos y estructurales.
 - Componentes electrónicos cuentan con verificación previa de polaridad y continuidad antes de despacho.`,
   paymentQrUrl: "/images/payment/qr_simple_hobbybolivia.svg",
-  paymentQrInstructions: "Titular: Hobby Bolivia\nBanco: Banco Unión / BCP / BNB\nMoneda: Bolivianos (Bs.)\nEnvía tu comprobante de pago por WhatsApp para procesar tu despacho.",
+  paymentQrInstructions: "Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp.",
   enablePaymentQr: true
 };
 

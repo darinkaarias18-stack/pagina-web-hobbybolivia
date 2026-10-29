@@ -1648,13 +1648,25 @@ export async function saveCatalogItem(data: Partial<Product>): Promise<Product> 
 }
 
 export const getQuoteOrders = getQuotes;
-export async function updateQuoteOrderStatus(id: number, status: OrderStatus): Promise<QuoteOrder | null> {
+export async function updateQuoteOrderStatus(idOrCode: number | string, status: OrderStatus): Promise<QuoteOrder | null> {
   const store = getLocalStore();
-  const index = store.quotes.findIndex(q => q.id === id);
+  const index = store.quotes.findIndex(
+    q => q.orderCode === String(idOrCode) || (typeof idOrCode === 'number' && q.id === idOrCode) || q.id === Number(idOrCode)
+  );
   if (index === -1) return null;
   store.quotes[index].status = status;
   store.quotes[index].updatedAt = new Date().toISOString();
   saveLocalStore(store);
+
+  const pool = getMysqlPool();
+  if (pool && store.quotes[index].id) {
+    try {
+      await pool.query('UPDATE quote_orders SET status = ? WHERE id = ?', [status, store.quotes[index].id]);
+    } catch (e) {
+      console.warn('[MySQL updateQuoteOrderStatus Warning]:', e);
+    }
+  }
+
   return store.quotes[index];
 }
 

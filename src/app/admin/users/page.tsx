@@ -13,14 +13,24 @@ import {
   Check,
   Loader2,
   AlertTriangle,
-  UserCheck,
   Eye,
   EyeOff,
-  Search,
   Crown,
-  CheckCircle2
+  CheckCircle2,
+  Mail,
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import type { User, UserRole } from '@/lib/types';
+
+interface EmailDispatchInfo {
+  sentViaSmtp: boolean;
+  recipient: string;
+  subject: string;
+  bodyText: string;
+  gmailComposeUrl: string;
+  mailtoUrl: string;
+}
 
 export default function AdminUsersPage() {
   const router = useRouter();
@@ -28,24 +38,25 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Search & Filter
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'SUPERADMIN' | 'ADMIN'>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
-
-  // Create User Modal
+  // Create User Modal (Exclusively creates ADMIN accounts with @gmail.com)
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newUsername, setNewUsername] = useState('');
-  const [newEmail, setNewEmail] = useState('');
+  const [newGmailUser, setNewGmailUser] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState<UserRole>('ADMIN');
   const [newIsActive, setNewIsActive] = useState(true);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
   const [createError, setCreateError] = useState('');
 
-  // Edit User Modal
+  // Credentials Dispatch Confirmation Modal after creating an Admin
+  const [dispatchedAccess, setDispatchedAccess] = useState<{
+    adminName: string;
+    username: string;
+    password: string;
+    emailDispatch: EmailDispatchInfo;
+  } | null>(null);
+
+  // Edit User Modal (Superadmin can edit name, Gmail, password, and Role)
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
@@ -69,7 +80,18 @@ export default function AdminUsersPage() {
     setToast({ message, type });
     setTimeout(() => {
       setToast(null);
-    }, 3800);
+    }, 4000);
+  };
+
+  // Identifica únicamente a la cuenta maestra principal del Superadmin (no eliminable)
+  const isPrimaryMasterAccount = (u: User) => {
+    const uname = (u.username || '').toLowerCase().trim();
+    const uemail = (u.email || '').toLowerCase().trim();
+    return (
+      u.id === 1 ||
+      uname === 'darinka.arias18@gmail.com' ||
+      uemail === 'darinka.arias18@gmail.com'
+    );
   };
 
   const loadUsers = useCallback(async () => {
@@ -99,6 +121,7 @@ export default function AdminUsersPage() {
   }, [router]);
 
   useEffect(() => {
+    // Regla estricta: Gestión de Usuarios solo está disponible para el SUPERADMIN
     const role = localStorage.getItem('hb_user_role');
     if (role && role !== 'SUPERADMIN') {
       router.replace('/admin');
@@ -107,50 +130,35 @@ export default function AdminUsersPage() {
     loadUsers();
   }, [loadUsers, router]);
 
-  // Filtered Users List
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      const query = searchQuery.trim().toLowerCase();
-      const matchSearch =
-        !query ||
-        u.name?.toLowerCase().includes(query) ||
-        u.username?.toLowerCase().includes(query) ||
-        (u.email && u.email.toLowerCase().includes(query));
-
-      const matchRole =
-        roleFilter === 'ALL' ? true : u.role === roleFilter;
-
-      const matchStatus =
-        statusFilter === 'ALL'
-          ? true
-          : statusFilter === 'ACTIVE'
-          ? u.isActive !== false
-          : u.isActive === false;
-
-      return matchSearch && matchRole && matchStatus;
-    });
-  }, [users, searchQuery, roleFilter, statusFilter]);
-
-  // Statistics
+  // Statistics for internal validation
   const stats = useMemo(() => {
-    const total = users.length;
     const superadmins = users.filter((u) => u.role === 'SUPERADMIN').length;
-    const admins = users.filter((u) => u.role === 'ADMIN').length;
-    const active = users.filter((u) => u.isActive !== false).length;
-    return { total, superadmins, admins, active };
+    return { superadmins };
   }, [users]);
 
-  // Handle Create User
+  // Handle Create Admin User (Rule: must be @gmail.com, role is always ADMIN, sends credentials)
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError('');
 
-    if (!newName.trim() || !newUsername.trim() || !newPassword.trim()) {
-      setCreateError('Nombre, usuario y contraseña son campos obligatorios.');
+    const cleanName = newName.trim();
+    const cleanGmail = newGmailUser.trim().toLowerCase();
+    const cleanPassword = newPassword.trim();
+
+    if (!cleanName || !cleanGmail || !cleanPassword) {
+      setCreateError('Nombre completo, correo Gmail de usuario y contraseña son obligatorios.');
       return;
     }
 
-    if (newPassword.trim().length < 6) {
+    const gmailRegex = /^[a-z0-9._%+-]+@gmail\.com$/i;
+    if (!gmailRegex.test(cleanGmail)) {
+      setCreateError(
+        'Por regla obligatoria, el usuario debe ser un correo válido de Gmail (ejemplo@gmail.com), a donde se enviarán los accesos.'
+      );
+      return;
+    }
+
+    if (cleanPassword.length < 6) {
       setCreateError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
@@ -161,28 +169,40 @@ export default function AdminUsersPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newName.trim(),
-          username: newUsername.trim().toLowerCase(),
-          email: newEmail.trim() || `${newUsername.trim().toLowerCase()}@hobbybolivia.com`,
-          password: newPassword.trim(),
-          role: newRole,
+          name: cleanName,
+          username: cleanGmail,
+          email: cleanGmail,
+          password: cleanPassword,
+          role: 'ADMIN',
           isActive: newIsActive
         })
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al crear usuario');
+        throw new Error(data.error || 'Error al crear usuario administrador');
       }
 
       setIsCreateOpen(false);
       setNewName('');
-      setNewUsername('');
-      setNewEmail('');
+      setNewGmailUser('');
       setNewPassword('');
-      setNewRole('ADMIN');
       setNewIsActive(true);
-      showToast(`Usuario "${data.data.username}" creado exitosamente.`);
+
+      if (data.emailDispatch) {
+        setDispatchedAccess({
+          adminName: cleanName,
+          username: cleanGmail,
+          password: cleanPassword,
+          emailDispatch: data.emailDispatch
+        });
+      }
+
+      showToast(
+        data.emailDispatch?.sentViaSmtp
+          ? `Administrador "${cleanGmail}" creado y accesos enviados a su Gmail.`
+          : `Administrador "${cleanGmail}" creado. Envía o confirma sus accesos por Gmail.`
+      );
       loadUsers();
     } catch (err: unknown) {
       setCreateError(err instanceof Error ? err.message : 'Error inesperado');
@@ -191,12 +211,42 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Inline Role Change by Superadmin directly from the table
+  const handleQuickRoleChange = async (user: User, nextRole: UserRole) => {
+    if (isPrimaryMasterAccount(user)) {
+      showToast('La cuenta Superadmin maestra no puede cambiar de rol.', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: nextRole })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, role: nextRole } : u))
+        );
+        showToast(
+          `Rol de "${user.username}" actualizado a ${nextRole === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN'}.`
+        );
+      } else {
+        showToast(data.error || 'No se pudo actualizar el rol', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Error de red al cambiar el rol', 'error');
+    }
+  };
+
   // Open Edit Modal
   const openEditModal = (user: User) => {
     setEditingUser(user);
     setEditName(user.name || '');
     setEditUsername(user.username || '');
-    setEditEmail(user.email || '');
+    setEditEmail(user.email || user.username || '');
     setEditPassword('');
     setEditRole(user.role || 'ADMIN');
     setEditIsActive(user.isActive !== false);
@@ -221,12 +271,13 @@ export default function AdminUsersPage() {
 
     setEditSaving(true);
     try {
+      const cleanUsername = editUsername.trim().toLowerCase();
       const payload: Record<string, unknown> = {
         name: editName.trim(),
-        username: editUsername.trim().toLowerCase(),
-        email: editEmail.trim(),
-        role: editRole,
-        isActive: editIsActive
+        username: cleanUsername,
+        email: editEmail.trim().toLowerCase() || cleanUsername,
+        role: isPrimaryMasterAccount(editingUser) ? 'SUPERADMIN' : editRole,
+        isActive: isPrimaryMasterAccount(editingUser) ? true : editIsActive
       };
 
       if (editPassword.trim().length > 0) {
@@ -245,7 +296,7 @@ export default function AdminUsersPage() {
       }
 
       setEditingUser(null);
-      showToast(`Usuario "${editingUser.username}" actualizado con éxito.`);
+      showToast(`Usuario "${cleanUsername}" actualizado con éxito.`);
       loadUsers();
     } catch (err: unknown) {
       setEditError(err instanceof Error ? err.message : 'Error inesperado');
@@ -256,10 +307,7 @@ export default function AdminUsersPage() {
 
   // Toggle active status
   const handleToggleActive = async (user: User) => {
-    const isMaster =
-      user.id === 1 ||
-      user.username.toLowerCase() === 'darinka.arias18@gmail.com' ||
-      (user.role === 'SUPERADMIN' && stats.superadmins <= 1);
+    const isMaster = isPrimaryMasterAccount(user) || (user.role === 'SUPERADMIN' && stats.superadmins <= 1);
 
     if (isMaster && user.isActive) {
       showToast('La cuenta Superadmin principal no puede ser desactivada.', 'error');
@@ -320,11 +368,10 @@ export default function AdminUsersPage() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom duration-200 border ${
-            toast.type === 'success'
-              ? 'bg-[#161311] text-[#FAF8F5] border-[#D4A359]'
-              : 'bg-rose-950 text-white border-rose-600'
-          }`}
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom duration-200 border ${toast.type === 'success'
+            ? 'bg-[#161311] text-[#FAF8F5] border-[#D4A359]'
+            : 'bg-rose-950 text-white border-rose-600'
+            }`}
         >
           {toast.type === 'success' ? (
             <CheckCircle2 className="w-4 h-4 text-[#D4A359]" />
@@ -341,14 +388,14 @@ export default function AdminUsersPage() {
           <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-pulse" />
             <span className="text-[11px] font-black uppercase tracking-wider text-[#D4A359]">
-              Control de Accesos & Seguridad · Hobby Bolivia
+              Exclusivo Superadmin · Control de Accesos & Seguridad
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
             Gestión de Usuarios
           </h1>
           <p className="text-xs text-[#5C5650] mt-1 max-w-2xl leading-relaxed">
-            Administra las cuentas de administradores, asigna roles y gestiona credenciales de acceso seguro al panel.
+            Crea cuentas de administrador vinculadas a un correo Gmail, edita sus roles o revoca accesos del sistema.
           </p>
         </div>
 
@@ -360,7 +407,7 @@ export default function AdminUsersPage() {
             <span>Volver al Dashboard</span>
           </Link>
 
-          {/* Primary Action Button: "Crear Nuevo Usuario" */}
+          {/* Primary Action Button: "Crear Nuevo Usuario (Admin)" */}
           <button
             type="button"
             onClick={() => {
@@ -370,145 +417,22 @@ export default function AdminUsersPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#D4A359] to-[#C69755] hover:from-[#C69755] hover:to-[#B8863A] text-[#161311] font-black text-xs uppercase tracking-wider shadow-md shadow-[#D4A359]/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <UserPlus className="w-4 h-4 text-[#161311]" />
-            <span>Crear Nuevo Usuario</span>
+            <span>Crear Nuevo Admin</span>
           </button>
         </div>
       </div>
 
-      {/* Metric Summary Cards (Warm Tech Aesthetic) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Usuarios (Dark Charcoal Hero Card) */}
-        <div className="bg-[#161311] text-[#FAF8F5] p-5 rounded-3xl border border-[#2D2622] shadow-md flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-[#A89F91] font-bold uppercase tracking-wider block mb-1">
-              Total Registrados
-            </span>
-            <span className="text-3xl font-black text-[#D4A359] font-mono tracking-tight">
-              {stats.total}
-            </span>
-            <span className="text-[10px] text-[#8C827A] block mt-0.5">
-              Cuentas en base de datos
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#D4A359]/15 border border-[#D4A359]/30 text-[#D4A359] flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6 text-[#D4A359]" />
-          </div>
-        </div>
-
-        {/* Card 2: Superadmins */}
-        <div className="bg-white p-5 rounded-3xl border border-[#E2DCD3] shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-[#8C827A] font-bold uppercase tracking-wider block mb-1">
-              Superadmins
-            </span>
-            <span className="text-3xl font-black text-[#B8863A] font-mono tracking-tight">
-              {stats.superadmins}
-            </span>
-            <span className="text-[10px] text-[#8C827A] block mt-0.5">
-              Acceso maestro total
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#D4A359]/20 border border-[#D4A359]/40 text-[#B8863A] flex items-center justify-center shrink-0">
-            <Crown className="w-6 h-6 text-[#B8863A]" />
-          </div>
-        </div>
-
-        {/* Card 3: Administradores */}
-        <div className="bg-white p-5 rounded-3xl border border-[#E2DCD3] shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-[#8C827A] font-bold uppercase tracking-wider block mb-1">
-              Admins Estándar
-            </span>
-            <span className="text-3xl font-black text-[#1A1817] font-mono tracking-tight">
-              {stats.admins}
-            </span>
-            <span className="text-[10px] text-[#8C827A] block mt-0.5">
-              Catálogo & Cotizaciones
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] text-[#F85606] flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-6 h-6 text-[#F85606]" />
-          </div>
-        </div>
-
-        {/* Card 4: Cuentas Activas */}
-        <div className="bg-white p-5 rounded-3xl border border-[#E2DCD3] shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-[#8C827A] font-bold uppercase tracking-wider block mb-1">
-              Cuentas Activas
-            </span>
-            <span className="text-3xl font-black text-[#3E7B44] font-mono tracking-tight">
-              {stats.active}
-            </span>
-            <span className="text-[10px] text-[#3E7B44] block mt-0.5 font-bold">
-              Sesiones habilitadas
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#3E7B44]/15 border border-[#3E7B44]/30 text-[#3E7B44] flex items-center justify-center shrink-0">
-            <UserCheck className="w-6 h-6 text-[#3E7B44]" />
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white rounded-3xl border border-[#E2DCD3] p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        {/* Search Input */}
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-3" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nombre, usuario o email..."
-            className="w-full pl-10 pr-8 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all placeholder:text-[#A89F91]"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-xs text-[#8C827A] hover:text-[#1A1817] cursor-pointer"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-2">
-          {/* Role Filter */}
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as any)}
-            className="px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-bold text-[#1A1817] focus:border-[#D4A359] outline-none cursor-pointer"
-          >
-            <option value="ALL">Todos los Roles</option>
-            <option value="SUPERADMIN">Solo Superadmins</option>
-            <option value="ADMIN">Solo Administradores</option>
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-bold text-[#1A1817] focus:border-[#D4A359] outline-none cursor-pointer"
-          >
-            <option value="ALL">Todos los Estados</option>
-            <option value="ACTIVE">Solo Activos</option>
-            <option value="INACTIVE">Solo Inactivos</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Users Table Card (Fits 100% on screen, NO horizontal scroll) */}
+      {/* Users Table Card */}
       <div className="bg-white rounded-3xl border border-[#E2DCD3] shadow-xs overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-[#E2DCD3] flex items-center justify-between bg-[#FAF8F5]">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-[#D4A359]" />
             <h2 className="text-xs font-black text-[#1A1817] uppercase tracking-wider">
-              Cuentas Registradas ({filteredUsers.length})
+              Cuentas Registradas ({users.length})
             </h2>
           </div>
           <span className="text-[11px] font-mono text-[#8C827A]">
-            Mostrando {filteredUsers.length} de {users.length} usuarios
+            Solo Superadmin puede editar roles y eliminar cuentas
           </span>
         </div>
 
@@ -517,30 +441,24 @@ export default function AdminUsersPage() {
             <Loader2 className="w-8 h-8 animate-spin text-[#D4A359]" />
             <span className="font-semibold">Cargando directorio de administradores...</span>
           </div>
-        ) : filteredUsers.length === 0 ? (
+        ) : users.length === 0 ? (
           <div className="p-16 text-center text-xs text-[#8C827A] space-y-2">
-            <p className="font-bold text-sm text-[#1A1817]">No se encontraron usuarios</p>
-            <p className="text-[11px]">
-              Intenta cambiar los términos de búsqueda o los filtros seleccionados.
-            </p>
+            <p className="font-bold text-sm text-[#1A1817]">No hay usuarios registrados</p>
           </div>
         ) : (
           <table className="w-full table-fixed text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#FAF8F5] border-b border-[#E2DCD3] text-[#8C827A] font-black uppercase tracking-wider text-[10px]">
-                <th className="py-3.5 px-4 w-[28%]">Usuario & Credencial</th>
-                <th className="py-3.5 px-4 w-[26%]">Nombre Completo</th>
-                <th className="py-3.5 px-4 w-[16%]">Rol Asignado</th>
-                <th className="py-3.5 px-4 w-[14%]">Estado</th>
-                <th className="py-3.5 px-4 text-right w-[16%]">Acciones</th>
+                <th className="py-3.5 px-4 w-[28%]">Usuario (Gmail)</th>
+                <th className="py-3.5 px-4 w-[22%]">Nombre Completo</th>
+                <th className="py-3.5 px-4 w-[18%]">Rol Asignado</th>
+                <th className="py-3.5 px-4 w-[13%]">Estado</th>
+                <th className="py-3.5 px-4 text-right w-[19%]">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EFEAE2]">
-              {filteredUsers.map((u) => {
-                const isMaster =
-                  u.id === 1 ||
-                  u.username.toLowerCase() === 'darinka.arias18@gmail.com' ||
-                  u.role === 'SUPERADMIN';
+              {users.map((u) => {
+                const isPrimaryMaster = isPrimaryMasterAccount(u);
 
                 // Initial Avatar letters
                 const initials = (u.name || u.username)
@@ -556,19 +474,18 @@ export default function AdminUsersPage() {
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 ${
-                            u.role === 'SUPERADMIN'
-                              ? 'bg-[#161311] text-[#D4A359] border border-[#D4A359]/30 shadow-xs'
-                              : 'bg-[#FAF8F5] text-[#1A1817] border border-[#E2DCD3]'
-                          }`}
+                          className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 ${u.role === 'SUPERADMIN'
+                            ? 'bg-[#161311] text-[#D4A359] border border-[#D4A359]/30 shadow-xs'
+                            : 'bg-[#FAF8F5] text-[#1A1817] border border-[#E2DCD3]'
+                            }`}
                         >
                           {initials}
                         </div>
                         <div className="min-w-0">
                           <div className="font-mono font-black text-[#1A1817] truncate flex items-center gap-1.5">
                             <span>{u.username}</span>
-                            {isMaster && (
-                              <span title="Superadmin Maestro" className="inline-flex items-center">
+                            {isPrimaryMaster && (
+                              <span title="Superadmin Maestro Principal" className="inline-flex items-center">
                                 <Crown className="w-3.5 h-3.5 text-[#D4A359] shrink-0" />
                               </span>
                             )}
@@ -587,18 +504,26 @@ export default function AdminUsersPage() {
                       {u.name}
                     </td>
 
-                    {/* 3. Rol Asignado */}
+                    {/* 3. Rol Asignado (Editable por Superadmin para cuentas Admin) */}
                     <td className="py-3.5 px-4">
-                      {u.role === 'SUPERADMIN' ? (
+                      {isPrimaryMaster ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#161311] text-[#D4A359] border border-[#D4A359]/40 shadow-xs">
                           <Crown className="w-3 h-3 text-[#D4A359]" />
-                          <span>Superadmin</span>
+                          <span>Superadmin Maestro</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#FAF8F5] text-[#1A1817] border border-[#E2DCD3]">
-                          <ShieldCheck className="w-3 h-3 text-[#F85606]" />
-                          <span>Admin</span>
-                        </span>
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleQuickRoleChange(u, e.target.value as UserRole)}
+                          className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border cursor-pointer outline-none transition-colors ${u.role === 'SUPERADMIN'
+                            ? 'bg-[#161311] text-[#D4A359] border-[#D4A359]/50'
+                            : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359]'
+                            }`}
+                          title="Cambiar rol del usuario"
+                        >
+                          <option value="ADMIN">ADMIN (Catálogo y Pedidos)</option>
+                          <option value="SUPERADMIN">SUPERADMIN (Acceso Total)</option>
+                        </select>
                       )}
                     </td>
 
@@ -607,51 +532,50 @@ export default function AdminUsersPage() {
                       <button
                         type="button"
                         onClick={() => handleToggleActive(u)}
-                        disabled={isMaster && u.isActive}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
-                          u.isActive !== false
-                            ? 'bg-[#3E7B44]/15 text-[#3E7B44] border border-[#3E7B44]/30 hover:bg-[#3E7B44]/25 cursor-pointer'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
-                        } ${isMaster && u.isActive ? 'opacity-90 cursor-default' : ''}`}
+                        disabled={isPrimaryMaster && u.isActive}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${u.isActive !== false
+                          ? 'bg-[#3E7B44]/15 text-[#3E7B44] border border-[#3E7B44]/30 hover:bg-[#3E7B44]/25 cursor-pointer'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
+                          } ${isPrimaryMaster && u.isActive ? 'opacity-90 cursor-default' : ''}`}
                         title={
-                          isMaster && u.isActive
+                          isPrimaryMaster && u.isActive
                             ? 'Cuenta maestra permanentemente activa'
                             : 'Clic para alternar estado'
                         }
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            u.isActive !== false ? 'bg-[#3E7B44] animate-pulse' : 'bg-rose-500'
-                          }`}
+                          className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-[#3E7B44] animate-pulse' : 'bg-rose-500'
+                            }`}
                         />
                         <span>{u.isActive !== false ? 'Activo' : 'Inactivo'}</span>
                       </button>
                     </td>
 
-                    {/* 5. Acciones */}
+                    {/* 5. Acciones (Editar y Eliminar habilitados para Superadmin) */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           onClick={() => openEditModal(u)}
                           className="px-2.5 py-1.5 rounded-xl border border-[#E2DCD3] hover:border-[#161311] bg-white hover:bg-[#161311] text-[#1A1817] hover:text-[#D4A359] font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
-                          title="Editar usuario o contraseña"
+                          title="Editar usuario, rol o contraseña"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                           <span className="hidden sm:inline">Editar</span>
                         </button>
 
-                        {!isMaster && (
+                        {!isPrimaryMaster && (
                           <button
                             type="button"
                             onClick={() => {
                               setDeleteError('');
                               setUserToDelete(u);
                             }}
-                            className="p-1.5 rounded-xl border border-rose-200 hover:border-rose-400 bg-white hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer"
-                            title="Eliminar usuario"
+                            className="px-2.5 py-1.5 rounded-xl border border-rose-200 hover:border-rose-500 bg-rose-50/60 hover:bg-rose-600 text-rose-600 hover:text-white font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                            title="Eliminar cuenta de administrador"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Eliminar</span>
                           </button>
                         )}
                       </div>
@@ -665,7 +589,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* ========================================================
-          MODAL: CREAR NUEVO USUARIO
+          MODAL: CREAR NUEVO USUARIO ADMINISTRADOR (SOLO ROL ADMIN + GMAIL)
       ======================================================== */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs animate-in fade-in duration-150">
@@ -677,10 +601,10 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-[#1A1817]">
-                    Crear Nuevo Usuario
+                    Crear Nuevo Usuario Admin
                   </h3>
                   <span className="text-[11px] text-[#8C827A]">
-                    Autoriza credenciales de acceso al panel de administración
+                    El usuario debe ser un correo Gmail a donde se enviarán sus accesos
                   </span>
                 </div>
               </div>
@@ -700,10 +624,10 @@ export default function AdminUsersPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
+            <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
               <div>
                 <label className="font-bold text-[#1A1817] block mb-1">
-                  Nombre Completo *
+                  Nombre Completo del Administrador *
                 </label>
                 <input
                   type="text"
@@ -715,40 +639,24 @@ export default function AdminUsersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-[#1A1817] block mb-1">
-                    Usuario (Login) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newUsername}
-                    onChange={(e) =>
-                      setNewUsername(
-                        e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '')
-                      )
-                    }
-                    placeholder="ej. rmorales"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
-                  />
-                  <span className="text-[10px] text-[#8C827A] mt-0.5 block">
-                    Solo minúsculas, números o punto.
-                  </span>
-                </div>
-
-                <div>
-                  <label className="font-bold text-[#1A1817] block mb-1">
-                    Correo Electrónico
-                  </label>
+              <div>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Usuario (Correo Gmail donde recibirá los accesos) *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-[#D4A359] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="rmorales@hobbybolivia.com"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
+                    required
+                    value={newGmailUser}
+                    onChange={(e) => setNewGmailUser(e.target.value.trim().toLowerCase())}
+                    placeholder="ejemplo@gmail.com"
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
                   />
                 </div>
+                <span className="text-[10px] text-[#8C827A] mt-1 block">
+                  Regla obligatoria: debe terminar en <strong>@gmail.com</strong>. A este correo se enviarán el usuario y la contraseña.
+                </span>
               </div>
 
               <div>
@@ -778,47 +686,20 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              {/* Rol Asignado */}
-              <div>
-                <label className="font-bold text-[#1A1817] block mb-1">
-                  Rol de Privilegios
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label
-                    onClick={() => setNewRole('ADMIN')}
-                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
-                      newRole === 'ADMIN'
-                        ? 'border-[#D4A359] bg-[#FAF8F5] shadow-xs'
-                        : 'border-[#E2DCD3] bg-white opacity-70'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-xs text-[#1A1817]">ADMIN</span>
-                      <ShieldCheck className="w-4 h-4 text-[#F85606]" />
-                    </div>
-                    <span className="text-[10px] text-[#5C5650] leading-tight">
-                      Gestión de catálogo, productos y cotizaciones.
+              {/* Rol Fijo Informativo: ADMIN */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-[#D4A359]" />
+                  </div>
+                  <div>
+                    <span className="font-black text-xs text-[#1A1817] block">
+                      Rol Asignado: ADMIN (Estándar)
                     </span>
-                  </label>
-
-                  <label
-                    onClick={() => setNewRole('SUPERADMIN')}
-                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
-                      newRole === 'SUPERADMIN'
-                        ? 'border-[#D4A359] bg-[#161311] text-[#FAF8F5] shadow-xs'
-                        : 'border-[#E2DCD3] bg-white opacity-70'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`font-black text-xs ${newRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#1A1817]'}`}>
-                        SUPERADMIN
-                      </span>
-                      <Crown className={`w-4 h-4 ${newRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#8C827A]'}`} />
-                    </div>
-                    <span className={`text-[10px] leading-tight ${newRole === 'SUPERADMIN' ? 'text-[#A89F91]' : 'text-[#5C5650]'}`}>
-                      Acceso total, usuarios y ajustes del sistema.
+                    <span className="text-[10px] text-[#5C5650]">
+                      Acceso a Productos, Stock, Gestión de Pedidos y Configuración General. No puede ver ni crear usuarios.
                     </span>
-                  </label>
+                  </div>
                 </div>
               </div>
 
@@ -853,9 +734,9 @@ export default function AdminUsersPage() {
                   {createSaving ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Check className="w-3.5 h-3.5" />
+                    <Mail className="w-3.5 h-3.5" />
                   )}
-                  <span>{createSaving ? 'Creando...' : 'Crear Usuario'}</span>
+                  <span>{createSaving ? 'Creando y enviando...' : 'Crear Admin y Enviar Accesos'}</span>
                 </button>
               </div>
             </form>
@@ -864,7 +745,114 @@ export default function AdminUsersPage() {
       )}
 
       {/* ========================================================
-          MODAL: EDITAR USUARIO / CAMBIAR CONTRASEÑA
+          MODAL: CONFIRMACIÓN DE ENVÍO DE ACCESOS AL GMAIL DEL ADMIN
+      ======================================================== */}
+      {dispatchedAccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/75 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white text-[#1A1817] rounded-3xl max-w-lg w-full shadow-2xl border border-[#E2DCD3] p-6 sm:p-7 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#3E7B44] text-white flex items-center justify-center shadow-xs">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#1A1817]">
+                    Administrador Creado · Accesos Listos
+                  </h3>
+                  <span className="text-[11px] text-[#8C827A]">
+                    Destinatario: {dispatchedAccess.username}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDispatchedAccess(null)}
+                className="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#8C827A] hover:text-[#1A1817] flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#8C827A] font-bold">Nombre:</span>
+                <span className="font-black text-[#1A1817]">{dispatchedAccess.adminName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8C827A] font-bold">Usuario (Gmail):</span>
+                <span className="font-mono font-black text-[#1A1817]">{dispatchedAccess.username}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8C827A] font-bold">Contraseña:</span>
+                <span className="font-mono font-black text-[#D4A359] bg-[#211E1C] px-2.5 py-0.5 rounded-lg">
+                  {dispatchedAccess.password}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8C827A] font-bold">Rol asignado:</span>
+                <span className="font-black text-[#1A1817]">ADMIN</span>
+              </div>
+            </div>
+
+            {dispatchedAccess.emailDispatch.sentViaSmtp ? (
+              <div className="p-3 rounded-2xl bg-[#3E7B44]/15 border border-[#3E7B44]/30 text-[#1E4D2B] text-xs font-bold">
+                El correo con el usuario y la contraseña se envió automáticamente a{' '}
+                <span className="underline">{dispatchedAccess.username}</span>.
+              </div>
+            ) : (
+              <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#D4A359]/50 text-[#1A1817] text-xs space-y-2">
+                <p className="font-semibold text-[#5C5650]">
+                  Haz clic en <strong>Enviar por Gmail</strong> para despachar el correo con las credenciales directamente a{' '}
+                  <strong className="text-[#1A1817]">{dispatchedAccess.username}</strong>:
+                </p>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-[#E2DCD3] flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(dispatchedAccess.emailDispatch.bodyText);
+                  showToast('Credenciales copiadas al portapapeles');
+                }}
+                className="px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-[#EFEAE2] text-[#1A1817] border border-[#E2DCD3] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5 text-[#D4A359]" />
+                <span>Copiar Accesos</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.open(
+                      dispatchedAccess.emailDispatch.gmailComposeUrl,
+                      '_blank',
+                      'noopener,noreferrer'
+                    )
+                  }
+                  className="px-5 py-2.5 rounded-full bg-[#211E1C] hover:bg-[#2E2926] text-white border border-[#D4A359] font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5 text-[#D4A359]" />
+                  <span className="text-white">Enviar por Gmail</span>
+                  <ExternalLink className="w-3 h-3 text-[#D4A359]" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDispatchedAccess(null)}
+                  className="px-5 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider cursor-pointer"
+                >
+                  Listo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: EDITAR USUARIO / ROL / CONTRASEÑA (EXCLUSIVO SUPERADMIN)
       ======================================================== */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs animate-in fade-in duration-150">
@@ -876,10 +864,10 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-[#1A1817]">
-                    Editar Usuario
+                    Editar Usuario y Rol
                   </h3>
                   <span className="text-[11px] font-mono text-[#8C827A]">
-                    @{editingUser.username} · ID #{editingUser.id}
+                    {editingUser.username} · ID #{editingUser.id}
                   </span>
                 </div>
               </div>
@@ -916,17 +904,13 @@ export default function AdminUsersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-[#1A1817] block mb-1">
-                    Nombre de Usuario (Login)
+                    Usuario (Login / Gmail)
                   </label>
                   <input
                     type="text"
                     required
                     value={editUsername}
-                    onChange={(e) =>
-                      setEditUsername(
-                        e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '')
-                      )
-                    }
+                    onChange={(e) => setEditUsername(e.target.value.trim().toLowerCase())}
                     className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
                   />
                 </div>
@@ -969,72 +953,68 @@ export default function AdminUsersPage() {
                     )}
                   </button>
                 </div>
-                <span className="text-[10px] text-[#8C827A] mt-0.5 block">
-                  Solo escribe si deseas cambiar la contraseña de esta cuenta.
-                </span>
               </div>
 
-              {/* Rol */}
-              <div>
-                <label className="font-bold text-[#1A1817] block mb-1">
-                  Rol Asignado
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label
-                    onClick={() => setEditRole('ADMIN')}
-                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
-                      editRole === 'ADMIN'
+              {/* Rol Asignado (Editable por Superadmin) */}
+              {!isPrimaryMasterAccount(editingUser) && (
+                <div>
+                  <label className="font-bold text-[#1A1817] block mb-1">
+                    Rol Asignado (Exclusivo Superadmin)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label
+                      onClick={() => setEditRole('ADMIN')}
+                      className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${editRole === 'ADMIN'
                         ? 'border-[#D4A359] bg-[#FAF8F5] shadow-xs'
                         : 'border-[#E2DCD3] bg-white opacity-70'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-xs text-[#1A1817]">ADMIN</span>
-                      <ShieldCheck className="w-4 h-4 text-[#F85606]" />
-                    </div>
-                    <span className="text-[10px] text-[#5C5650] leading-tight">
-                      Acceso a productos y pedidos.
-                    </span>
-                  </label>
+                        }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-black text-xs text-[#1A1817]">ADMIN</span>
+                        <ShieldCheck className="w-4 h-4 text-[#D4A359]" />
+                      </div>
+                      <span className="text-[10px] text-[#5C5650] leading-tight">
+                        Acceso a productos y pedidos. Sin acceso a usuarios.
+                      </span>
+                    </label>
 
-                  <label
-                    onClick={() => setEditRole('SUPERADMIN')}
-                    className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${
-                      editRole === 'SUPERADMIN'
+                    <label
+                      onClick={() => setEditRole('SUPERADMIN')}
+                      className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${editRole === 'SUPERADMIN'
                         ? 'border-[#D4A359] bg-[#161311] text-[#FAF8F5] shadow-xs'
                         : 'border-[#E2DCD3] bg-white opacity-70'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`font-black text-xs ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#1A1817]'}`}>
-                        SUPERADMIN
-                      </span>
-                      <Crown className={`w-4 h-4 ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#8C827A]'}`} />
-                    </div>
-                    <span className={`text-[10px] leading-tight ${editRole === 'SUPERADMIN' ? 'text-[#A89F91]' : 'text-[#5C5650]'}`}>
-                      Control maestro total.
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Estado Activo (solo si no es la cuenta maestra) */}
-              {editingUser.id !== 1 &&
-                editingUser.username.toLowerCase() !== 'darinka.arias18@gmail.com' && (
-                  <div className="pt-1">
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editIsActive}
-                        onChange={(e) => setEditIsActive(e.target.checked)}
-                        className="w-4 h-4 accent-[#D4A359] rounded cursor-pointer"
-                      />
-                      <span className="text-xs font-bold text-[#1A1817]">
-                        Cuenta activa (permite el inicio de sesión)
+                        }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`font-black text-xs ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#1A1817]'}`}>
+                          SUPERADMIN
+                        </span>
+                        <Crown className={`w-4 h-4 ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#8C827A]'}`} />
+                      </div>
+                      <span className={`text-[10px] leading-tight ${editRole === 'SUPERADMIN' ? 'text-[#A89F91]' : 'text-[#5C5650]'}`}>
+                        Control maestro total.
                       </span>
                     </label>
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Estado Activo (solo si no es la cuenta maestra) */}
+              {!isPrimaryMasterAccount(editingUser) && (
+                <div className="pt-1">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editIsActive}
+                      onChange={(e) => setEditIsActive(e.target.checked)}
+                      className="w-4 h-4 accent-[#D4A359] rounded cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-[#1A1817]">
+                      Cuenta activa (permite el inicio de sesión)
+                    </span>
+                  </label>
+                </div>
+              )}
 
               <div className="pt-4 border-t border-[#E2DCD3] flex items-center justify-end gap-2.5">
                 <button
@@ -1074,14 +1054,14 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-base font-black text-[#1A1817]">
-                  ¿Eliminar este usuario?
+                  ¿Eliminar este administrador?
                 </h3>
                 <p className="text-xs text-[#5C5650] leading-relaxed">
                   Estás a punto de revocar permanentemente los accesos de{' '}
                   <strong className="text-[#1A1817] font-bold">
                     {userToDelete.name}
                   </strong>{' '}
-                  (@{userToDelete.username}).
+                  ({userToDelete.username}).
                 </p>
               </div>
             </div>

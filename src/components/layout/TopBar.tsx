@@ -12,6 +12,17 @@ interface TopBarProps {
 
 export function TopBar({ config, exchangeRate }: TopBarProps) {
   const whatsapp = config?.whatsappNumber || "+591 77293446";
+  const [todayDateStr, setTodayDateStr] = React.useState<string>('');
+
+  React.useEffect(() => {
+    setTodayDateStr(
+      new Date().toLocaleDateString('es-BO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    );
+  }, []);
 
   return (
     <div className="bg-[#161311] text-[#A89F91] text-[12px] py-2 px-4 border-b border-[#2D2622] transition-colors">
@@ -20,9 +31,13 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
         {/* Main Message */}
         <div className="flex items-center gap-2 text-center md:text-left font-medium">
           <span className="inline-block w-2 h-2 rounded-full bg-[#D4A359] animate-pulse"></span>
-          <span className="text-[#FAF8F5]">
-            <strong className="text-[#D4A359]">Hobby Bolivia:</strong> Repuestos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia
-          </span>
+          {config?.topBarText ? (
+            <span className="text-[#FAF8F5]">{config.topBarText}</span>
+          ) : (
+            <span className="text-[#FAF8F5]">
+              <strong className="text-[#D4A359]">Hobby Bolivia:</strong> Repuestos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia
+            </span>
+          )}
         </div>
 
         {/* Quick links & Direct Admin Button */}
@@ -39,7 +54,7 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="text-[#A89F91]">
-                TC ({new Date().toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })}):
+                TC{todayDateStr ? ` (${todayDateStr})` : ''}:
               </span>
               <strong className="text-[#D4A359]">1 USD = Bs. {exchangeRate.toFixed(2)}</strong>
             </span>

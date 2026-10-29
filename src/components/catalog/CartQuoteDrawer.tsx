@@ -115,7 +115,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
 
   const paymentQrUrl = currentConfig ? (currentConfig.paymentQrUrl || '') : "/images/payment/qr_simple_hobbybolivia.svg";
   const paymentQrInstructions = currentConfig?.paymentQrInstructions ||
-    "Titular: Hobby Bolivia\nBanco: Banco Unión / BCP / BNB\nMoneda: Bolivianos (Bs.)\nEnvía tu comprobante de pago por WhatsApp para procesar tu despacho inmediato.";
+    "Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp.";
   const showPaymentQr = currentConfig?.enablePaymentQr !== false && Boolean(paymentQrUrl);
 
   const handleGoToCatalog = () => {
@@ -206,33 +206,39 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
 
   return (
     <>
-      {/* Full-Screen Checkout Screen */}
-      <div className="fixed inset-0 z-50 bg-[#F5F2EB] overflow-y-auto animate-in fade-in duration-200 flex flex-col">
-
-        {/* Top Checkout Header Bar */}
-        <header className="sticky top-0 z-30 border-b border-[#2D2622] bg-[#161311] text-[#FAF8F5] shadow-md">
-          <div className="w-full max-w-[1240px] mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-3.5">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center text-[#D4A359] shadow-md shrink-0">
+      {/* Backdrop + Right Sidebar Drawer */}
+      <div
+        onClick={closeDrawer}
+        className="fixed inset-0 z-50 bg-[#161311]/70 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+      >
+        {/* Sidebar Panel from Right Side */}
+        <aside
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-lg sm:max-w-xl h-full bg-[#F5F2EB] text-[#1A1817] shadow-2xl border-l border-[#2D2622] flex flex-col animate-in slide-in-from-right duration-300"
+        >
+          {/* Top Sidebar Header Bar */}
+          <header className="shrink-0 border-b border-[#2D2622] bg-[#161311] text-[#FAF8F5] px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center text-[#D4A359] shadow-md shrink-0">
                 <ShoppingCart className="w-5 h-5" />
               </div>
               <div>
                 <h2 className="font-black text-sm sm:text-base uppercase tracking-wider text-[#FAF8F5] flex items-center gap-2">
                   <span>Datos de la compra</span>
                 </h2>
-                <p className="text-[11px] sm:text-xs text-[#D4A359] font-bold">
+                <p className="text-[11px] text-[#D4A359] font-bold">
                   {totalCount} {totalCount === 1 ? 'pieza seleccionada' : 'piezas seleccionadas'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
               {cartItems.length > 0 && !orderCompleted && (
                 <button
                   onClick={clearCart}
                   type="button"
                   title="Vaciar carrito"
-                  className="text-xs text-[#A89F91] hover:text-[#FAF8F5] font-bold px-3 py-1.5 rounded-xl bg-[#211E1C] hover:bg-[#2E2A27] border border-[#2D2622] transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="text-xs text-[#A89F91] hover:text-[#FAF8F5] font-bold px-2.5 py-1.5 rounded-xl bg-[#211E1C] hover:bg-[#2E2A27] border border-[#2D2622] transition-colors cursor-pointer flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-[#D4A359]" />
                   <span>Vaciar</span>
@@ -242,130 +248,118 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
               <button
                 onClick={closeDrawer}
                 type="button"
-                className="px-3.5 py-2 rounded-xl bg-[#211E1C] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] border border-[#D4A359]/40 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
-                aria-label="Volver al catálogo"
+                className="p-2 rounded-xl bg-[#211E1C] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] border border-[#D4A359]/40 transition-all cursor-pointer"
+                aria-label="Cerrar panel"
+                title="Cerrar"
               >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Seguir Comprando</span>
-                <X className="w-4 h-4 sm:hidden" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Main Checkout Body */}
-        <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
-
-          {orderCompleted ? (
-            <div className="max-w-lg mx-auto my-10 p-8 rounded-3xl bg-[#FAF8F5] border border-[#E2DCD3] shadow-lg text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center mx-auto border border-[#D4A359]/50 shadow-md">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
-              <h4 className="text-xl font-black text-[#1A1817] uppercase tracking-wide">
-                ¡Orden Registrada con Éxito!
-              </h4>
-              <p className="text-xs sm:text-sm text-[#5C5650] max-w-sm mx-auto leading-relaxed">
-                Tu orden con código <strong className="text-[#1A1817] font-mono bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#E2DCD3]">{orderCompleted}</strong> fue enviada por WhatsApp para confirmación de pago y despacho.
-              </p>
-              <div className="pt-4">
-                <button
-                  onClick={() => {
-                    setOrderCompleted(null);
-                    closeDrawer();
-                  }}
-                  type="button"
-                  className="px-8 py-3 bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer shadow-md"
-                >
-                  Volver al Catálogo
-                </button>
-              </div>
-            </div>
-          ) : cartItems.length === 0 ? (
-            /* Empty Checkout State */
-            <div className="max-w-xl mx-auto my-8 p-8 sm:p-10 rounded-3xl bg-[#FAF8F5] border border-[#E2DCD3] shadow-sm text-center space-y-6">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center shadow-md">
-                <ShoppingCart className="w-8 h-8 text-[#D4A359]" />
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-black text-lg text-[#1A1817] uppercase tracking-wide">
-                  Tu carrito aún está vacío
+          {/* Scrollable Sidebar Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+            {orderCompleted ? (
+              <div className="my-6 p-6 rounded-3xl bg-[#FAF8F5] border border-[#E2DCD3] shadow-lg text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center mx-auto border border-[#D4A359]/50 shadow-md">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h4 className="text-lg font-black text-[#1A1817] uppercase tracking-wide">
+                  ¡Orden Registrada con Éxito!
                 </h4>
-                <p className="text-xs sm:text-sm text-[#5C5650] max-w-md mx-auto leading-relaxed">
-                  Elige los conectores, varillajes, hélices o componentes mecánicos que necesitas en el catálogo y haz clic en el botón <strong className="text-[#1A1817]">&quot;+&quot;</strong> o <strong className="text-[#1A1817]">&quot;Añadir a mi Pedido&quot;</strong> de cada pieza.
+                <p className="text-xs sm:text-sm text-[#5C5650] leading-relaxed">
+                  Tu orden con código{' '}
+                  <strong className="text-[#1A1817] font-mono bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#E2DCD3]">
+                    {orderCompleted}
+                  </strong>{' '}
+                  fue enviada por WhatsApp para confirmación de pago y despacho.
                 </p>
-              </div>
-
-              {/* Primary CTA to catalog */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleGoToCatalog}
-                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#D4A359]/25 hover:scale-105 cursor-pointer"
-                >
-                  <span>Ir al Catálogo de Repuestos</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Payment Guarantee & QR Info */}
-              <div className="p-5 rounded-2xl bg-[#F5F2EB] border border-[#E2DCD3] text-left space-y-2 mt-4">
-                <div className="flex items-center gap-2 text-xs font-black uppercase text-[#1A1817]">
-                  <QrCode className="w-4 h-4 text-[#D4A359]" />
-                  <span>Cobros con QR Simple Bolivia</span>
-                </div>
-                <p className="text-xs text-[#5C5650] leading-relaxed">
-                  Aceptamos transferencias inmediatas vía QR Simple desde cualquier entidad financiera de Bolivia (Banco Unión, BCP, BNB, Banco Sol, Mercantil Santa Cruz, etc.).
-                </p>
-                <div className="pt-1 flex items-center gap-2 text-[11px] text-[#D4A359] bg-[#211E1C] px-3 py-1.5 rounded-xl w-fit font-bold">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Envíos blindados con número de guía a todo el país</span>
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      setOrderCompleted(null);
+                      closeDrawer();
+                    }}
+                    type="button"
+                    className="px-7 py-3 bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer shadow-md"
+                  >
+                    Volver al Catálogo
+                  </button>
                 </div>
               </div>
-            </div>
-          ) : (
-            /* Two-Column Full Checkout Layout */
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+            ) : cartItems.length === 0 ? (
+              /* Empty Sidebar State */
+              <div className="my-4 p-6 sm:p-8 rounded-3xl bg-[#FAF8F5] border border-[#E2DCD3] shadow-sm text-center space-y-5">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center shadow-md">
+                  <ShoppingCart className="w-8 h-8 text-[#D4A359]" />
+                </div>
 
-              {/* ========================================================
-                  LEFT COLUMN (7 cols): REPUESTOS + DIRECCIÓN PARA EL PEDIDO
-              ======================================================== */}
-              <div className="lg:col-span-7 space-y-6">
+                <div className="space-y-2">
+                  <h4 className="font-black text-base sm:text-lg text-[#1A1817] uppercase tracking-wide">
+                    Tu carrito aún está vacío
+                  </h4>
+                  <p className="text-xs text-[#5C5650] leading-relaxed">
+                    Elige los conectores, varillajes, hélices o componentes mecánicos que necesitas en el catálogo y haz clic en el botón{' '}
+                    <strong className="text-[#1A1817]">&quot;+&quot;</strong> o{' '}
+                    <strong className="text-[#1A1817]">&quot;Añadir a mi Pedido&quot;</strong> de cada pieza.
+                  </p>
+                </div>
 
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleGoToCatalog}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#D4A359]/25 hover:scale-105 cursor-pointer"
+                  >
+                    <span>Ir al Catálogo de Repuestos</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#F5F2EB] border border-[#E2DCD3] text-left space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase text-[#1A1817]">
+                    <ShieldCheck className="w-4 h-4 text-[#D4A359]" />
+                    <span>Atención y Despacho Directo</span>
+                  </div>
+                  <p className="text-xs text-[#5C5650] leading-relaxed">
+                    Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp. Realizamos envíos blindados con número de guía a toda Bolivia.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Sidebar Content: 1. Items + 2. Delivery Form + 3. Optional QR */
+              <div className="space-y-5">
                 {/* 1. LISTA DE REPUESTOS SELECCIONADOS */}
-                <section className="p-5 sm:p-6 bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-[#211E1C] border border-[#D4A359]/40 flex items-center justify-center text-[#D4A359]">
-                        <ShoppingCart className="w-4 h-4" />
+                <section className="p-4 sm:p-5 bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-xs space-y-3.5">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-[#E2DCD3]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-[#211E1C] border border-[#D4A359]/40 flex items-center justify-center text-[#D4A359]">
+                        <ShoppingCart className="w-3.5 h-3.5" />
                       </div>
-                      <div>
-                        <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#1A1817]">
-                          Repuestos Seleccionados ({cartItems.length})
-                        </h3>
-                        <p className="text-[11px] text-[#8C827A] font-semibold">
-                          Verifica las cantidades antes de finalizar tu compra
-                        </p>
-                      </div>
+                      <h3 className="text-xs font-black uppercase tracking-wider text-[#1A1817]">
+                        Repuestos Seleccionados ({cartItems.length})
+                      </h3>
                     </div>
-                    <span className="text-xs font-bold text-[#D4A359] bg-[#211E1C] px-3 py-1 rounded-full border border-[#D4A359]/30">
+                    <span className="text-[10px] font-bold text-[#D4A359] bg-[#211E1C] px-2.5 py-0.5 rounded-full border border-[#D4A359]/30">
                       Precios en Bs.
                     </span>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {cartItems.map((ci, index) => {
                       const item = ci.item;
-                      const itemImg = item.image_url || (item.images && item.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
+                      const itemImg =
+                        item.image_url ||
+                        (item.images && item.images[0]) ||
+                        'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp';
                       const itemTotal = item.price * ci.quantity;
 
                       return (
                         <div
                           key={`${item.id}-${index}`}
-                          className="p-3.5 bg-[#F5F2EB] rounded-2xl border border-[#E2DCD3] flex gap-3.5 items-center hover:border-[#D4A359] transition-colors"
+                          className="p-3 bg-[#F5F2EB] rounded-2xl border border-[#E2DCD3] flex gap-3 items-center hover:border-[#D4A359] transition-colors"
                         >
-                          {/* Product Image */}
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 border border-[#E2DCD3]">
+                          <div className="w-14 h-14 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-[#E2DCD3]">
                             <img
                               src={itemImg}
                               alt={item.name}
@@ -373,18 +367,17 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                             />
                           </div>
 
-                          {/* Details */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h5 className="font-extrabold text-xs sm:text-sm text-[#1A1817] line-clamp-1">
+                              <div className="min-w-0">
+                                <h5 className="font-extrabold text-xs text-[#1A1817] truncate">
                                   {item.name || item.title}
                                 </h5>
-                                <div className="flex flex-wrap items-center gap-2 mt-1">
-                                  <span className="text-[10px] font-mono font-bold text-[#D4A359] bg-[#211E1C] px-2 py-0.5 rounded border border-[#D4A359]/30">
-                                    SKU: {item.sku}
+                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  <span className="text-[9.5px] font-mono font-bold text-[#D4A359] bg-[#211E1C] px-1.5 py-0.5 rounded">
+                                    {item.sku}
                                   </span>
-                                  <span className="text-xs text-[#5C5650] font-semibold">
+                                  <span className="text-[11px] text-[#5C5650] font-semibold">
                                     Bs. {item.price.toFixed(2)} c/u
                                   </span>
                                 </div>
@@ -393,80 +386,64 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                               <button
                                 type="button"
                                 onClick={() => removeFromCart(index)}
-                                className="text-[#8C827A] hover:text-[#161311] bg-white hover:bg-[#EFEAE2] border border-[#E2DCD3] rounded-lg p-1.5 transition-colors cursor-pointer"
+                                className="text-[#8C827A] hover:text-red-600 bg-white hover:bg-red-50 border border-[#E2DCD3] rounded-lg p-1 transition-colors cursor-pointer shrink-0"
                                 title="Quitar repuesto"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
 
-                            <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#E2DCD3]">
-                              {/* Quantity Stepper */}
+                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#E2DCD3]">
                               <div className="flex items-center border border-[#E2DCD3] rounded-full overflow-hidden bg-white">
                                 <button
                                   type="button"
                                   onClick={() => updateQuantity(index, ci.quantity - 1)}
-                                  className="px-3 py-1 text-[#5C5650] hover:bg-[#F5F2EB] text-xs font-black cursor-pointer transition-colors"
-                                  title="Disminuir"
+                                  className="px-2.5 py-0.5 text-[#5C5650] hover:bg-[#F5F2EB] text-xs font-black cursor-pointer"
                                 >
                                   -
                                 </button>
-                                <span className="px-3 text-xs font-black text-[#1A1817]">
+                                <span className="px-2.5 text-xs font-black text-[#1A1817]">
                                   {ci.quantity}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => updateQuantity(index, ci.quantity + 1)}
-                                  className="px-3 py-1 text-[#5C5650] hover:bg-[#F5F2EB] text-xs font-black cursor-pointer transition-colors"
-                                  title="Aumentar"
+                                  className="px-2.5 py-0.5 text-[#5C5650] hover:bg-[#F5F2EB] text-xs font-black cursor-pointer"
                                 >
                                   +
                                 </button>
                               </div>
 
-                              {/* Item Total */}
-                              <div className="text-right">
-                                <span className="text-sm font-black text-[#1A1817]">
-                                  Bs. {itemTotal.toFixed(2)}
-                                </span>
-                              </div>
+                              <span className="text-xs font-black text-[#1A1817]">
+                                Bs. {itemTotal.toFixed(2)}
+                              </span>
                             </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-
-                  {/* Subtotal Banner */}
-                  <div className="p-3.5 bg-[#211E1C] rounded-2xl border border-[#2D2622] flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#D4A359] uppercase tracking-wider">
-                      Subtotal de piezas:
-                    </span>
-                    <span className="text-base font-black text-[#FAF8F5]">
-                      Bs. {subtotal.toFixed(2)}
-                    </span>
-                  </div>
                 </section>
 
                 {/* 2. FORMULARIO: DIRECCIÓN PARA EL PEDIDO */}
-                <section className="p-5 sm:p-6 bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-xs">
-                  <form id="checkout-form" onSubmit={handleCheckout} className="space-y-4">
-                    <div className="flex items-center gap-2.5 pb-3 border-b border-[#E2DCD3]">
-                      <div className="w-8 h-8 rounded-lg bg-[#211E1C] border border-[#D4A359]/40 flex items-center justify-center text-[#D4A359]">
-                        <MapPin className="w-4 h-4" />
+                <section className="p-4 sm:p-5 bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-xs">
+                  <form id="checkout-form" onSubmit={handleCheckout} className="space-y-3.5">
+                    <div className="flex items-center gap-2 pb-2.5 border-b border-[#E2DCD3]">
+                      <div className="w-7 h-7 rounded-lg bg-[#211E1C] border border-[#D4A359]/40 flex items-center justify-center text-[#D4A359]">
+                        <MapPin className="w-3.5 h-3.5" />
                       </div>
                       <div>
-                        <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#1A1817]">
+                        <h3 className="text-xs font-black uppercase tracking-wider text-[#1A1817]">
                           DIRECCIÓN PARA EL PEDIDO
                         </h3>
-                        <p className="text-[11px] text-[#8C827A] font-semibold">
-                          Datos del destinatario y ciudad de despacho en Bolivia
+                        <p className="text-[10.5px] text-[#8C827A] font-semibold">
+                          Datos del comprador y ciudad de despacho en Bolivia
                         </p>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
+                      <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#5C5650] mb-1">
                         Nombre Completo *
                       </label>
                       <input
@@ -475,23 +452,26 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                         placeholder="Ej. Ing. Carlos Méndez"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full text-xs sm:text-sm p-3 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-medium transition-colors"
+                        className="w-full text-xs p-2.5 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-medium transition-colors"
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
+                        <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#5C5650] mb-1">
                           WhatsApp / Teléfono *
                         </label>
-                        <div className="flex rounded-xl border border-[#E2DCD3] bg-[#F5F2EB] focus-within:bg-white overflow-hidden focus-within:border-[#D4A359] focus-within:ring-1 focus-within:ring-[#D4A359] transition-all">
-                          {/* Identificador de País con Código */}
+                        <div className="flex rounded-xl border border-[#E2DCD3] bg-[#F5F2EB] focus-within:bg-white overflow-hidden focus-within:border-[#D4A359] transition-all">
                           <div
-                            className="relative flex items-center gap-1.5 bg-[#EFEAE2] hover:bg-[#E5DEC9] border-r border-[#E2DCD3] px-2.5 py-1 select-none shrink-0 transition-colors cursor-pointer"
+                            className="relative flex items-center gap-1 bg-[#EFEAE2] hover:bg-[#E5DEC9] border-r border-[#E2DCD3] px-2 py-1 select-none shrink-0 cursor-pointer"
                             title="Seleccionar país y código de área"
                           >
-                            <span className="text-[10px] font-black text-[#D4A359] bg-[#211E1C] px-1.5 py-0.5 rounded">{selectedCountry.iso}</span>
-                            <span className="text-xs font-black text-[#1A1817]">{selectedCountry.code}</span>
+                            <span className="text-[9px] font-black text-[#D4A359] bg-[#211E1C] px-1 py-0.5 rounded">
+                              {selectedCountry.iso}
+                            </span>
+                            <span className="text-[11px] font-black text-[#1A1817]">
+                              {selectedCountry.code}
+                            </span>
                             <ChevronDown className="w-3 h-3 text-[#8C827A]" />
                             <select
                               value={countryCode}
@@ -507,29 +487,28 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                             </select>
                           </div>
 
-                          {/* Campo de Número */}
                           <input
                             type="tel"
                             required
                             placeholder="Ej. 77012345"
                             value={customerPhone}
                             onChange={(e) => setCustomerPhone(e.target.value)}
-                            className="flex-1 min-w-0 text-xs sm:text-sm p-3 bg-transparent text-[#1A1817] outline-none font-medium placeholder-[#A89F91]"
+                            className="flex-1 min-w-0 text-xs p-2.5 bg-transparent text-[#1A1817] outline-none font-medium placeholder-[#A89F91]"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
+                        <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#5C5650] mb-1">
                           Ciudad Destino *
                         </label>
                         <select
                           value={deliveryCity}
                           onChange={(e) => setDeliveryCity(e.target.value)}
-                          className="w-full text-xs sm:text-sm p-3 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold cursor-pointer transition-colors"
+                          className="w-full text-xs p-2.5 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold cursor-pointer transition-colors"
                         >
-                          <option value="Santa Cruz">Santa Cruz</option>
                           <option value="La Paz">La Paz / El Alto</option>
+                          <option value="Santa Cruz">Santa Cruz</option>
                           <option value="Cochabamba">Cochabamba</option>
                           <option value="Sucre">Sucre</option>
                           <option value="Tarija">Tarija</option>
@@ -542,21 +521,21 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
+                      <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#5C5650] mb-1">
                         Dirección para el Pedido *
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="Ej. Calle Los Pozos #123 o 'Retiro en Terminal de Flotas'"
+                        placeholder="Ej. Av. Arce #123 o 'Retiro en Terminal de Flotas'"
                         value={deliveryAddress}
                         onChange={(e) => setDeliveryAddress(e.target.value)}
-                        className="w-full text-xs sm:text-sm p-3 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-medium transition-colors"
+                        className="w-full text-xs p-2.5 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-medium transition-colors"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
+                      <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#5C5650] mb-1">
                         Notas de Protección / Embalaje (Opcional)
                       </label>
                       <textarea
@@ -564,159 +543,91 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                         placeholder="Ej. Por favor despachar las varillas en tubo rígido de PVC."
                         value={customerNotes}
                         onChange={(e) => setCustomerNotes(e.target.value)}
-                        className="w-full text-xs sm:text-sm p-3 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-medium transition-colors"
+                        className="w-full text-xs p-2.5 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-medium transition-colors"
                       ></textarea>
                     </div>
                   </form>
                 </section>
 
-              </div>
-
-              {/* ========================================================
-                  RIGHT COLUMN (5 cols): QR SIMPLE + TOTAL A PAGAR
-              ======================================================== */}
-              <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
-
-                {/* PAGO MEDIANTE QR SIMPLE */}
+                {/* 3. PAGO MEDIANTE QR SIMPLE (SI ESTÁ ACTIVO) */}
                 {showPaymentQr && (
-                  <section className="p-5 sm:p-6 rounded-3xl bg-[#FAF8F5] border border-[#D4A359] shadow-sm space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-[#211E1C] text-[#D4A359] border border-[#D4A359]/40 flex items-center justify-center">
-                          <QrCode className="w-4 h-4" />
+                  <section className="p-4 sm:p-5 rounded-3xl bg-[#FAF8F5] border border-[#D4A359] shadow-sm space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#E2DCD3]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-[#211E1C] text-[#D4A359] border border-[#D4A359]/40 flex items-center justify-center">
+                          <QrCode className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                          <h4 className="text-xs font-black uppercase tracking-wider text-[#1A1817]">
-                            PAGO MEDIANTE QR SIMPLE (BOLIVIA)
-                          </h4>
-                          <p className="text-[10px] text-[#8C827A]">
-                            Escanea desde la app de cualquier banco boliviano
-                          </p>
-                        </div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-[#1A1817]">
+                          PAGO MEDIANTE QR SIMPLE
+                        </h4>
                       </div>
-
-                      <span className="text-[10px] font-black uppercase bg-[#211E1C] text-[#D4A359] px-2.5 py-0.5 rounded-full border border-[#D4A359]/40">
-                        Inmediato
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowQrModal(true)}
+                        className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#161311] hover:text-[#D4A359] cursor-pointer"
+                      >
+                        <Maximize2 className="w-3 h-3 text-[#D4A359]" />
+                        <span>Ampliar QR</span>
+                      </button>
                     </div>
 
-                    {/* QR Display Card */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#F5F2EB] p-4 rounded-2xl border border-[#E2DCD3]">
-                      {/* QR Image with zoom trigger */}
+                    <div className="flex items-center gap-3.5 bg-[#F5F2EB] p-3 rounded-2xl border border-[#E2DCD3]">
                       <div
                         onClick={() => setShowQrModal(true)}
-                        className="relative w-36 h-36 bg-white p-2 rounded-xl border border-[#D4A359] flex items-center justify-center shrink-0 cursor-pointer group shadow-xs hover:shadow-md transition-shadow"
-                        title="Clic para ver QR en grande"
+                        className="relative w-24 h-24 bg-white p-1.5 rounded-xl border border-[#D4A359] flex items-center justify-center shrink-0 cursor-pointer group"
                       >
                         <img
                           src={paymentQrUrl}
                           alt="Código QR de Pago Hobby Bolivia"
                           className="max-h-full max-w-full object-contain"
                         />
-                        <div className="absolute inset-0 bg-[#161311]/70 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[#FAF8F5] text-[10px] font-black gap-1">
-                          <Maximize2 className="w-3.5 h-3.5 text-[#D4A359]" />
-                          <span>Ampliar</span>
-                        </div>
                       </div>
 
-                      {/* Instructions & Bank Data */}
-                      <div className="flex-1 space-y-2 text-left">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-[#8C827A] block">
-                            Monto exacto a transferir:
-                          </span>
-                          <span className="text-lg font-black text-[#1A1817]">
-                            Bs. {subtotal.toFixed(2)}
-                          </span>
-                        </div>
-
-                        <div className="text-[11px] text-[#5C5650] whitespace-pre-line leading-relaxed bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E2DCD3]">
-                          {paymentQrInstructions}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowQrModal(true)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#161311] hover:text-[#D4A359] cursor-pointer"
-                        >
-                          <Maximize2 className="w-3 h-3 text-[#D4A359]" />
-                          <span>Ver código QR en pantalla completa</span>
-                        </button>
+                      <div className="flex-1 text-[11px] text-[#5C5650] whitespace-pre-line leading-relaxed">
+                        {paymentQrInstructions}
                       </div>
                     </div>
-
-                    <p className="text-[11px] text-[#5C5650] leading-tight">
-                      <strong>Pasos:</strong> Realiza el pago con tu app bancaria y adjunta la captura o comprobante en el chat de WhatsApp al presionar el botón de abajo.
-                    </p>
                   </section>
                 )}
+              </div>
+            )}
+          </div>
 
-                {/* CARD DE LIQUIDACIÓN Y BOTÓN FINALIZAR PEDIDO */}
-                <section className="p-5 sm:p-6 rounded-3xl border border-[#2D2622] bg-[#161311] text-[#FAF8F5] shadow-xl space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#2D2622]">
-                    <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-4 h-4 text-[#D4A359]" />
-                      <span className="text-xs font-black uppercase tracking-wider text-[#FAF8F5]">
-                        Datos de la compra
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-bold text-[#D4A359]">
-                      {totalCount} {totalCount === 1 ? 'pieza' : 'piezas'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 text-xs text-[#A89F91]">
-                    <div className="flex items-center justify-between">
-                      <span>Subtotal de repuestos:</span>
-                      <span className="font-bold text-[#FAF8F5]">Bs. {subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Modalidad de pago:</span>
-                      <span className="font-bold text-[#D4A359]">QR Simple / Transferencia</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-[#2D2622] flex items-center justify-between">
-                    <div>
-                      <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#FAF8F5] block">
-                        TOTAL A PAGAR:
-                      </span>
-                      <span className="text-[10px] text-[#D4A359] font-bold">
-                        Pago por QR Simple habilitado
-                      </span>
-                    </div>
-                    <span className="text-2xl sm:text-3xl font-black text-[#D4A359]">
-                      Bs. {subtotal.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    form="checkout-form"
-                    disabled={isSubmitting}
-                    className="w-full py-4 px-5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D4A359]/20 cursor-pointer hover:scale-[1.01] disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <span>Registrando Orden...</span>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        <span>Finalizar Pedido</span>
-                      </>
-                    )}
-                  </button>
-
-                  <p className="text-[10.5px] text-center text-[#A89F91] leading-relaxed">
-                    Al presionar se abrirá WhatsApp con el resumen de tu pedido para coordinar el comprobante QR y el número de guía de envío.
-                  </p>
-                </section>
-
+          {/* Sticky Sidebar Footer: TOTAL A PAGAR & Finalizar Pedido */}
+          {cartItems.length > 0 && !orderCompleted && (
+            <footer className="shrink-0 border-t border-[#2D2622] bg-[#161311] text-[#FAF8F5] p-4 sm:p-5 space-y-3 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#FAF8F5] block">
+                    TOTAL A PAGAR:
+                  </span>
+                  <span className="text-[10.5px] text-[#D4A359] font-bold">
+                    Las instrucciones de compra se coordinarán por WhatsApp
+                  </span>
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-[#D4A359]">
+                  Bs. {subtotal.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
 
-            </div>
+              <button
+                type="submit"
+                form="checkout-form"
+                disabled={isSubmitting}
+                className="w-full py-3.5 px-5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D4A359]/20 cursor-pointer hover:scale-[1.01] disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span>Registrando Orden...</span>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Finalizar Pedido por WhatsApp</span>
+                  </>
+                )}
+              </button>
+            </footer>
           )}
-
-        </main>
+        </aside>
       </div>
 
       {/* Modal Zoom QR */}

@@ -30,7 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [userName, setUserName] = useState<string>('Administrador');
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [remainingSeconds, setRemainingSeconds] = useState<number>(INACTIVITY_TIMEOUT_MS / 1000);
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
   const isLoggingOutRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -74,12 +74,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
 
         if (isMounted) {
-          setUserRole(data.user.role);
+          const detectedRole = data.user.role;
+          setUserRole(detectedRole);
           setUserName(data.user.name || data.user.username || 'Administrador');
           localStorage.setItem('hb_admin_logged', 'true');
-          localStorage.setItem('hb_user_role', data.user.role);
+          localStorage.setItem('hb_user_role', detectedRole);
           localStorage.setItem('hb_user_username', data.user.username);
           localStorage.setItem('hb_user_name', data.user.name);
+
+          // Regla estricta: el módulo Gestión de Usuarios (/admin/users) es exclusivo del SUPERADMIN
+          if (pathname.startsWith('/admin/users') && detectedRole !== 'SUPERADMIN') {
+            router.replace('/admin');
+            return;
+          }
+
           setCheckingAuth(false);
         }
       } catch {
@@ -169,27 +177,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen bg-[#161311] flex flex-col items-center justify-center text-white gap-3">
-        <div className="w-8 h-8 border-3 border-[#D4A359] border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs text-[#D4A359] font-mono">Cargando Panel Administrativo Hobby Bolivia...</span>
-      </div>
-    );
-  }
-
   const allNavItems = [
     { label: 'Productos y Stock', href: '/admin', icon: LayoutDashboard, superadminOnly: false },
-    { label: 'Pedidos & Cotizaciones', href: '/admin/quotes', icon: ShoppingBag, superadminOnly: false },
+    { label: 'Gestión de Pedidos', href: '/admin/quotes', icon: ShoppingBag, superadminOnly: false },
     { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins, superadminOnly: true },
     { label: 'Gestión de Usuarios', href: '/admin/users', icon: Users, superadminOnly: true },
-    { label: 'Configuración de Tienda', href: '/admin/settings', icon: Settings, superadminOnly: false }
+    { label: 'Configuración General', href: '/admin/settings', icon: Settings, superadminOnly: false }
   ];
 
   const navItems = allNavItems.filter((item) => !item.superadminOnly || userRole === 'SUPERADMIN');
 
   return (
     <div className="min-h-screen bg-[#F5F2EB] text-[#1A1817] flex flex-col md:flex-row">
+      {checkingAuth && (
+        <div className="fixed inset-0 z-50 min-h-screen bg-[#161311] flex flex-col items-center justify-center text-white gap-3">
+          <div className="w-8 h-8 border-3 border-[#D4A359] border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs text-[#D4A359] font-mono">
+            Cargando Panel Administrativo Hobby Bolivia...
+          </span>
+        </div>
+      )}
 
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-[#161311] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-[#2D2622]">
@@ -294,23 +301,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Bottom Actions */}
-        <div className="pt-4 border-t border-[#2D2622] space-y-2.5">
-
-          {/* Inactivity Timer Status Box */}
-          <div className="px-3 py-2 rounded-xl bg-[#1E1916] border border-[#2D2622] flex items-center justify-between text-[11px]">
-            <span className="flex items-center gap-1.5 text-[#A89F91] font-semibold">
-              <Clock className="w-3.5 h-3.5 text-[#D4A359]" />
-              <span>Cierre por inactividad:</span>
-            </span>
-            <span className={`font-mono font-black ${remainingSeconds <= 120 ? 'text-[#F85606] animate-pulse' : 'text-[#D4A359]'}`}>
-              {formatRemainingTime(remainingSeconds)}
-            </span>
-          </div>
-
+        <div className="pt-4 border-t border-[#2D2622]">
           <Link
             href="/"
             target="_blank"
-            className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[#A89F91] hover:bg-[#1E1916] hover:text-[#FAF8F5] transition-colors"
+            className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-[#A89F91] hover:bg-[#1E1916] hover:text-[#FAF8F5] transition-colors"
           >
             <span className="flex items-center gap-2">
               <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
@@ -320,15 +315,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               Live
             </span>
           </Link>
-
-          <button
-            onClick={() => handleLogout('manual')}
-            type="button"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700 shadow-md transition-all cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Cerrar Sesión</span>
-          </button>
         </div>
 
       </aside>
