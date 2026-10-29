@@ -115,11 +115,10 @@ export function SidebarFilters({
           <div className="space-y-1 pt-1 text-xs">
             <button
               onClick={() => onFilterChange({ category: 'all' })}
-              className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-left transition-colors ${
-                !selectedCategory || selectedCategory === 'all'
+              className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-left transition-colors ${!selectedCategory || selectedCategory === 'all'
                   ? 'bg-rose-50 text-[#E11D48] font-bold'
                   : 'text-slate-600 hover:bg-slate-50'
-              }`}
+                }`}
             >
               <span>Todas las Categorías</span>
               {(!selectedCategory || selectedCategory === 'all') && <Check className="w-3.5 h-3.5 text-[#E11D48]" />}
@@ -131,9 +130,8 @@ export function SidebarFilters({
                 <button
                   key={c.id}
                   onClick={() => onFilterChange({ category: c.slug })}
-                  className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-left transition-colors ${
-                    active ? 'bg-rose-50 text-[#E11D48] font-bold' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
+                  className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-left transition-colors ${active ? 'bg-rose-50 text-[#E11D48] font-bold' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
                 >
                   <span className="line-clamp-1">{c.name}</span>
                   {c.itemCount !== undefined && (
@@ -166,15 +164,14 @@ export function SidebarFilters({
                 <label
                   key={occ.id}
                   onClick={() => onFilterChange({ occasion: active ? 'all' : occ.slug })}
-                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                    active ? 'bg-rose-50 text-[#E11D48] font-bold' : 'hover:bg-slate-50 text-slate-700'
-                  }`}
+                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${active ? 'bg-rose-50 text-[#E11D48] font-bold' : 'hover:bg-slate-50 text-slate-700'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={active}
-                      onChange={() => {}}
+                      onChange={() => { }}
                       className="rounded border-slate-300 text-[#E11D48] focus:ring-[#E11D48] pointer-events-none"
                     />
                     <span>{occ.name}</span>
@@ -207,11 +204,10 @@ export function SidebarFilters({
                 <button
                   key={opt.value}
                   onClick={() => onFilterChange({ flowerType: active && opt.value ? '' : opt.value })}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                    active
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${active
                       ? 'border-[#E11D48] bg-[#E11D48] text-white font-bold shadow-xs'
                       : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
-                  }`}
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -279,21 +275,20 @@ export function SidebarFilters({
           <div className="space-y-1.5 pt-1 text-xs">
             {[
               { id: 'all', label: 'Todos los arreglos' },
-              { id: 'IN_STOCK', label: '🌸 Entrega hoy mismo' },
+              { id: 'IN_STOCK', label: 'Entrega hoy mismo' },
               { id: 'OUT_OF_STOCK', label: 'Agotados temporalmente' }
             ].map((st) => (
               <label
                 key={st.id}
                 onClick={() => onFilterChange({ availability: st.id })}
-                className={`flex items-center gap-2 p-1.5 rounded-lg cursor-pointer ${
-                  (availability || 'all') === st.id ? 'text-[#064E3B] font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
+                className={`flex items-center gap-2 p-1.5 rounded-lg cursor-pointer ${(availability || 'all') === st.id ? 'text-[#064E3B] font-bold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
               >
                 <input
                   type="radio"
                   name="availability_filter"
                   checked={(availability || 'all') === st.id}
-                  onChange={() => {}}
+                  onChange={() => { }}
                   className="text-[#064E3B] focus:ring-[#064E3B]"
                 />
                 <span>{st.label}</span>

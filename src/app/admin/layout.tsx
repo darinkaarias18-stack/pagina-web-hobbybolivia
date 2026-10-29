@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -13,8 +13,12 @@ import {
   X,
   LogOut,
   Coins,
-  Users
+  Users,
+  Clock
 } from 'lucide-react';
+
+// Tiempo máximo de inactividad antes de cerrar la sesión automáticamente (15 minutos)
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,49 +27,81 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [userRole, setUserRole] = useState<'SUPERADMIN' | 'ADMIN' | null>(null);
+  const [userName, setUserName] = useState<string>('Administrador');
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(INACTIVITY_TIMEOUT_MS / 1000);
+  const lastActivityRef = useRef<number>(Date.now());
+  const isLoggingOutRef = useRef<boolean>(false);
 
-  // Verify authentication
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.data?.logoUrl) {
+          setLogoUrl(data.data.logoUrl);
+        }
+      })
+      .catch(() => { });
+
+    const handleConfigUpdate = (e: Event) => {
+      const custom = e as CustomEvent;
+      if (custom.detail) {
+        setLogoUrl(custom.detail.logoUrl || '');
+      }
+    };
+    window.addEventListener('hb_config_updated', handleConfigUpdate);
+    return () => window.removeEventListener('hb_config_updated', handleConfigUpdate);
+  }, []);
+
+  // Verify authentication strictly against server & MySQL database
   useEffect(() => {
     if (pathname === '/admin/login' || pathname === '/login') {
       setCheckingAuth(false);
       return;
     }
 
+    let isMounted = true;
+
     const checkSession = async () => {
-      const logged =
-        localStorage.getItem('hb_admin_logged') === 'true' ||
-        document.cookie.includes('hb_admin_auth=authenticated');
-
-      if (!logged) {
-        router.replace('/login?redirect=' + encodeURIComponent(pathname));
-        return;
-      }
-
-      const storedRole = localStorage.getItem('hb_user_role') as 'SUPERADMIN' | 'ADMIN' | null;
-      if (storedRole) {
-        setUserRole(storedRole);
-      }
-
       try {
         const res = await fetch('/api/auth/me', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated && data.user) {
-            setUserRole(data.user.role);
-            localStorage.setItem('hb_user_role', data.user.role);
-          }
+        if (!res.ok) {
+          throw new Error('Unauthorized');
         }
-      } catch (err) {
-        console.error('Error verifying auth/me session:', err);
-      }
+        const data = await res.json();
+        if (!data.authenticated || !data.user) {
+          throw new Error('Unauthenticated');
+        }
 
-      setCheckingAuth(false);
+        if (isMounted) {
+          setUserRole(data.user.role);
+          setUserName(data.user.name || data.user.username || 'Administrador');
+          localStorage.setItem('hb_admin_logged', 'true');
+          localStorage.setItem('hb_user_role', data.user.role);
+          localStorage.setItem('hb_user_username', data.user.username);
+          localStorage.setItem('hb_user_name', data.user.name);
+          setCheckingAuth(false);
+        }
+      } catch {
+        localStorage.removeItem('hb_admin_logged');
+        localStorage.removeItem('hb_user_role');
+        localStorage.removeItem('hb_user_username');
+        localStorage.removeItem('hb_user_name');
+        router.replace('/login?redirect=' + encodeURIComponent(pathname));
+      }
     };
 
     checkSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, [pathname, router]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async (reason?: 'inactivity' | 'manual') => {
+    if (isLoggingOutRef.current) return;
+    isLoggingOutRef.current = true;
+
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (e) {
@@ -77,8 +113,56 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     localStorage.removeItem('hb_user_username');
     localStorage.removeItem('hb_user_name');
 
-    router.push('/login');
+    if (reason === 'inactivity') {
+      router.replace('/login?reason=inactivity&redirect=' + encodeURIComponent(pathname));
+    } else {
+      router.push('/login');
+    }
     router.refresh();
+  }, [pathname, router]);
+
+  // Control automático de cierre de sesión por inactividad
+  useEffect(() => {
+    if (checkingAuth || pathname === '/admin/login' || pathname === '/login') {
+      return;
+    }
+
+    isLoggingOutRef.current = false;
+    lastActivityRef.current = Date.now();
+    setRemainingSeconds(Math.floor(INACTIVITY_TIMEOUT_MS / 1000));
+
+    const resetInactivityTimer = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, resetInactivityTimer, { passive: true });
+    });
+
+    const interval = setInterval(() => {
+      const elapsedMs = Date.now() - lastActivityRef.current;
+      const leftSec = Math.max(0, Math.ceil((INACTIVITY_TIMEOUT_MS - elapsedMs) / 1000));
+      setRemainingSeconds(leftSec);
+
+      if (leftSec <= 0) {
+        clearInterval(interval);
+        handleLogout('inactivity');
+      }
+    }, 1000);
+
+    return () => {
+      activityEvents.forEach((evt) => {
+        window.removeEventListener(evt, resetInactivityTimer);
+      });
+      clearInterval(interval);
+    };
+  }, [checkingAuth, pathname, handleLogout]);
+
+  const formatRemainingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (pathname === '/admin/login') {
@@ -95,7 +179,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const allNavItems = [
-    { label: 'Dashboard & Productos', href: '/admin', icon: LayoutDashboard, superadminOnly: false },
+    { label: 'Productos y Stock', href: '/admin', icon: LayoutDashboard, superadminOnly: false },
     { label: 'Pedidos & Cotizaciones', href: '/admin/quotes', icon: ShoppingBag, superadminOnly: false },
     { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins, superadminOnly: true },
     { label: 'Gestión de Usuarios', href: '/admin/users', icon: Users, superadminOnly: true },
@@ -106,36 +190,74 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#F5F2EB] text-[#1A1817] flex flex-col md:flex-row">
-      
+
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-[#161311] text-white p-4 flex items-center justify-between sticky top-0 z-40 border-b border-[#2D2622]">
-        <div className="flex items-center gap-2">
-          <Plane className="w-5 h-5 text-[#F85606] -rotate-45" />
-          <span className="font-extrabold text-base tracking-tight text-white">Hobby Bolivia Admin</span>
+      <div className="md:hidden bg-[#161311] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-[#2D2622]">
+        <div className="flex items-center gap-2 min-w-0">
+          <Plane className="w-5 h-5 text-[#D4A359] -rotate-45 shrink-0" />
+          <span className="font-extrabold text-sm tracking-tight text-white truncate">Hobby Bolivia Admin</span>
         </div>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-1.5 rounded-lg text-[#A89F91] hover:text-white"
-        >
-          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <div
+            className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#211E1C] border border-[#D4A359]/30 text-[10px] font-mono text-[#D4A359]"
+            title="Tiempo restante de sesión por inactividad"
+          >
+            <Clock className="w-3 h-3" />
+            <span>{formatRemainingTime(remainingSeconds)}</span>
+          </div>
+          <button
+            onClick={() => handleLogout('manual')}
+            type="button"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-[11px] font-bold transition-colors cursor-pointer"
+            title="Cerrar Sesión"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Salir</span>
+          </button>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 rounded-lg text-[#A89F91] hover:text-white"
+            aria-label="Menú Admin"
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
-      {/* Sidebar */}
+      {/* Mobile Backdrop when Sidebar is open */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="md:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-xs"
+        />
+      )}
+
+      {/* Sidebar (Fixed full height on desktop so it never scrolls off-screen) */}
       <aside
-        className={`fixed md:sticky top-0 left-0 z-40 w-64 h-screen bg-[#161311] text-[#A89F91] flex flex-col justify-between p-4 border-r border-[#2D2622] transition-transform duration-200 ease-in-out md:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 h-screen bg-[#161311] text-[#A89F91] flex flex-col justify-between p-4 border-r border-[#2D2622] overflow-y-auto transition-transform duration-200 ease-in-out md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="space-y-6">
-          
+
           {/* Brand Logo Header */}
           <div className="px-2 pt-2">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-[#F85606] flex items-center justify-center text-white shadow-md shadow-[#F85606]/30">
-                <Plane className="w-4 h-4 -rotate-45" />
-              </div>
-              <span className="font-black text-lg tracking-tight text-[#F85606]">
+              {logoUrl && logoUrl !== 'https://hobbybolivia.com/icon.svg' && logoUrl !== '/icon.svg' ? (
+                <div className="w-9 h-9 rounded-xl bg-[#211E1C] p-0.5 flex items-center justify-center shadow-md border border-[#D4A359]/50 overflow-hidden shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={logoUrl}
+                    alt="Hobby Bolivia"
+                    className="w-full h-full object-contain"
+                    onError={() => setLogoUrl('')}
+                  />
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center text-[#D4A359] shadow-md shrink-0">
+                  <Plane className="w-4 h-4 -rotate-45 text-[#D4A359]" />
+                </div>
+              )}
+              <span className="font-black text-lg tracking-tight text-[#D4A359]">
                 HOBBY <span className="text-[#FAF8F5]">BOLIVIA</span>
               </span>
             </Link>
@@ -158,11 +280,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                    isActive
-                      ? 'bg-[#211E1C] text-[#D4A359] border border-[#D4A359]/40 shadow-sm font-black'
-                      : 'text-[#A89F91] hover:bg-[#1E1916] hover:text-[#FAF8F5]'
-                  }`}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all ${isActive
+                    ? 'bg-[#211E1C] text-[#D4A359] border border-[#D4A359]/40 shadow-sm font-black'
+                    : 'text-[#A89F91] hover:bg-[#1E1916] hover:text-[#FAF8F5]'
+                    }`}
                 >
                   <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4A359]' : 'text-[#8C827A]'}`} />
                   <span>{item.label}</span>
@@ -173,8 +294,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Bottom Actions */}
-        <div className="pt-4 border-t border-[#2D2622] space-y-2">
-          
+        <div className="pt-4 border-t border-[#2D2622] space-y-2.5">
+
+          {/* Inactivity Timer Status Box */}
+          <div className="px-3 py-2 rounded-xl bg-[#1E1916] border border-[#2D2622] flex items-center justify-between text-[11px]">
+            <span className="flex items-center gap-1.5 text-[#A89F91] font-semibold">
+              <Clock className="w-3.5 h-3.5 text-[#D4A359]" />
+              <span>Cierre por inactividad:</span>
+            </span>
+            <span className={`font-mono font-black ${remainingSeconds <= 120 ? 'text-[#F85606] animate-pulse' : 'text-[#D4A359]'}`}>
+              {formatRemainingTime(remainingSeconds)}
+            </span>
+          </div>
+
           <Link
             href="/"
             target="_blank"
@@ -190,11 +322,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
 
           <button
-            onClick={handleLogout}
+            onClick={() => handleLogout('manual')}
             type="button"
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-950/30 hover:text-red-300 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700 shadow-md transition-all cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
             <span>Cerrar Sesión</span>
           </button>
         </div>
@@ -202,8 +334,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-y-auto min-h-screen bg-[#F5F2EB]">
-        {children}
+      <main className="flex-1 min-w-0 min-h-screen bg-[#F5F2EB] flex flex-col md:pl-64">
+        {/* Top Admin Session Bar (Sticky on Desktop & Tablet) */}
+        <div className="hidden md:flex items-center justify-between px-6 py-2.5 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E2DCD3] text-xs sticky top-0 z-30 shadow-2xs">
+          <div className="flex items-center gap-2 text-[#5C5650]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Sesión activa: <strong className="text-[#1A1817]">{userName}</strong></span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#211E1C] text-[#D4A359] font-bold uppercase">
+              {userRole}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E2DCD3] text-[11px] font-semibold text-[#5C5650]"
+              title="La sesión se cerrará automáticamente tras 15 minutos sin actividad"
+            >
+              <Clock className="w-3.5 h-3.5 text-[#D4A359]" />
+              <span>Auto-cierre por inactividad:</span>
+              <strong className={`font-mono ${remainingSeconds <= 120 ? 'text-[#F85606]' : 'text-[#1A1817]'}`}>
+                {formatRemainingTime(remainingSeconds)}
+              </strong>
+            </div>
+
+            <button
+              onClick={() => handleLogout('manual')}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-black text-xs shadow-xs transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1">
+          {children}
+        </div>
       </main>
 
     </div>

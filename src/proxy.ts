@@ -13,15 +13,14 @@ export async function proxy(request: NextRequest) {
     }
 
     const sessionCookie = request.cookies.get('hb_session')?.value;
-    const authCookie = request.cookies.get('hb_admin_auth')?.value;
 
     let isAuthenticated = false;
 
     if (sessionCookie) {
       const user = await verifySessionToken(sessionCookie);
-      if (user) isAuthenticated = true;
-    } else if (authCookie === 'authenticated') {
-      isAuthenticated = true;
+      if (user && (user.role === 'SUPERADMIN' || user.role === 'ADMIN')) {
+        isAuthenticated = true;
+      }
     }
 
     if (!isAuthenticated) {

@@ -171,15 +171,14 @@ export default function AdminQuotesPage() {
                     <select
                       value={ord.status}
                       onChange={(e) => handleUpdateStatus(ord.orderCode, e.target.value as OrderStatus)}
-                      className={`text-xs font-extrabold uppercase rounded-xl px-3 py-1.5 border cursor-pointer focus:outline-none ${
-                        ord.status === 'DELIVERED'
+                      className={`text-xs font-extrabold uppercase rounded-xl px-3 py-1.5 border cursor-pointer focus:outline-none ${ord.status === 'DELIVERED'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                           : ord.status === 'IN_PREPARATION'
-                          ? 'bg-blue-50 text-blue-800 border-blue-300'
-                          : ord.status === 'CANCELLED'
-                          ? 'bg-slate-100 text-slate-500 border-slate-200'
-                          : 'bg-amber-50 text-amber-800 border-amber-300'
-                      }`}
+                            ? 'bg-blue-50 text-blue-800 border-blue-300'
+                            : ord.status === 'CANCELLED'
+                              ? 'bg-slate-100 text-slate-500 border-slate-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-300'
+                        }`}
                     >
                       <option value="PENDING">PENDIENTE</option>
                       <option value="IN_PREPARATION">EN PREPARACIÓN</option>
@@ -317,8 +316,8 @@ export default function AdminQuotesPage() {
               id="printable-card"
               className="bg-gradient-to-br from-[#FFF1F2] to-white border-2 border-rose-300 rounded-2xl p-8 text-center space-y-4 shadow-inner"
             >
-              <div className="w-8 h-8 rounded-full bg-rose-100 text-[#E11D48] flex items-center justify-center mx-auto text-sm">
-                🌸
+              <div className="w-8 h-8 rounded-full bg-rose-100 text-[#E11D48] flex items-center justify-center mx-auto text-xs font-bold">
+                HB
               </div>
 
               <div className="text-xs font-serif uppercase tracking-widest text-[#064E3B] font-bold">

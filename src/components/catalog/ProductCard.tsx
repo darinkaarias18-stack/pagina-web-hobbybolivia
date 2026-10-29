@@ -60,19 +60,18 @@ export function ProductCard({
   return (
     <div
       onClick={() => handleQuickView()}
-      className="group relative rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] p-3 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+      className="group relative hover:z-50 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] p-3 hover:scale-135 hover:shadow-2xl transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer"
       title="Clic para ver detalles y cotizar"
     >
-      {/* 1. Caja de Imagen Rediseñada y Compacta (h-32) */}
-      <div className="w-full h-32 bg-white rounded-xl p-2 flex items-center justify-center relative border border-[#EBE5DB] overflow-hidden">
+      {/* 1. Caja de Imagen (crece junto con toda la tarjeta como un solo bloque) */}
+      <div className="w-full h-36 bg-white rounded-xl p-2 flex items-center justify-center relative border border-[#EBE5DB] group-hover:border-[#D4A359]/60 overflow-hidden transition-colors duration-300">
         {/* Etiqueta / Badge en esquina superior derecha */}
         {validBadge && (
           <span
-            className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-xs border select-none ${
-              validBadge === 'Popular'
-                ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]/60'
-                : 'bg-[#D4A359] text-[#161311] border-[#D4A359]'
-            }`}
+            className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-xs border select-none pointer-events-none ${validBadge === 'Popular'
+              ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]/60'
+              : 'bg-[#D4A359] text-[#161311] border-[#D4A359]'
+              }`}
             title={validBadge === 'Popular' ? 'Repuesto Popular · El más pedido' : 'Nuevo Repuesto'}
           >
             {validBadge}
@@ -82,7 +81,7 @@ export function ProductCard({
         <img
           src={imageSource}
           alt={name}
-          className="max-h-full max-w-full object-contain mx-auto group-hover:scale-105 transition-transform duration-300"
+          className="max-h-full max-w-full w-full h-full object-contain mx-auto"
           loading="lazy"
           decoding="async"
         />
@@ -133,11 +132,10 @@ export function ProductCard({
               onClick={handleAddToCart}
               type="button"
               title={justAdded ? "¡Añadido al carrito!" : "Añadir al carrito"}
-              className={`p-2 rounded-xl font-bold transition-all shadow-xs flex items-center justify-center cursor-pointer ${
-                justAdded
-                  ? 'bg-[#3E7B44] text-white'
-                  : 'bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] active:scale-95'
-              }`}
+              className={`p-2 rounded-xl font-bold transition-all shadow-xs flex items-center justify-center cursor-pointer ${justAdded
+                ? 'bg-[#3E7B44] text-white'
+                : 'bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] active:scale-95'
+                }`}
             >
               {justAdded ? (
                 <Check className="w-3.5 h-3.5 text-white" />

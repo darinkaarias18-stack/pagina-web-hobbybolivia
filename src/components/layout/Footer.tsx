@@ -18,8 +18,8 @@ export function Footer({ config }: FooterProps) {
   };
 
   return (
-    <footer className="bg-[#161311] text-[#A89F91] text-xs border-t border-[#2D2622]">
-      
+    <footer id="contacto" className="bg-[#161311] text-[#A89F91] text-xs border-t border-[#2D2622]">
+
       {/* 1. Barra CTA Superior (Carbón #1E1916 con Botón Dorado Arena) */}
       <div className="bg-[#1E1916] py-6 border-b border-[#2D2622]">
         <div className="w-full max-w-[1320px] mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -60,14 +60,25 @@ export function Footer({ config }: FooterProps) {
       {/* 2. Main Footer Links */}
       <div className="w-full max-w-[1320px] mx-auto px-4 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
-          
+
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#F85606] flex items-center justify-center text-white">
-                <Plane className="w-4 h-4 -rotate-45" />
-              </div>
-              <span className="font-black text-xl tracking-tight text-[#F85606]">
+              {config?.logoUrl && config.logoUrl !== 'https://hobbybolivia.com/icon.svg' && config.logoUrl !== '/icon.svg' ? (
+                <div className="w-8 h-8 rounded-lg bg-[#211E1C] p-0.5 flex items-center justify-center overflow-hidden border border-[#D4A359]/50 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={config.logoUrl}
+                    alt={config.companyName || 'Hobby Bolivia'}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center text-[#D4A359] shadow-md shrink-0">
+                  <Plane className="w-4 h-4 -rotate-45 text-[#D4A359]" />
+                </div>
+              )}
+              <span className="font-black text-xl tracking-tight text-[#D4A359]">
                 HOBBY <span className="text-[#FAF8F5]">BOLIVIA</span>
               </span>
             </div>
@@ -168,7 +179,7 @@ export function Footer({ config }: FooterProps) {
 
             <div className="mt-5 pt-3 border-t border-[#2D2622]">
               <Link
-                href="/admin"
+                href="/login?reauth=1"
                 className="text-[11px] font-bold text-[#D4A359] hover:text-[#C69755] transition-colors flex items-center gap-1"
               >
                 <span>Acceso al Panel Administrativo</span>

@@ -1,12 +1,18 @@
 'use client';
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 
 interface FloatingWhatsAppProps {
   phone?: string;
 }
 
 export function FloatingWhatsApp({ phone = '+591 77293446' }: FloatingWhatsAppProps) {
+  const pathname = usePathname();
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/login')) {
+    return null;
+  }
+
   const cleanPhone = phone.replace(/[^0-9]/g, '');
 
   return (

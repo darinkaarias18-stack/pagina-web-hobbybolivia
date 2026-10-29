@@ -23,7 +23,9 @@ import {
   UploadCloud,
   Image as ImageIcon,
   Loader2,
-  Boxes
+  Boxes,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import type { Product, Category } from '@/lib/types';
 
@@ -74,17 +76,83 @@ export function AdminDashboardClient() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
+  // Comprimir imagen automáticamente en el navegador si pesa más de 1 MB antes de enviarla
+  const compressImageClientSide = (file: File, maxBytes = 1024 * 1024): Promise<File> => {
+    return new Promise((resolve) => {
+      if (file.type === 'image/svg+xml') {
+        resolve(file);
+        return;
+      }
+
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        const maxDim = 1400;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let quality = 0.85;
+        const tryCompress = () => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve(file);
+                return;
+              }
+              if (blob.size <= maxBytes || quality <= 0.35) {
+                const baseName = file.name.replace(/\.[^/.]+$/, '');
+                const compressedFile = new File([blob], `${baseName}.webp`, {
+                  type: 'image/webp',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              } else {
+                quality -= 0.12;
+                tryCompress();
+              }
+            },
+            'image/webp',
+            quality
+          );
+        };
+
+        tryCompress();
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+
+      img.src = objectUrl;
+    });
+  };
+
   const handleImageFile = async (file: File) => {
     setImageError(null);
 
-    // 1. Limitar tamaño máximo permitido por archivo a 2 MB
-    const MAX_SIZE = 2 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      setImageError("El tamaño máximo permitido por imagen es de 2 MB.");
-      return;
-    }
-
-    // 2. Formatos web permitidos: .jpg, .jpeg, .png, .webp
+    // 1. Formatos web permitidos: .jpg, .jpeg, .png, .webp
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
     const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
     const isMimeOk = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
@@ -97,8 +165,12 @@ export function AdminDashboardClient() {
 
     setIsUploadingImage(true);
     try {
+      // 2. Comprimir automáticamente a <= 1 MB antes de subir a la base de datos
+      const MAX_DB_IMAGE_SIZE = 1 * 1024 * 1024; // 1 MB
+      const processedFile = await compressImageClientSide(file, MAX_DB_IMAGE_SIZE);
+
       const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
+      uploadFormData.append('file', processedFile);
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -107,8 +179,9 @@ export function AdminDashboardClient() {
 
       const data = await res.json();
       if (data.success && data.url) {
+        const finalKb = data.optimizedSize ? Math.round(data.optimizedSize / 1024) : Math.round(processedFile.size / 1024);
         setFormData(prev => ({ ...prev, image_url: data.url }));
-        showToast("Imagen optimizada en WebP correctamente");
+        showToast(`Imagen comprimida y optimizada (${finalKb} KB <= 1 MB)`);
       } else {
         setImageError(data.error || "Error al subir la imagen");
       }
@@ -133,7 +206,7 @@ export function AdminDashboardClient() {
     setLoading(true);
     try {
       const [prodRes, catRes, rateRes] = await Promise.all([
-        fetch('/api/products?t=' + Date.now(), { cache: 'no-store' }),
+        fetch('/api/products?includeInactive=true&t=' + Date.now(), { cache: 'no-store' }),
         fetch('/api/categories?t=' + Date.now(), { cache: 'no-store' }),
         fetch('/api/exchange-rate?t=' + Date.now(), { cache: 'no-store' })
       ]);
@@ -161,13 +234,15 @@ export function AdminDashboardClient() {
     fetchData();
   }, []);
 
-  // Inline Fast Update (Price, Stock or Currency)
-  const handleInlineUpdate = async (id: number, field: 'price' | 'stock' | 'currency', value: any) => {
+  // Inline Fast Update (Price, Stock, Currency or Visibility)
+  const handleInlineUpdate = async (id: number, field: 'price' | 'stock' | 'currency' | 'is_active', value: any) => {
     setInlineLoadingId(id);
     try {
       const payload = field === 'currency'
         ? { currency: value, display_currency: value }
-        : { [field]: value };
+        : field === 'is_active'
+          ? { is_active: Boolean(value), isActive: Boolean(value) }
+          : { [field]: value };
 
       const res = await fetch(`/api/products/${id}`, {
         method: 'PUT',
@@ -177,7 +252,16 @@ export function AdminDashboardClient() {
       const data = await res.json();
       if (data.success) {
         setProducts(prev =>
-          prev.map(p => (p.id === id ? { ...p, [field]: value, ...(field === 'currency' ? { currency: value, display_currency: value } : {}) } : p))
+          prev.map(p => (
+            p.id === id
+              ? {
+                ...p,
+                [field]: value,
+                ...(field === 'currency' ? { currency: value, display_currency: value } : {}),
+                ...(field === 'is_active' ? { is_active: Boolean(value), isActive: Boolean(value) } : {})
+              }
+              : p
+          ))
         );
 
         // Sincronizar en tiempo real con cualquier pestaña abierta de la tienda pública
@@ -189,14 +273,16 @@ export function AdminDashboardClient() {
           // ignore
         }
         try {
-          localStorage.setItem('hb_catalog_sync', JSON.stringify({ id, field, value }));
+          localStorage.setItem('hb_catalog_sync', JSON.stringify({ id, field, value, t: Date.now() }));
         } catch {
           // ignore
         }
 
         const msg = field === 'currency'
           ? `Repuesto configurado para mostrarse en ${value === 'USD' ? 'Dólares ($ USD)' : 'Bolivianos (Bs.)'}`
-          : `${field === 'price' ? 'Precio' : 'Stock'} actualizado`;
+          : field === 'is_active'
+            ? (value ? 'Producto marcado como VISIBLE en el catálogo público' : 'Producto marcado como NO VISIBLE (oculto en la tienda)')
+            : `${field === 'price' ? 'Precio' : 'Stock'} actualizado`;
         showToast(msg);
       } else {
         showToast(data.error || "Error al actualizar", "error");
@@ -396,12 +482,11 @@ export function AdminDashboardClient() {
 
   return (
     <div className="p-3 sm:p-5 lg:p-6 space-y-6 w-full mx-auto">
-      
+
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold flex items-center gap-2 animate-in slide-in-from-bottom duration-200 ${
-          toast.type === 'success' ? 'bg-[#3E7B44]' : 'bg-red-600'
-        }`}>
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold flex items-center gap-2 animate-in slide-in-from-bottom duration-200 ${toast.type === 'success' ? 'bg-[#3E7B44]' : 'bg-red-600'
+          }`}>
           {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
           <span>{toast.message}</span>
         </div>
@@ -413,9 +498,9 @@ export function AdminDashboardClient() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-[#F85606]"></span>
+            <span className="w-2 h-2 rounded-full bg-[#D4A359]"></span>
             <span className="text-xs font-black uppercase tracking-wider text-[#D4A359]">
-              Panel de Control Central Warm Tech
+              Panel de Control
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
@@ -424,14 +509,16 @@ export function AdminDashboardClient() {
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
-          {/* Quick Currency Status (Solo informativo) */}
+          {/* Quick Currency Status (Solo informativo con fecha actual) */}
           <div
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#FAF8F5] text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs select-none"
-            title="Sincronización automática de paridad cada 24 horas"
+            title="Tipo de cambio oficial vigente a la fecha de hoy"
           >
             <Coins className="w-4 h-4 text-[#D4A359]" />
-            <span>TC Oficial:</span>
-            <span className="font-mono font-black text-[#F85606]">
+            <span>
+              TC Oficial ({new Date().toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })}):
+            </span>
+            <span className="font-mono font-black text-[#1A1817]">
               Bs. {exchangeRate.toFixed(2)}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold">
@@ -452,7 +539,7 @@ export function AdminDashboardClient() {
 
       {/* 1. Dashboard de Métricas en Warm Tech */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+
         {/* 1. Total Productos (Columna: Producto / Repuesto) */}
         <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shrink-0 border border-[#D4A359]/30">
@@ -530,220 +617,250 @@ export function AdminDashboardClient() {
       </div>
 
       <div className="space-y-4">
-          
-          {/* Controls: Search, Category & Brand filter */}
-          <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E2DCD3] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-            <div className="relative w-full sm:w-80">
-              <input
-                type="text"
-                placeholder="Buscar por SKU, Nombre o Marca..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none"
-              />
-              <Search className="w-4 h-4 text-[#8C827A] absolute left-3 top-1/2 -translate-y-1/2" />
-            </div>
 
-            <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold flex-1 sm:flex-initial"
-              >
-                <option value="all">Todas las Categorías</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={brandFilter}
-                onChange={(e) => setBrandFilter(e.target.value)}
-                className="text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold flex-1 sm:flex-initial"
-                title="Clasificar por Marca"
-              >
-                <option value="all">Todas las Marcas</option>
-                {availableBrands.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] rounded-full text-xs font-black uppercase tracking-wider transition-colors whitespace-nowrap cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Nuevo Producto</span>
-              </button>
-            </div>
+        {/* Controls: Search, Category & Brand filter (Sticky al bajar) */}
+        <div className="sticky top-[45px] z-20 bg-[#FAF8F5]/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-[#E2DCD3] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+          <div className="relative w-full sm:w-80">
+            <input
+              type="text"
+              placeholder="Buscar por SKU, Nombre o Marca..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none"
+            />
+            <Search className="w-4 h-4 text-[#8C827A] absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
 
-          {/* Table Container */}
-          <div className="bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] overflow-hidden shadow-sm">
-            <div className="w-full overflow-x-auto xl:overflow-x-visible">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase text-[9.5px] font-black tracking-wider">
-                    <th className="py-3 px-3">Producto / Repuesto</th>
-                    <th className="py-3 px-2">SKU</th>
-                    <th className="py-3 px-2">Categoría</th>
-                    <th className="py-3 px-2">Marca</th>
-                    <th className="py-3 px-2 text-center">Precio (Bs.)</th>
-                    <th className="py-3 px-2 text-center">Precio USD</th>
-                    <th className="py-3 px-2 text-center">Mostrar en</th>
-                    <th className="py-3 px-2 text-center">Stock</th>
-                    <th className="py-3 px-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E2DCD3]">
-                  {filteredProducts.map((p) => {
-                    const imgSrc = p.image_url || (p.images && p.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
-                    const catName = categories.find(c => c.id === (p.category_id || p.categoryId))?.name || 'General';
+          <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold flex-1 sm:flex-initial"
+            >
+              <option value="all">Todas las Categorías</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
 
-                    return (
-                      <tr key={p.id} className="hover:bg-white/80 transition-colors">
-                        
-                        {/* Name + Image (STRICT RULE: bg-white, object-contain) */}
-                        <td className="py-2.5 px-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-lg bg-white p-0.5 border border-[#E2DCD3] flex items-center justify-center shrink-0">
-                              <img
-                                src={imgSrc}
-                                alt={p.name || p.title}
-                                className="max-h-full max-w-full object-contain"
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="font-extrabold text-[#1A1817] text-xs block truncate max-w-[160px] xl:max-w-[220px]" title={p.name || p.title}>
-                                {p.name || p.title}
-                              </span>
-                              <span className="text-[10px] text-[#5C5650] block truncate max-w-[160px] xl:max-w-[220px]">
-                                {p.specs_line || p.material}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
+            <select
+              value={brandFilter}
+              onChange={(e) => setBrandFilter(e.target.value)}
+              className="text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold flex-1 sm:flex-initial"
+              title="Clasificar por Marca"
+            >
+              <option value="all">Todas las Marcas</option>
+              {availableBrands.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
 
-                        {/* SKU */}
-                        <td className="py-2.5 px-2 font-mono font-bold text-[#D4A359] text-[11px] whitespace-nowrap">
-                          {(p.sku && p.sku.startsWith('HB-')) ? p.sku : `HB-${p.id.toString().padStart(4, '0')}`}
-                        </td>
-
-                        {/* Category */}
-                        <td className="py-2.5 px-2 text-[#5C5650]">
-                          <span className="block font-bold text-[#1A1817] text-[11px] truncate max-w-[110px]" title={catName}>
-                            {catName}
-                          </span>
-                        </td>
-
-                        {/* Marca */}
-                        <td className="py-2.5 px-2 whitespace-nowrap">
-                          <span
-                            onClick={() => setBrandFilter(brandFilter === (p.brand || 'Dubro') ? 'all' : (p.brand || 'Dubro'))}
-                            className={`inline-flex items-center px-2 py-0.5 rounded-md border font-bold text-[10px] shadow-2xs transition-all cursor-pointer ${
-                              brandFilter === (p.brand || 'Dubro')
-                                ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]'
-                                : 'bg-white text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359]'
-                            }`}
-                            title={`Clic para filtrar solo repuestos de ${p.brand || 'Dubro'}`}
-                          >
-                            {p.brand || 'Dubro'}
-                          </span>
-                        </td>
-
-                        {/* Precio (Bs.) - Solo número, no editable inline */}
-                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                          <span className="font-mono font-bold text-xs text-[#1A1817]">
-                            {Number(p.price).toFixed(2)}
-                          </span>
-                        </td>
-
-                        {/* Precio USD - Solo número */}
-                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                          <span className="font-mono font-bold text-xs text-[#1A1817]">
-                            {(exchangeRate > 0 ? (p.price / exchangeRate) : 0).toFixed(2)}
-                          </span>
-                        </td>
-
-                        {/* Opción de elegir si el producto se mostrará en Bs. o en USD */}
-                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                          <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-lg shadow-2xs">
-                            <button
-                              type="button"
-                              onClick={() => handleInlineUpdate(p.id, 'currency', 'Bs.')}
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${
-                                (p.currency || 'Bs.') === 'Bs.'
-                                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                                  : 'text-[#8C827A] hover:text-[#1A1817]'
-                              }`}
-                              title="Mostrar este producto en Bolivianos (Bs.) en el catálogo público"
-                            >
-                              Bs.
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleInlineUpdate(p.id, 'currency', 'USD')}
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${
-                                p.currency === 'USD'
-                                  ? 'bg-[#128C7E] text-white shadow-xs'
-                                  : 'text-[#8C827A] hover:text-[#1A1817]'
-                              }`}
-                              title="Mostrar este producto en Dólares ($ USD) en el catálogo público"
-                            >
-                              USD
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Stock - Solo número */}
-                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                          <span
-                            className={`inline-block px-2 py-0.5 font-mono font-bold text-xs rounded-md ${
-                              (p.stock !== undefined ? p.stock : (p.stockQuantity || 0)) < 5
-                                ? 'bg-[#F85606]/15 text-[#F85606] font-black'
-                                : 'text-[#1A1817]'
-                            }`}
-                          >
-                            {p.stock !== undefined ? p.stock : (p.stockQuantity || 0)}
-                          </span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(p)}
-                              className="p-1.5 rounded-lg text-[#5C5650] hover:text-[#1A1817] hover:bg-white transition-colors cursor-pointer"
-                              title="Editar repuesto completo"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setProductToDelete(p)}
-                              className="p-1.5 rounded-lg text-[#8C827A] hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                              title="Eliminar repuesto"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] rounded-full text-xs font-black uppercase tracking-wider transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nuevo Producto</span>
+            </button>
           </div>
-
         </div>
+
+        {/* Table Container */}
+        <div className="bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-sm overflow-x-auto xl:overflow-visible">
+          <div className="w-full">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="sticky top-[113px] z-10 shadow-xs">
+                <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase text-[9.5px] font-black tracking-wider">
+                  <th className="py-3 px-3 rounded-tl-2xl">SKU</th>
+                  <th className="py-3 px-3">Producto / Repuesto</th>
+                  <th className="py-3 px-2">Categoría</th>
+                  <th className="py-3 px-2">Marca</th>
+                  <th className="py-3 px-2 text-center">Precio (Bs.)</th>
+                  <th className="py-3 px-2 text-center">Precio USD</th>
+                  <th className="py-3 px-2 text-center">Mostrar en</th>
+                  <th className="py-3 px-2 text-center">Stock</th>
+                  <th className="py-3 px-2 text-center">Visibilidad</th>
+                  <th className="py-3 px-3 text-right rounded-tr-2xl">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E2DCD3]">
+                {filteredProducts.map((p) => {
+                  const imgSrc = p.image_url || (p.images && p.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
+                  const catName = categories.find(c => c.id === (p.category_id || p.categoryId))?.name || 'General';
+                  const isVisible = p.is_active !== false && p.isActive !== false;
+
+                  return (
+                    <tr key={p.id} className={`hover:bg-white/80 transition-colors ${!isVisible ? 'bg-[#EFEAE2]/50 opacity-75' : ''}`}>
+
+                      {/* SKU */}
+                      <td className="py-2.5 px-3 font-mono font-bold text-[#D4A359] text-[11px] whitespace-nowrap">
+                        {(p.sku && p.sku.startsWith('HB-')) ? p.sku : `HB-${p.id.toString().padStart(4, '0')}`}
+                      </td>
+
+                      {/* Name + Image (STRICT RULE: bg-white, object-contain) */}
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-lg bg-white p-0.5 border border-[#E2DCD3] flex items-center justify-center shrink-0">
+                            <img
+                              src={imgSrc}
+                              alt={p.name || p.title}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="font-extrabold text-[#1A1817] text-xs block truncate max-w-[160px] xl:max-w-[220px]" title={p.name || p.title}>
+                              {p.name || p.title}
+                            </span>
+                            <span className="text-[10px] text-[#5C5650] block truncate max-w-[160px] xl:max-w-[220px]">
+                              {p.specs_line || p.material}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Category */}
+                      <td className="py-2.5 px-2 text-[#5C5650]">
+                        <span className="block font-bold text-[#1A1817] text-[11px] truncate max-w-[110px]" title={catName}>
+                          {catName}
+                        </span>
+                      </td>
+
+                      {/* Marca */}
+                      <td className="py-2.5 px-2 whitespace-nowrap">
+                        <span
+                          onClick={() => setBrandFilter(brandFilter === (p.brand || 'Dubro') ? 'all' : (p.brand || 'Dubro'))}
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md border font-bold text-[10px] shadow-2xs transition-all cursor-pointer ${brandFilter === (p.brand || 'Dubro')
+                            ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]'
+                            : 'bg-white text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359]'
+                            }`}
+                          title={`Clic para filtrar solo repuestos de ${p.brand || 'Dubro'}`}
+                        >
+                          {p.brand || 'Dubro'}
+                        </span>
+                      </td>
+
+                      {/* Precio (Bs.) - Solo número, no editable inline */}
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        <span className="font-mono font-bold text-xs text-[#1A1817]">
+                          {Number(p.price).toFixed(2)}
+                        </span>
+                      </td>
+
+                      {/* Precio USD - Solo número */}
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        <span className="font-mono font-bold text-xs text-[#1A1817]">
+                          {(exchangeRate > 0 ? (p.price / exchangeRate) : 0).toFixed(2)}
+                        </span>
+                      </td>
+
+                      {/* Opción de elegir si el producto se mostrará en Bs. o en USD */}
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-lg shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleInlineUpdate(p.id, 'currency', 'Bs.')}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${(p.currency || 'Bs.') === 'Bs.'
+                              ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                              : 'text-[#8C827A] hover:text-[#1A1817]'
+                              }`}
+                            title="Mostrar este producto en Bolivianos (Bs.) en el catálogo público"
+                          >
+                            Bs.
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInlineUpdate(p.id, 'currency', 'USD')}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${p.currency === 'USD'
+                              ? 'bg-[#128C7E] text-white shadow-xs'
+                              : 'text-[#8C827A] hover:text-[#1A1817]'
+                              }`}
+                            title="Mostrar este producto en Dólares ($ USD) en el catálogo público"
+                          >
+                            USD
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Stock - Solo número */}
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2 py-0.5 font-mono font-bold text-xs rounded-md ${(p.stock !== undefined ? p.stock : (p.stockQuantity || 0)) < 5
+                            ? 'bg-[#F85606]/15 text-[#F85606] font-black'
+                            : 'text-[#1A1817]'
+                            }`}
+                        >
+                          {p.stock !== undefined ? p.stock : (p.stockQuantity || 0)}
+                        </span>
+                      </td>
+
+                      {/* Visibilidad (Visible / No Visible) */}
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        <div className="inline-flex items-center p-0.5 bg-white border border-[#E2DCD3] rounded-lg shadow-2xs">
+                          <button
+                            type="button"
+                            disabled={inlineLoadingId === p.id}
+                            onClick={() => handleInlineUpdate(p.id, 'is_active', true)}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${isVisible
+                              ? 'bg-[#3E7B44] text-white shadow-xs'
+                              : 'text-[#8C827A] hover:text-[#1A1817]'
+                              }`}
+                            title="Hacer visible este producto en el catálogo público"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Visible</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={inlineLoadingId === p.id}
+                            onClick={() => handleInlineUpdate(p.id, 'is_active', false)}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black transition-all cursor-pointer ${!isVisible
+                              ? 'bg-red-600 text-white shadow-xs'
+                              : 'text-[#8C827A] hover:text-[#1A1817]'
+                              }`}
+                            title="Ocultar este producto del catálogo público"
+                          >
+                            <EyeOff className="w-3 h-3" />
+                            <span>No visible</span>
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(p)}
+                            className="p-1.5 rounded-lg text-[#5C5650] hover:text-[#1A1817] hover:bg-white transition-colors cursor-pointer"
+                            title="Editar repuesto completo"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setProductToDelete(p)}
+                            className="p-1.5 rounded-lg text-[#8C827A] hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Eliminar repuesto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
 
       {/* MODAL: ADD / EDIT PRODUCT */}
       {isModalOpen && (
@@ -773,7 +890,7 @@ export function AdminDashboardClient() {
 
             {/* Modal Form */}
             <form onSubmit={handleProductSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-[#1A1817] mb-1">Nombre del Repuesto *</label>
@@ -911,22 +1028,20 @@ export function AdminDashboardClient() {
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, currency: 'Bs.' })}
-                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${
-                        (formData.currency || 'Bs.') === 'Bs.'
-                          ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                          : 'text-[#5C5650] hover:text-[#1A1817]'
-                      }`}
+                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${(formData.currency || 'Bs.') === 'Bs.'
+                        ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                        : 'text-[#5C5650] hover:text-[#1A1817]'
+                        }`}
                     >
                       Bs.
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, currency: 'USD' })}
-                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${
-                        formData.currency === 'USD'
-                          ? 'bg-[#128C7E] text-white shadow-xs'
-                          : 'text-[#5C5650] hover:text-[#1A1817]'
-                      }`}
+                      className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs transition-all cursor-pointer ${formData.currency === 'USD'
+                        ? 'bg-[#128C7E] text-white shadow-xs'
+                        : 'text-[#5C5650] hover:text-[#1A1817]'
+                        }`}
                     >
                       USD
                     </button>
@@ -968,9 +1083,6 @@ export function AdminDashboardClient() {
                   <label className="block font-bold text-[#1A1817] text-xs uppercase tracking-wider">
                     Foto del Repuesto / Producto *
                   </label>
-                  <span className="text-[11px] font-semibold text-[#8C827A]">
-                    Solo se aceptan imágenes de 2 MB como máximo
-                  </span>
                 </div>
 
                 {/* Input oculto para selección de archivos del sistema */}
@@ -1063,11 +1175,10 @@ export function AdminDashboardClient() {
                       }
                     }}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
-                      isDragging
-                        ? 'border-[#D4A359] bg-[#D4A359]/10 scale-[1.01]'
-                        : 'border-[#D0C7BC] bg-[#FAF8F5] hover:bg-white hover:border-[#D4A359]'
-                    }`}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragging
+                      ? 'border-[#D4A359] bg-[#D4A359]/10 scale-[1.01]'
+                      : 'border-[#D0C7BC] bg-[#FAF8F5] hover:bg-white hover:border-[#D4A359]'
+                      }`}
                   >
                     {isUploadingImage ? (
                       <div className="py-2 flex flex-col items-center gap-2">
@@ -1086,7 +1197,7 @@ export function AdminDashboardClient() {
                             <span className="text-[#D4A359] underline decoration-[#D4A359]">Haz clic para buscar</span> o arrastra y suelta tu foto aquí
                           </p>
                           <p className="text-[11px] text-[#8C827A] mt-0.5">
-                            Formatos web: .jpg, .jpeg, .png, .webp · Máximo 2 MB
+                            Formatos web: .jpg, .jpeg, .png, .webp
                           </p>
                         </div>
                       </>

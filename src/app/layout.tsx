@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: 'Repuestos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.',
   keywords: 'aeromodelismo bolivia, radio control, rc bolivia, hobby bolivia, dubro bolivia, great planes, conectores ez, bellcrank, repuestos rc santa cruz',
   icons: {
-    icon: 'https://hobbybolivia.com/icon.svg',
+    icon: '/icon.svg',
   },
   openGraph: {
     title: 'Hobby Bolivia · Aeromodelismo y radio control',
@@ -38,9 +38,9 @@ export default function RootLayout({
   return (
     <html lang="es" className={manrope.variable}>
       <head>
-        <meta name="theme-color" content="#162544" />
+        <meta name="theme-color" content="#161311" />
       </head>
-      <body className={`${manrope.className} antialiased min-h-screen flex flex-col bg-white text-[#1e293b]`}>
+      <body className={`${manrope.className} antialiased min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817]`}>
         <CartProvider>
           {children}
           <ClientModals />

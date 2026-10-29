@@ -10,7 +10,8 @@ import {
   Loader2,
   Sparkles,
   Eye,
-  QrCode
+  QrCode,
+  Plane
 } from 'lucide-react';
 import { ImageUploader } from '@/components/ui/ImageUploader';
 import type { SiteConfig } from '@/lib/types';
@@ -99,6 +100,74 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
+  const broadcastConfigChange = (updatedConfig: SiteConfig) => {
+    try {
+      const channel = new BroadcastChannel('hb_catalog_channel');
+      channel.postMessage({ type: 'CONFIG_UPDATED', config: updatedConfig });
+      channel.close();
+    } catch {
+      // ignore
+    }
+    try {
+      localStorage.setItem('hb_config_sync', JSON.stringify({ config: updatedConfig, t: Date.now() }));
+      window.dispatchEvent(new CustomEvent('hb_config_updated', { detail: updatedConfig }));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleInstantLogoUpdate = async (newLogoUrl: string) => {
+    setLogoUrl(newLogoUrl);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logoUrl: newLogoUrl.trim() || null })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        broadcastConfigChange(data.data);
+        setSuccessMsg(
+          newLogoUrl.trim()
+            ? '¡Logotipo actualizado! Ya se muestra en la cabecera, pie de página y panel.'
+            : 'Logotipo restaurado al ícono original de Hobby Bolivia.'
+        );
+        setTimeout(() => setSuccessMsg(''), 5000);
+      }
+    } catch (e) {
+      console.error('Error guardando logo:', e);
+    }
+  };
+
+  const handleInstantQrUpdate = async (
+    nextQrUrl: string = paymentQrUrl,
+    nextInstructions: string = paymentQrInstructions,
+    nextEnabled: boolean = enablePaymentQr
+  ) => {
+    setPaymentQrUrl(nextQrUrl);
+    setPaymentQrInstructions(nextInstructions);
+    setEnablePaymentQr(nextEnabled);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentQrUrl: nextQrUrl.trim() || null,
+          paymentQrInstructions: nextInstructions.trim() || null,
+          enablePaymentQr: nextEnabled
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        broadcastConfigChange(data.data);
+        setSuccessMsg('¡Configuración de código QR actualizada y publicada en el carrito de compras!');
+        setTimeout(() => setSuccessMsg(''), 5000);
+      }
+    } catch (e) {
+      console.error('Error guardando QR:', e);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -139,6 +208,7 @@ export default function AdminSettingsPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        broadcastConfigChange(data.data);
         setSuccessMsg('¡Configuración guardada! Los cambios ya se reflejan en el catálogo público.');
         setTimeout(() => setSuccessMsg(''), 5000);
       }
@@ -315,13 +385,38 @@ export default function AdminSettingsPage() {
             2. LOGOTIPO OFICIAL DE LA WEB
         ======================================================== */}
         <section className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E2DCD3] shadow-xs space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-[#FAF8F5]">
-            <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
-              <ImageIcon className="w-4 h-4" />
+          <div className="flex items-center justify-between pb-4 border-b border-[#FAF8F5] flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center shrink-0">
+                <ImageIcon className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-[#1A1817]">2. Logotipo Oficial de la Web</h2>
+                <p className="text-xs text-[#8C827A]">Sube o cambia el logotipo cuando lo desees; se actualiza al instante en cabecera, menú y pie de página.</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-black text-[#1A1817]">2. Logotipo Oficial de la Web</h2>
-              <p className="text-xs text-[#8C827A]">Sube el logotipo que se mostrará en la cabecera principal, menú y pie de página del catálogo.</p>
+
+            {/* Vista Previa en Vivo del Header con el Logo Actual */}
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-[#161311] border border-[#2D2622] shadow-xs">
+              <span className="text-[10px] font-bold text-[#A89F91] uppercase tracking-wider mr-1">
+                Vista previa en web:
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#211E1C] border border-[#D4A359]/50 flex items-center justify-center text-[#D4A359] overflow-hidden shrink-0">
+                {logoUrl && logoUrl !== 'https://hobbybolivia.com/icon.svg' && logoUrl !== '/icon.svg' ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={logoUrl}
+                    alt="Logo Preview"
+                    className="w-full h-full object-contain bg-white p-0.5"
+                  />
+                ) : (
+                  <Plane className="w-4 h-4 -rotate-45 text-[#D4A359]" />
+                )}
+              </div>
+              <span className="font-black text-xs tracking-tight text-[#D4A359]">
+                {companyName.split(' ')[0] || 'HOBBY'}{' '}
+                <span className="text-[#FAF8F5]">{companyName.split(' ').slice(1).join(' ') || 'BOLIVIA'}</span>
+              </span>
             </div>
           </div>
 
@@ -330,7 +425,8 @@ export default function AdminSettingsPage() {
               label="Logotipo Oficial (Header y Footer)"
               value={logoUrl}
               onChange={setLogoUrl}
-              recommendedSize="Proporción recomendada: 512x512 px o formato horizontal con fondo transparente (PNG, SVG, WebP)."
+              onUploadSuccess={handleInstantLogoUpdate}
+              recommendedSize="Proporción recomendada: 512x512 px o formato horizontal con fondo transparente (PNG, SVG, WebP, JPG)."
             />
           </div>
         </section>
@@ -346,19 +442,33 @@ export default function AdminSettingsPage() {
               </div>
               <div>
                 <h2 className="text-base font-black text-[#1A1817]">3. Cobro con QR Simple (Bolivia)</h2>
-                <p className="text-xs text-[#8C827A]">Publica el código QR bancario para que tus clientes completen pagos al instante en el carrito.</p>
+                <p className="text-xs text-[#8C827A]">Publica o cambia el código QR bancario cuando desees para pagos al instante en el carrito.</p>
               </div>
             </div>
 
-            <label className="flex items-center gap-2.5 cursor-pointer bg-[#FAF8F5] hover:bg-white px-3.5 py-2 rounded-xl border border-[#E2DCD3] transition-colors shadow-xs">
-              <input
-                type="checkbox"
-                checked={enablePaymentQr}
-                onChange={(e) => setEnablePaymentQr(e.target.checked)}
-                className="w-4 h-4 rounded text-[#D4A359] focus:ring-0 accent-[#D4A359] cursor-pointer"
-              />
-              <span className="text-xs font-black text-[#1A1817]">Habilitar QR en Carrito</span>
-            </label>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <label className="flex items-center gap-2.5 cursor-pointer bg-[#FAF8F5] hover:bg-white px-3.5 py-2 rounded-xl border border-[#E2DCD3] transition-colors shadow-xs">
+                <input
+                  type="checkbox"
+                  checked={enablePaymentQr}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    handleInstantQrUpdate(paymentQrUrl, paymentQrInstructions, checked);
+                  }}
+                  className="w-4 h-4 rounded text-[#D4A359] focus:ring-0 accent-[#D4A359] cursor-pointer"
+                />
+                <span className="text-xs font-black text-[#1A1817]">Habilitar QR en Carrito</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => handleInstantQrUpdate(paymentQrUrl, paymentQrInstructions, enablePaymentQr)}
+                className="px-4 py-2 rounded-xl bg-[#161311] hover:bg-[#D4A359] text-white hover:text-[#161311] text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5 text-[#D4A359]" />
+                <span>Guardar QR</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -368,16 +478,27 @@ export default function AdminSettingsPage() {
                 label="Imagen del Código QR Bancario"
                 value={paymentQrUrl}
                 onChange={setPaymentQrUrl}
-                recommendedSize="Sube la captura de tu QR Simple generado desde tu banco (Banco Unión, BCP, BNB, Mercantil, etc.)."
+                onUploadSuccess={(newUrl) => handleInstantQrUpdate(newUrl, paymentQrInstructions, enablePaymentQr)}
+                recommendedSize="Sube la imagen de tu QR Simple generado desde tu banco (PNG, JPG, WebP o SVG hasta 5 MB)."
               />
             </div>
 
             {/* Instrucciones & Vista Previa */}
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block mb-1.5">
-                  Datos de Cuenta / Instrucciones para el Comprador:
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
+                    Datos de Cuenta / Instrucciones para el Comprador:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleInstantQrUpdate(paymentQrUrl, paymentQrInstructions, enablePaymentQr)}
+                    className="px-3.5 py-1.5 rounded-xl bg-[#D4A359] hover:bg-[#C69755] text-[#161311] text-[11px] font-black uppercase tracking-wider transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <Save className="w-3 h-3 text-[#161311]" />
+                    <span>Aplicar texto al carrito</span>
+                  </button>
+                </div>
                 <textarea
                   rows={4}
                   value={paymentQrInstructions}
@@ -391,21 +512,30 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Vista previa en vivo */}
-              {paymentQrUrl && (
+              {paymentQrUrl ? (
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] flex items-center gap-4">
-                  <div className="w-24 h-24 bg-white p-1 rounded-xl border border-[#E2DCD3] flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-24 h-24 bg-white p-1.5 rounded-xl border border-[#D4A359] flex items-center justify-center shrink-0 shadow-xs">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={paymentQrUrl} alt="Vista previa QR" className="max-h-full max-w-full object-contain" />
                   </div>
-                  <div className="text-xs space-y-1">
-                    <span className="inline-block px-2 py-0.5 rounded-full bg-[#3E7B44]/15 border border-[#3E7B44]/30 text-[#1E4D2B] text-[10px] font-black uppercase">
-                      ✓ QR Configurado
+                  <div className="text-xs space-y-1 min-w-0 flex-1">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${enablePaymentQr
+                        ? 'bg-[#3E7B44]/15 border-[#3E7B44]/30 text-[#1E4D2B]'
+                        : 'bg-amber-50 border-amber-200 text-amber-800'
+                        }`}
+                    >
+                      {enablePaymentQr ? 'QR Activo en Carrito' : 'QR Deshabilitado en Carrito'}
                     </span>
                     <p className="font-black text-[#1A1817]">Vista previa en el Carrito</p>
                     <p className="text-[11px] text-[#5C554E] whitespace-pre-line line-clamp-3">
                       {paymentQrInstructions || 'Titular: Hobby Bolivia\nEnvía tu comprobante con tu orden por WhatsApp.'}
                     </p>
                   </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs font-semibold">
+                  No hay imagen de código QR cargada actualmente. Haz clic en &quot;Haz clic para buscar o arrastra tu archivo aquí&quot; a la izquierda para subir tu QR bancario.
                 </div>
               )}
             </div>
@@ -422,54 +552,11 @@ export default function AdminSettingsPage() {
             </div>
             <div>
               <h2 className="text-base font-black text-[#1A1817]">4. Opciones de Diseño del Catálogo Público</h2>
-              <p className="text-xs text-[#8C827A]">Controla el estilo de tarjetas, cantidad de columnas y elementos visibles en la tienda.</p>
+              <p className="text-xs text-[#8C827A]">Controla la cantidad de columnas visibles por fila en la tienda.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card Style Selector */}
-            <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
-              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
-                Estilo de Tarjetas de Producto:
-              </label>
-
-              <div className="space-y-2.5">
-                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-[#E2DCD3] cursor-pointer hover:border-[#D4A359] transition-colors shadow-xs">
-                  <input
-                    type="radio"
-                    name="cardStyle"
-                    value="with_button"
-                    checked={cardStyle === 'with_button'}
-                    onChange={() => setCardStyle('with_button')}
-                    className="mt-0.5 accent-[#D4A359]"
-                  />
-                  <div>
-                    <span className="text-xs font-black text-[#1A1817] block">Con botón &quot;+ Añadir&quot;</span>
-                    <span className="text-[11px] text-[#8C827A] leading-tight block mt-0.5">
-                      Permite compras y cotizaciones directas al carrito.
-                    </span>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-[#E2DCD3] cursor-pointer hover:border-[#D4A359] transition-colors shadow-xs">
-                  <input
-                    type="radio"
-                    name="cardStyle"
-                    value="catalog_only"
-                    checked={cardStyle === 'catalog_only'}
-                    onChange={() => setCardStyle('catalog_only')}
-                    className="mt-0.5 accent-[#D4A359]"
-                  />
-                  <div>
-                    <span className="text-xs font-black text-[#1A1817] block">Estilo catálogo simple</span>
-                    <span className="text-[11px] text-[#8C827A] leading-tight block mt-0.5">
-                      Muestra fotografía, título y precio para consulta visual.
-                    </span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
+          <div className="max-w-md">
             {/* Columns Count */}
             <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
               <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
@@ -478,39 +565,36 @@ export default function AdminSettingsPage() {
 
               <select
                 value={desktopColumns}
-                onChange={(e) => setDesktopColumns(Number(e.target.value))}
+                onChange={async (e) => {
+                  const cols = Number(e.target.value);
+                  setDesktopColumns(cols);
+                  try {
+                    const res = await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ desktopColumns: cols })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                      broadcastConfigChange(data.data);
+                      setSuccessMsg(`¡Diseño actualizado a ${cols} productos por fila en escritorio!`);
+                      setTimeout(() => setSuccessMsg(''), 4000);
+                    }
+                  } catch {
+                    // ignore
+                  }
+                }}
                 className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-[#E2DCD3] rounded-xl outline-none focus:border-[#D4A359] focus:ring-2 focus:ring-[#D4A359]/20 text-[#1A1817] cursor-pointer shadow-xs"
               >
                 <option value={3}>3 productos por fila (Tarjetas Grandes)</option>
                 <option value={4}>4 productos por fila (Estándar E-commerce)</option>
                 <option value={6}>6 productos por fila (Estilo Galba Compacto)</option>
+                <option value={8}>8 productos por fila (Vista Ultra Compacta)</option>
               </select>
 
               <span className="text-[11px] text-[#8C827A] block">
                 En pantallas móviles se adapta automáticamente a 2 columnas para una navegación ágil.
               </span>
-            </div>
-
-            {/* Top Bar Switch */}
-            <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-3">
-              <label className="text-xs font-black text-[#1A1817] uppercase tracking-wide block">
-                Barra Superior de Anuncios:
-              </label>
-
-              <label className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#E2DCD3] cursor-pointer hover:border-[#D4A359] transition-colors shadow-xs">
-                <input
-                  type="checkbox"
-                  checked={showTopBar}
-                  onChange={(e) => setShowTopBar(e.target.checked)}
-                  className="w-4 h-4 text-[#D4A359] rounded focus:ring-0 accent-[#D4A359] cursor-pointer"
-                />
-                <div>
-                  <span className="text-xs font-black text-[#1A1817] block">Mostrar barra superior</span>
-                  <span className="text-[11px] text-[#8C827A] block mt-0.5">
-                    Muestra redes sociales, contacto y anuncio de envíos.
-                  </span>
-                </div>
-              </label>
             </div>
           </div>
         </section>

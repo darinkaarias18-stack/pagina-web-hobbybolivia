@@ -49,15 +49,15 @@ export function DynamicPoliciesModule({ initialPolicies }: DynamicPoliciesModule
     <section id="politicas" className="py-16 bg-[#F5F2EB] border-b border-[#E2DCD3]">
       <div className="w-full max-w-5xl mx-auto px-4">
         
-        {/* Section Header with Horizontal Lines & Star */}
+        {/* Section Header with Horizontal Lines */}
         <div className="text-center mb-10 max-w-2xl mx-auto">
           <div className="flex items-center justify-center gap-3 mb-2">
             <span className="h-px bg-gradient-to-r from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-20"></span>
-            <span className="text-[#D4A359] text-sm">✦</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-[#1A1817] uppercase tracking-wider">
               POLÍTICAS Y GARANTÍA TÉCNICA
             </h2>
-            <span className="text-[#D4A359] text-sm">✦</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
             <span className="h-px bg-gradient-to-l from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-20"></span>
           </div>
           <p className="text-xs sm:text-sm text-[#5C5650] font-medium">

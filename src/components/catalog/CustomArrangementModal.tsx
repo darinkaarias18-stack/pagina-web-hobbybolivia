@@ -17,14 +17,14 @@ export function CustomArrangementModal() {
 
   const handleSendCustomQuote = (e: React.FormEvent) => {
     e.preventDefault();
-    const msg = `✈️ *CONSULTA TÉCNICA / PEDIDO ESPECIAL HOBBY BOLIVIA* ✈️
+    const msg = `*CONSULTA TÉCNICA / PEDIDO ESPECIAL HOBBY BOLIVIA*
 Hola Hobby Bolivia, deseo cotizar repuestos o asesoría para mi modelo:
 
-👤 *Nombre:* ${clientName || 'Cliente'}
-📱 *Teléfono:* ${clientPhone || 'No especificado'}
-⚙️ *Categoría del repuesto:* ${partCategory}
-🛫 *Tipo de modelo RC:* ${modelType}
-📝 *Descripción del repuesto o consulta:* ${notes || 'Quisiera saber disponibilidad'}
+• *Nombre:* ${clientName || 'Cliente'}
+• *Teléfono:* ${clientPhone || 'No especificado'}
+• *Categoría del repuesto:* ${partCategory}
+• *Tipo de modelo RC:* ${modelType}
+• *Descripción del repuesto o consulta:* ${notes || 'Quisiera saber disponibilidad'}
 
 ¿Podrían indicarme si tienen stock o fecha de llegada? Muchas gracias.`;
 

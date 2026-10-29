@@ -55,9 +55,13 @@ export async function PUT(
       message: "Producto actualizado correctamente",
       data: updated
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in PUT /api/products/[id]:", error);
-    return NextResponse.json({ success: false, error: "Error al actualizar el producto" }, { status: 500 });
+    const isSizeError = error?.message?.includes('1 MB');
+    return NextResponse.json(
+      { success: false, error: error?.message || "Error al actualizar el producto" },
+      { status: isSizeError ? 400 : 500 }
+    );
   }
 }
 

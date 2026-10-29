@@ -120,60 +120,41 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
  */
 export async function getSessionUser(request: NextRequest): Promise<SessionUser | null> {
   const sessionCookie = request.cookies.get('hb_session')?.value;
-  if (sessionCookie) {
-    const verified = await verifySessionToken(sessionCookie);
-    if (verified) return verified;
+  if (!sessionCookie) {
+    return null;
   }
 
-  // Compatibilidad transicional: verificar cookies tradicionales si coinciden
-  const authCookie = request.cookies.get('hb_admin_auth')?.value;
-  const roleCookie = request.cookies.get('hb_user_role')?.value as 'SUPERADMIN' | 'ADMIN' | undefined;
-  const usernameCookie = request.cookies.get('hb_user_username')?.value || 'admin';
-  const nameCookie = request.cookies.get('hb_user_name')?.value;
-
-  if (authCookie === 'authenticated' && roleCookie) {
-    return {
-      id: 1,
-      username: usernameCookie,
-      name: nameCookie ? decodeURIComponent(nameCookie) : 'Administrador',
-      role: roleCookie,
-      exp: Math.floor(Date.now() / 1000) + 3600
-    };
+  const verified = await verifySessionToken(sessionCookie);
+  if (!verified) {
+    return null;
   }
 
-  return null;
+  return verified;
 }
 
 /**
  * Guarda el token de sesión seguro en cookies de la respuesta.
+ * Se configura como cookie de sesión estricta (expira al cerrar el navegador o tras 2 horas).
  */
 export function setAuthSessionCookies(response: NextResponse, user: SessionUser, token: string) {
   const isProd = process.env.NODE_ENV === 'production';
-  const maxAge = 60 * 60 * 24 * 7; // 7 días
+  const maxAge = 60 * 60 * 2; // Máximo 2 horas de sesión activa
 
   // 1. Cookie de sesión criptográfica (HttpOnly para prevenir robo por XSS)
   response.cookies.set('hb_session', token, {
     path: '/',
     httpOnly: true,
     secure: isProd,
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge
   });
 
-  // 2. Cookie de estado de autenticación (para validación de UI en cliente)
-  response.cookies.set('hb_admin_auth', 'authenticated', {
-    path: '/',
-    httpOnly: false,
-    secure: isProd,
-    sameSite: 'lax',
-    maxAge
-  });
-
+  // 2. Cookies informativas de rol/usuario para la UI (nunca usadas para autorizar sin hb_session)
   response.cookies.set('hb_user_role', user.role, {
     path: '/',
     httpOnly: false,
     secure: isProd,
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge
   });
 
@@ -181,7 +162,7 @@ export function setAuthSessionCookies(response: NextResponse, user: SessionUser,
     path: '/',
     httpOnly: false,
     secure: isProd,
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge
   });
 
@@ -189,7 +170,7 @@ export function setAuthSessionCookies(response: NextResponse, user: SessionUser,
     path: '/',
     httpOnly: false,
     secure: isProd,
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge
   });
 }

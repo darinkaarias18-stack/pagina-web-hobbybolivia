@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getSiteConfig, updateSiteConfig } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 
@@ -19,6 +20,11 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     const updated = await updateSiteConfig(body);
+    try {
+      revalidatePath('/', 'layout');
+    } catch {
+      // safe fallback
+    }
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Error in PUT /api/settings:", error);

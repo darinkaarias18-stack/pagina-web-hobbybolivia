@@ -147,7 +147,9 @@ export default function AdminOccasionsPage() {
             <tbody className="divide-y divide-slate-100">
               {occasions.map((occ) => (
                 <tr key={occ.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4 font-bold text-lg text-[#E11D48]">🌸</td>
+                  <td className="py-3 px-4 font-bold text-lg text-[#E11D48]">
+                    <Sparkles className="w-4 h-4 text-[#E11D48]" />
+                  </td>
                   <td className="py-3 px-4 font-bold text-slate-900">{occ.name}</td>
                   <td className="py-3 px-4 font-mono text-slate-500">{occ.slug}</td>
                   <td className="py-3 px-4 font-semibold text-slate-700">

@@ -38,14 +38,13 @@ export function SubcategoryCarousel({
           {/* "Ver Todo" Card */}
           <button
             onClick={() => onSelectCategory('all')}
-            className={`flex items-center gap-3 p-2 pr-4 rounded-xl border transition-all flex-shrink-0 text-left ${
-              !selectedCategorySlug || selectedCategorySlug === 'all'
+            className={`flex items-center gap-3 p-2 pr-4 rounded-xl border transition-all flex-shrink-0 text-left ${!selectedCategorySlug || selectedCategorySlug === 'all'
                 ? 'border-[#E11D48] bg-rose-50/70 shadow-xs'
                 : 'border-slate-200 hover:border-rose-300 bg-white hover:bg-slate-50'
-            }`}
+              }`}
           >
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-tr from-rose-500 to-rose-400 flex items-center justify-center text-white font-bold text-lg shadow-xs">
-              🌸
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-tr from-rose-500 to-rose-400 flex items-center justify-center text-white font-bold text-xs shadow-xs">
+              TODO
             </div>
             <div>
               <div className="font-bold text-xs text-slate-800">Todo el Catálogo</div>
@@ -60,11 +59,10 @@ export function SubcategoryCarousel({
               <button
                 key={cat.id}
                 onClick={() => onSelectCategory(cat.slug)}
-                className={`flex items-center gap-3 p-2 pr-4 rounded-xl border transition-all flex-shrink-0 text-left group ${
-                  isSelected
+                className={`flex items-center gap-3 p-2 pr-4 rounded-xl border transition-all flex-shrink-0 text-left group ${isSelected
                     ? 'border-[#E11D48] bg-rose-50/80 shadow-xs ring-1 ring-[#E11D48]'
                     : 'border-slate-200 hover:border-rose-300 bg-white hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 {/* Thumbnail Image */}
                 <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100 relative">
@@ -80,9 +78,8 @@ export function SubcategoryCarousel({
                 {/* Info */}
                 <div>
                   <div
-                    className={`font-bold text-xs leading-tight line-clamp-1 transition-colors ${
-                      isSelected ? 'text-[#E11D48]' : 'text-slate-800 group-hover:text-[#E11D48]'
-                    }`}
+                    className={`font-bold text-xs leading-tight line-clamp-1 transition-colors ${isSelected ? 'text-[#E11D48]' : 'text-slate-800 group-hover:text-[#E11D48]'
+                      }`}
                   >
                     {cat.name}
                   </div>

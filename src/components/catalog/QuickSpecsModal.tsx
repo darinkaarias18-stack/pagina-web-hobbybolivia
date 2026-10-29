@@ -38,7 +38,7 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs animate-in fade-in duration-200">
-      
+
       {/* Modal Dialog */}
       <div
         onClick={(e) => e.stopPropagation()}
@@ -78,9 +78,8 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
               </span>
               {/* Solo mostrar badge si es Popular o Nuevo */}
               {(product.badge === 'Popular' || product.badge === 'Nuevo' || product.badge === 'Best Seller') && (
-                <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                  product.badge === 'Nuevo' ? 'text-[#161311] bg-[#D4A359]' : 'text-[#D4A359] bg-[#211E1C] border border-[#D4A359]/40'
-                }`}>
+                <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${product.badge === 'Nuevo' ? 'text-[#161311] bg-[#D4A359]' : 'text-[#D4A359] bg-[#211E1C] border border-[#D4A359]/40'
+                  }`}>
                   {product.badge === 'Nuevo' ? 'Nuevo' : 'Popular'}
                 </span>
               )}
@@ -113,7 +112,7 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
                 <span><strong>Especificaciones:</strong> {product.specs_line}</span>
               </div>
               <div className="flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#F85606] shrink-0 mt-0.5" />
+                <ShieldCheck className="w-4 h-4 text-[#D4A359] shrink-0 mt-0.5" />
                 <span><strong>Compatibilidad:</strong> {product.compatible_models || 'Modelos RC generales'}</span>
               </div>
             </div>
@@ -150,11 +149,10 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
               <button
                 onClick={handleAdd}
                 type="button"
-                className={`flex-1 py-3 px-4 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-                  justAdded
-                    ? 'bg-[#3E7B44] text-white'
-                    : 'bg-[#D4A359] hover:bg-[#C69755] text-[#161311]'
-                }`}
+                className={`flex-1 py-3 px-4 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${justAdded
+                  ? 'bg-[#3E7B44] text-white'
+                  : 'bg-[#D4A359] hover:bg-[#C69755] text-[#161311]'
+                  }`}
               >
                 {justAdded ? (
                   <>

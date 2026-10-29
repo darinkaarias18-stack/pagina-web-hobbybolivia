@@ -16,10 +16,10 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
   return (
     <div className="bg-[#161311] text-[#A89F91] text-[12px] py-2 px-4 border-b border-[#2D2622] transition-colors">
       <div className="w-full max-w-[1320px] mx-auto flex flex-col md:flex-row items-center justify-between gap-2.5">
-        
+
         {/* Main Message */}
         <div className="flex items-center gap-2 text-center md:text-left font-medium">
-          <span className="inline-block w-2 h-2 rounded-full bg-[#F85606] animate-pulse"></span>
+          <span className="inline-block w-2 h-2 rounded-full bg-[#D4A359] animate-pulse"></span>
           <span className="text-[#FAF8F5]">
             <strong className="text-[#D4A359]">Hobby Bolivia:</strong> Repuestos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia
           </span>
@@ -33,9 +33,14 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
           </span>
 
           {exchangeRate ? (
-            <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#211E1C] border border-[#D4A359]/30 text-[#FAF8F5] font-mono text-[11px]">
+            <span
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#211E1C] border border-[#D4A359]/30 text-[#FAF8F5] font-mono text-[11px]"
+              title="Tipo de cambio oficial vigente a la fecha de hoy"
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[#A89F91]">TC:</span>
+              <span className="text-[#A89F91]">
+                TC ({new Date().toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })}):
+              </span>
               <strong className="text-[#D4A359]">1 USD = Bs. {exchangeRate.toFixed(2)}</strong>
             </span>
           ) : null}
@@ -59,7 +64,7 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
           </a>
 
           <Link
-            href="/admin"
+            href="/login?reauth=1"
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] font-bold transition-all border border-[#D4A359]/40 shadow-sm"
           >
             <Lock className="w-3 h-3 text-[#D4A359]" />

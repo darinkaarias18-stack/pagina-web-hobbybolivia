@@ -15,7 +15,7 @@ export function CategoryTilesGrid({
   onSelectCategory,
   activeCategory
 }: CategoryTilesGridProps) {
-  
+
   const handleCategoryClick = (slug: string) => {
     onSelectCategory(slug);
     const el = document.getElementById('catalogo');
@@ -45,10 +45,10 @@ export function CategoryTilesGrid({
           <div className="absolute inset-0 flex items-center">
             <div className="w-full max-w-[1320px] mx-auto px-4 sm:px-8">
               <div className="max-w-xl space-y-4">
-                
+
                 {/* Micro Brand Pill */}
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#161311]/80 backdrop-blur-md border border-[#D4A359]/40 shadow-lg">
-                  <span className="w-2 h-2 rounded-full bg-[#F85606] animate-pulse"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-pulse"></span>
                   <span className="text-[#D4A359] text-[11px] font-black uppercase tracking-wider">
                     PLANEA · CONSTRUYE · VUELA
                   </span>
@@ -57,7 +57,7 @@ export function CategoryTilesGrid({
                 {/* Main Headline Overlay */}
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[#F85606] font-black text-xs sm:text-sm tracking-wider uppercase">
+                    <span className="text-[#D4A359] font-black text-xs sm:text-sm tracking-wider uppercase">
                       Hobby Bolivia
                     </span>
                     <span className="text-[#A89F91] text-xs">·</span>
@@ -79,7 +79,7 @@ export function CategoryTilesGrid({
                   <button
                     type="button"
                     onClick={() => handleCategoryClick('all')}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#F85606] hover:bg-[#E04B00] text-white font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-[#F85606]/30 hover:scale-105 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-[#D4A359]/25 hover:scale-105 cursor-pointer"
                   >
                     <span>VER CATÁLOGO COMPLETO</span>
                     <ArrowRight className="w-4 h-4" />
@@ -95,8 +95,8 @@ export function CategoryTilesGrid({
         <div className="w-full bg-[#1B1714] border-t border-[#2D2622] py-3.5 sm:py-4 px-4 sm:px-6">
           <div className="w-full max-w-[1320px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 text-center sm:text-left">
-              <div className="w-9 h-9 rounded-full bg-[#F85606] text-white flex items-center justify-center shrink-0 shadow-md">
-                <Plane className="w-4 h-4 -rotate-45" />
+              <div className="w-9 h-9 rounded-xl bg-[#211E1C] border border-[#D4A359]/50 text-[#D4A359] flex items-center justify-center shrink-0 shadow-md">
+                <Plane className="w-4 h-4 -rotate-45 text-[#D4A359]" />
               </div>
               <div>
                 <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 justify-center sm:justify-start">

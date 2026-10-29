@@ -55,11 +55,16 @@ export function CatalogView({
 }: CatalogViewProps) {
   const [products, setProducts] = useState<Product[]>(initialItems);
   const [categories] = useState<Category[]>(initialCategories);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null | undefined>(initialConfig);
 
   // Sync state if initialItems prop updates
   useEffect(() => {
     setProducts(initialItems);
   }, [initialItems]);
+
+  useEffect(() => {
+    setSiteConfig(initialConfig);
+  }, [initialConfig]);
 
   // Real-time synchronization across browser tabs (Admin <-> Public Catalog)
   const refreshProducts = useCallback(async () => {
@@ -82,6 +87,9 @@ export function CatalogView({
     try {
       channel = new BroadcastChannel('hb_catalog_channel');
       channel.onmessage = (event) => {
+        if (event.data?.type === 'CONFIG_UPDATED' && event.data?.config) {
+          setSiteConfig(event.data.config);
+        }
         if (event.data?.type === 'PRODUCT_UPDATED') {
           const { id, field, value } = event.data;
           setProducts((prev) =>
@@ -90,7 +98,8 @@ export function CatalogView({
                 return {
                   ...p,
                   [field]: value,
-                  ...(field === 'currency' ? { currency: value, display_currency: value } : {})
+                  ...(field === 'currency' ? { currency: value, display_currency: value } : {}),
+                  ...(field === 'is_active' ? { is_active: Boolean(value), isActive: Boolean(value) } : {})
                 };
               }
               return p;
@@ -346,14 +355,14 @@ export function CatalogView({
   ]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817]">
-      
+    <div className="min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817] overflow-x-hidden">
+
       {/* 1. Top Utility Bar (Carbón #161311 & Dorado #D4A359) */}
-      <TopBar config={initialConfig} exchangeRate={initialExchangeRate} />
+      <TopBar config={siteConfig} exchangeRate={initialExchangeRate} />
 
       {/* 2. Sticky Main Header with Logo & Cart */}
       <Header
-        config={initialConfig}
+        config={siteConfig}
         favoritesCount={favorites.length}
       />
 
@@ -373,17 +382,18 @@ export function CatalogView({
       {/* 6. Main Interactive Catalog Section */}
       <section id="catalogo" className="py-14 bg-[#F5F2EB]">
         <div id="categorias" className="scroll-mt-24"></div>
+        <div id="ofertas" className="scroll-mt-24"></div>
         <div className="w-full max-w-[1320px] mx-auto px-4">
-          
-          {/* Section Header with Centered Line & Gold Star */}
+
+          {/* Section Header with Centered Line */}
           <div className="flex flex-col items-center justify-center text-center mb-10">
             <div className="flex items-center justify-center gap-3 mb-2">
               <span className="h-px bg-gradient-to-r from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-24"></span>
-              <span className="text-[#D4A359] text-sm">✦</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
               <h2 className="text-xl sm:text-3xl font-black text-[#1A1817] uppercase tracking-wider">
                 CATÁLOGO DE REPUESTOS DE AVIONES A ESCALA
               </h2>
-              <span className="text-[#D4A359] text-sm">✦</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
               <span className="h-px bg-gradient-to-l from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-24"></span>
             </div>
             <p className="text-xs sm:text-sm text-[#5C5650] max-w-none whitespace-normal md:whitespace-nowrap">
@@ -420,13 +430,13 @@ export function CatalogView({
           {/* Quick Filter Pills Carousel */}
           <div className="flex items-center justify-between gap-3 mb-6">
             <div className="relative flex-1 flex items-center gap-1.5 overflow-hidden">
-              
+
               {/* Left Carousel Navigation Arrow */}
               {canScrollLeft && (
                 <button
                   type="button"
                   onClick={() => scrollCategories('left')}
-                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-[#FAF8F5] text-[#1A1817] hover:text-[#F85606] border border-[#E2DCD3] shadow-md transition-all shrink-0 z-20 cursor-pointer"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-[#FAF8F5] text-[#1A1817] hover:text-[#D4A359] border border-[#E2DCD3] shadow-md transition-all shrink-0 z-20 cursor-pointer"
                   title="Desplazar a la izquierda"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -453,11 +463,10 @@ export function CatalogView({
                     type="button"
                     onClick={() => setActiveCategorySlug('all')}
                     data-active={activeCategorySlug === 'all' ? 'true' : undefined}
-                    className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 cursor-pointer ${
-                      activeCategorySlug === 'all'
-                        ? 'bg-[#211E1C] text-[#FAF8F5] shadow-md border border-[#D4A359]/40'
-                        : 'bg-[#FAF8F5] hover:bg-white text-[#1A1817] border border-[#E2DCD3]'
-                    }`}
+                    className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 cursor-pointer ${activeCategorySlug === 'all'
+                      ? 'bg-[#211E1C] text-[#FAF8F5] shadow-md border border-[#D4A359]/40'
+                      : 'bg-[#FAF8F5] hover:bg-white text-[#1A1817] border border-[#E2DCD3]'
+                      }`}
                   >
                     Todos ({products.length})
                   </button>
@@ -470,11 +479,10 @@ export function CatalogView({
                         type="button"
                         onClick={() => setActiveCategorySlug(cat.slug)}
                         data-active={isActive ? 'true' : undefined}
-                        className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
-                          isActive
-                            ? 'bg-[#211E1C] text-[#FAF8F5] shadow-md border border-[#D4A359]/40'
-                            : 'bg-[#FAF8F5] hover:bg-white text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3]'
-                        }`}
+                        className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${isActive
+                          ? 'bg-[#211E1C] text-[#FAF8F5] shadow-md border border-[#D4A359]/40'
+                          : 'bg-[#FAF8F5] hover:bg-white text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3]'
+                          }`}
                       >
                         {cat.name}
                       </button>
@@ -488,7 +496,7 @@ export function CatalogView({
                 <button
                   type="button"
                   onClick={() => scrollCategories('right')}
-                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-[#FAF8F5] text-[#1A1817] hover:text-[#F85606] border border-[#E2DCD3] shadow-md transition-all shrink-0 z-20 cursor-pointer"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-[#FAF8F5] text-[#1A1817] hover:text-[#D4A359] border border-[#E2DCD3] shadow-md transition-all shrink-0 z-20 cursor-pointer"
                   title="Desplazar a la derecha"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -506,7 +514,7 @@ export function CatalogView({
               <SlidersHorizontal className="w-3.5 h-3.5 text-[#D4A359]" />
               <span>Filtros</span>
               {activeFiltersCount > 0 && (
-                <span className="w-4 h-4 bg-[#F85606] text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                <span className="w-4 h-4 bg-[#D4A359] text-[#161311] text-[9px] font-black rounded-full flex items-center justify-center">
                   {activeFiltersCount}
                 </span>
               )}
@@ -515,12 +523,11 @@ export function CatalogView({
 
           {/* Catalog Layout: Sidebar + Product Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-            
+
             {/* Advanced Filters Sidebar */}
             <aside
-              className={`lg:block ${
-                mobileFiltersOpen ? 'block' : 'hidden'
-              } bg-[#FAF8F5] p-5 sm:p-6 rounded-2xl border border-[#E2DCD3] space-y-6 lg:sticky lg:top-24 shadow-sm`}
+              className={`lg:block ${mobileFiltersOpen ? 'block' : 'hidden'
+                } bg-[#FAF8F5] p-5 sm:p-6 rounded-2xl border border-[#E2DCD3] space-y-6 lg:sticky lg:top-24 shadow-sm`}
             >
               <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
                 <div className="flex items-center gap-2 font-black text-xs uppercase tracking-wider text-[#1A1817]">
@@ -676,7 +683,7 @@ export function CatalogView({
 
             {/* Product Grid */}
             <div className="lg:col-span-3">
-              
+
               {/* Results status bar */}
               <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#E2DCD3] text-xs text-[#5C5650]">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -708,7 +715,17 @@ export function CatalogView({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5">
+                <div
+                  className={
+                    siteConfig?.desktopColumns === 8
+                      ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5'
+                      : siteConfig?.desktopColumns === 6
+                        ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3'
+                        : siteConfig?.desktopColumns === 3
+                          ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-4'
+                          : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5'
+                  }
+                >
                   {filteredProducts.map((prod) => (
                     <ProductCard
                       key={prod.id}
@@ -737,7 +754,7 @@ export function CatalogView({
       <Testimonials />
 
       {/* 12. Footer with CTA and Keyword Strip */}
-      <Footer config={initialConfig} />
+      <Footer config={siteConfig} />
 
       {/* Quick Specs Technical Modal */}
       {quickViewProduct && (
@@ -762,14 +779,13 @@ export function CatalogView({
         <button
           type="button"
           onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-          className={`flex flex-col items-center justify-center px-2 py-1 transition-colors relative cursor-pointer ${
-            mobileFiltersOpen || activeFiltersCount > 0 ? 'text-[#D4A359]' : 'text-[#FAF8F5] hover:text-[#D4A359]'
-          }`}
+          className={`flex flex-col items-center justify-center px-2 py-1 transition-colors relative cursor-pointer ${mobileFiltersOpen || activeFiltersCount > 0 ? 'text-[#D4A359]' : 'text-[#FAF8F5] hover:text-[#D4A359]'
+            }`}
         >
           <div className="relative">
             <SlidersHorizontal className="w-5 h-5" />
             {activeFiltersCount > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-[#F85606] text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-2 bg-[#D4A359] text-[#161311] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                 {activeFiltersCount}
               </span>
             )}
@@ -785,7 +801,7 @@ export function CatalogView({
           title="WhatsApp Oficial Hobby Bolivia"
         >
           <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
           </svg>
           <span>WhatsApp</span>
         </a>
@@ -798,7 +814,7 @@ export function CatalogView({
           <div className="relative">
             <ShoppingCart className="w-5 h-5 text-[#D4A359]" />
             {totalCount > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-[#F85606] text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-2 bg-[#D4A359] text-[#161311] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                 {totalCount}
               </span>
             )}

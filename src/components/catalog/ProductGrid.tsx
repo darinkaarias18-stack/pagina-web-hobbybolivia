@@ -48,18 +48,16 @@ export function ProductGrid({
           <div className="hidden md:flex items-center gap-1 border-l border-slate-200 pl-3">
             <button
               onClick={() => setColumns(3)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                columns === 3 ? 'bg-rose-50 text-[#E11D48]' : 'text-slate-400 hover:text-slate-700'
-              }`}
+              className={`p-1.5 rounded-lg transition-colors ${columns === 3 ? 'bg-rose-50 text-[#E11D48]' : 'text-slate-400 hover:text-slate-700'
+                }`}
               title="Vista de 3 columnas"
             >
               <Grid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setColumns(4)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                columns === 4 ? 'bg-rose-50 text-[#E11D48]' : 'text-slate-400 hover:text-slate-700'
-              }`}
+              className={`p-1.5 rounded-lg transition-colors ${columns === 4 ? 'bg-rose-50 text-[#E11D48]' : 'text-slate-400 hover:text-slate-700'
+                }`}
               title="Vista de 4 columnas"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -72,7 +70,7 @@ export function ProductGrid({
       {items.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center space-y-3">
           <div className="w-14 h-14 mx-auto rounded-full bg-rose-50 flex items-center justify-center text-2xl text-[#E11D48]">
-            🌸
+            <Sparkles className="w-6 h-6 text-[#E11D48]" />
           </div>
           <h3 className="font-bold text-slate-800 text-base">No encontramos arreglos con estos filtros</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">

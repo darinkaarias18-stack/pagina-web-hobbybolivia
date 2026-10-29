@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProducts, createProduct } from '@/lib/db';
+import { getProducts, getAllProductsAdmin, createProduct } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const includeInactive = searchParams.get('includeInactive') === 'true';
+
+    if (includeInactive) {
+      const allProducts = await getAllProductsAdmin();
+      return NextResponse.json({
+        success: true,
+        total: allProducts.length,
+        data: allProducts
+      });
+    }
+
     const q = searchParams.get('q') || undefined;
     const category = searchParams.get('category') || undefined;
     const scale = searchParams.get('scale') || undefined;
@@ -70,11 +81,12 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in POST /api/products:", error);
+    const isSizeError = error?.message?.includes('1 MB');
     return NextResponse.json(
-      { success: false, error: "Error al registrar el producto en el catálogo" },
-      { status: 500 }
+      { success: false, error: error?.message || "Error al registrar el producto en el catálogo" },
+      { status: isSizeError ? 400 : 500 }
     );
   }
 }

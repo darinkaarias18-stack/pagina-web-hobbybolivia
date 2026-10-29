@@ -26,6 +26,36 @@ import type {
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
+export const MAX_CATALOG_IMAGE_BYTES = 1 * 1024 * 1024; // Límite estricto de 1 MB (1,048,576 bytes) por imagen en el catálogo
+
+/**
+ * Verifica que cualquier imagen local o base64 registrada en la base de datos no supere 1 MB.
+ */
+export function assertCatalogImageUnder1MB(imageUrl?: string | null): void {
+  if (!imageUrl) return;
+  const trimmed = imageUrl.trim();
+
+  // 1. Si es data URI (base64), calcular bytes reales
+  if (trimmed.startsWith('data:image/')) {
+    const base64Part = trimmed.split(',')[1] || '';
+    const byteLength = Buffer.byteLength(base64Part, 'base64');
+    if (byteLength > MAX_CATALOG_IMAGE_BYTES) {
+      throw new Error(`La imagen excede el tamaño máximo permitido en la base de datos (1 MB). Tamaño detectado: ${(byteLength / (1024 * 1024)).toFixed(2)} MB.`);
+    }
+    return;
+  }
+
+  // 2. Si es un archivo local subido a /uploads/..., verificar peso en disco
+  if (trimmed.startsWith('/uploads/')) {
+    const localPath = path.join(process.cwd(), 'public', trimmed.replace(/^\//, ''));
+    if (fs.existsSync(localPath)) {
+      const stats = fs.statSync(localPath);
+      if (stats.size > MAX_CATALOG_IMAGE_BYTES) {
+        throw new Error(`La imagen subida supera el límite máximo de 1 MB permitido en la base de datos (${(stats.size / (1024 * 1024)).toFixed(2)} MB).`);
+      }
+    }
+  }
+}
 
 export const DEFAULT_SUPERADMIN: User = {
   id: 1,
@@ -258,6 +288,7 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
         stock INT NOT NULL DEFAULT 0,
         badge VARCHAR(100) NULL,
         image_url VARCHAR(500) NOT NULL,
+        image_size_bytes INT UNSIGNED NOT NULL DEFAULT 0,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         brand VARCHAR(100) DEFAULT 'Hobby Bolivia',
         description TEXT NULL,
@@ -265,9 +296,17 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_products_category (category_id),
         INDEX idx_products_sku (sku),
-        INDEX idx_products_active (is_active)
+        INDEX idx_products_active (is_active),
+        CONSTRAINT chk_products_image_max_1mb CHECK (image_size_bytes <= 1048576)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    try {
+      await conn.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_size_bytes INT UNSIGNED NOT NULL DEFAULT 0 AFTER image_url`);
+      await conn.query(`ALTER TABLE products ADD CONSTRAINT chk_products_image_max_1mb CHECK (image_size_bytes <= 1048576)`);
+    } catch {
+      // Ignorar si ya existe la columna o la restricción CHECK en MySQL
+    }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS policies (
@@ -282,12 +321,30 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
     await conn.query(`
       CREATE TABLE IF NOT EXISTS admin_users (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL DEFAULT 'Administrador Hobby Bolivia',
         username VARCHAR(100) NOT NULL UNIQUE,
         email VARCHAR(255) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         role VARCHAR(50) NOT NULL DEFAULT 'ADMIN',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    try {
+      await conn.query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS name VARCHAR(255) NOT NULL DEFAULT 'Administrador Hobby Bolivia' AFTER id`);
+      await conn.query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER role`);
+    } catch {
+      // Ignorar si la versión de MySQL no soporta IF NOT EXISTS en ALTER TABLE o ya existen
+    }
+
+    // Asegurar que la tabla admin_users en MySQL tenga siempre las cuentas administradoras base
+    await conn.query(`
+      INSERT INTO admin_users (id, name, username, email, password_hash, role, is_active)
+      VALUES (1, 'Darinka Arias', 'darinka.arias18@gmail.com', 'darinka.arias18@gmail.com', 'superadmin1234*', 'SUPERADMIN', 1),
+             (2, 'Administrador Hobby Bolivia', 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN', 1)
+      ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), role=VALUES(role);
     `);
 
     await conn.query(`
@@ -915,6 +972,9 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
   const slug = data.slug || (data.name || `producto-${newId}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   const imageUrl = data.image_url || (data.images && data.images[0]) || data.imageUrl || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
 
+  // Validar que la imagen no supere 1 MB en la base de datos
+  assertCatalogImageUnder1MB(imageUrl);
+
   const newProduct: Product = {
     id: newId,
     sku,
@@ -996,6 +1056,10 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
   if (index === -1) return null;
 
   const current = store.items[index];
+  const candidateImage = data.image_url || data.imageUrl || (data.images && data.images[0]);
+  if (candidateImage) {
+    assertCatalogImageUnder1MB(candidateImage);
+  }
   const updated: Product = {
     ...current,
     ...data,
@@ -1359,23 +1423,28 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
 // ============================================================================
 
 export async function getUserByUsername(username: string): Promise<User | null> {
+  if (isMysqlConfigured() && !hasAutoSynced) {
+    await ensureMysqlSynced();
+  }
+
+  const clean = username.trim().toLowerCase();
   const pool = getMysqlPool();
   if (pool) {
     try {
       const [rows]: any = await pool.query(
-        'SELECT * FROM admin_users WHERE username = ? OR email = ? LIMIT 1',
-        [username.trim().toLowerCase(), username.trim().toLowerCase()]
+        'SELECT * FROM admin_users WHERE LOWER(username) = ? OR LOWER(email) = ? LIMIT 1',
+        [clean, clean]
       );
       if (rows && rows.length > 0) {
         const r = rows[0];
         return {
           id: Number(r.id),
           username: r.username,
-          name: r.username === 'superadmin' ? 'Super Administrador' : 'Administrador Hobby Bolivia',
+          name: r.name || (r.username === 'darinka.arias18@gmail.com' ? 'Darinka Arias' : 'Administrador Hobby Bolivia'),
           email: r.email,
           password: r.password_hash,
-          role: r.role as 'SUPERADMIN' | 'ADMIN',
-          isActive: true
+          role: (r.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as 'SUPERADMIN' | 'ADMIN',
+          isActive: r.is_active !== undefined ? Boolean(r.is_active) : true
         };
       }
     } catch (e) {
@@ -1384,16 +1453,17 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   }
 
   const store = getLocalStore();
-  const clean = username.trim().toLowerCase();
   const user = store.users?.find(u =>
     u.username?.toLowerCase() === clean ||
-    u.email?.toLowerCase() === clean ||
-    (clean === 'darinka.arias18' && (u.username?.toLowerCase() === 'darinka.arias18@gmail.com' || u.email?.toLowerCase() === 'darinka.arias18@gmail.com'))
+    u.email?.toLowerCase() === clean
   );
   return user || null;
 }
 
 export async function getAllUsers(): Promise<User[]> {
+  if (isMysqlConfigured() && !hasAutoSynced) {
+    await ensureMysqlSynced();
+  }
   const pool = getMysqlPool();
   if (pool) {
     try {
@@ -1423,6 +1493,30 @@ export async function getAllUsers(): Promise<User[]> {
 }
 
 export async function getUserById(id: number): Promise<User | null> {
+  if (isMysqlConfigured() && !hasAutoSynced) {
+    await ensureMysqlSynced();
+  }
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM admin_users WHERE id = ? LIMIT 1', [id]);
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        return {
+          id: Number(r.id),
+          name: r.name || r.username,
+          username: r.username,
+          email: r.email,
+          password: r.password_hash,
+          role: (r.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as UserRole,
+          isActive: r.is_active !== undefined ? Boolean(r.is_active) : true,
+          createdAt: r.created_at || new Date().toISOString()
+        };
+      }
+    } catch (e) {
+      console.warn('[MySQL getUserById Warning]:', e);
+    }
+  }
   const users = await getAllUsers();
   return users.find(u => u.id === id) || null;
 }
@@ -1451,10 +1545,10 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
   if (pool) {
     try {
       await pool.query(
-        `INSERT INTO admin_users (id, username, email, password_hash, role)
-         VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE email=VALUES(email), role=VALUES(role)`,
-        [newUser.id, newUser.username, newUser.email, newUser.password, newUser.role]
+        `INSERT INTO admin_users (id, name, username, email, password_hash, role, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), password_hash=VALUES(password_hash), role=VALUES(role), is_active=VALUES(is_active)`,
+        [newUser.id, newUser.name, newUser.username, newUser.email, newUser.password, newUser.role, newUser.isActive ? 1 : 0]
       );
     } catch (e) {
       console.warn('[MySQL createUserRecord Warning]:', e);
@@ -1494,8 +1588,8 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
   if (pool) {
     try {
       await pool.query(
-        `UPDATE admin_users SET username = ?, email = ?, password_hash = ?, role = ? WHERE id = ?`,
-        [updated.username, updated.email, updated.password, updated.role, id]
+        `UPDATE admin_users SET name = ?, username = ?, email = ?, password_hash = ?, role = ?, is_active = ? WHERE id = ?`,
+        [updated.name, updated.username, updated.email, updated.password, updated.role, updated.isActive ? 1 : 0, id]
       );
     } catch (e) {
       console.warn('[MySQL updateUserRecord Warning]:', e);

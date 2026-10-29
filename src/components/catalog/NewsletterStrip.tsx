@@ -61,7 +61,7 @@ export function NewsletterStrip() {
                   <span>¡Suscrito!</span>
                 </>
               ) : (
-                <span>Suscribirme ✦</span>
+                <span>Suscribirme</span>
               )}
             </button>
           </form>
