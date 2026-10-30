@@ -85,8 +85,9 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: updated });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in PUT /api/quotes:", error);
-    return NextResponse.json({ success: false, error: "Failed to update order status" }, { status: 500 });
+    const message = error?.message || "Error al actualizar el estado del pedido";
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }

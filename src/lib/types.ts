@@ -2,7 +2,7 @@ export type ItemType = "PRODUCT" | "SERVICE";
 export type Availability = "IN_STOCK" | "OUT_OF_STOCK" | "ON_QUOTATION";
 export type ActionType = "ADD_TO_CART" | "SELECT_OPTIONS" | "QUOTE_ONLY";
 export type BannerPlacement = "HERO" | "CATEGORY_PROMO" | "SIDEBAR";
-export type OrderStatus = "PENDING" | "IN_PREPARATION" | "DELIVERED" | "CANCELLED";
+export type OrderStatus = "PENDING" | "IN_PREPARATION" | "DELIVERED" | "CANCELLED" | "CONFIRMADO" | "PAGADO" | "DESPACHADO" | "CANCELADO";
 export type ClaimType = "RECLAMO" | "QUEJA";
 export type ClaimStatus = "PENDIENTE" | "EN_PROCESO" | "RESUELTO";
 export type UserRole = "SUPERADMIN" | "ADMIN";
@@ -159,6 +159,7 @@ export interface QuoteOrder {
   items: CartItem[];
   total: number;
   status: OrderStatus;
+  stockDeducted?: boolean;
   order?: any;
   whatsappUrl?: string;
   createdAt?: string | Date;

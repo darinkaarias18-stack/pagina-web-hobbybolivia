@@ -79,16 +79,22 @@ export default function AdminQuotesPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setOrders((prev) =>
-          prev.map((o) => (o.orderCode === orderCode ? { ...o, status: newStatus } : o))
+          prev.map((o) => (o.orderCode === orderCode ? { ...o, ...(data.data || { status: newStatus }) } : o))
         );
         const statusLabel =
           newStatus === 'DELIVERED'
             ? 'ENTREGADO'
-            : newStatus === 'IN_PREPARATION'
-              ? 'EN PREPARACIÓN'
-              : newStatus === 'CANCELLED'
-                ? 'CANCELADO'
-                : 'PENDIENTE';
+            : newStatus === 'DESPACHADO'
+              ? 'DESPACHADO'
+              : newStatus === 'PAGADO'
+                ? 'PAGADO'
+                : newStatus === 'CONFIRMADO'
+                  ? 'CONFIRMADO'
+                  : newStatus === 'IN_PREPARATION'
+                    ? 'EN PREPARACIÓN'
+                    : newStatus === 'CANCELLED' || newStatus === 'CANCELADO'
+                      ? 'CANCELADO'
+                      : 'PENDIENTE';
         showToast(`Pedido ${orderCode} actualizado a ${statusLabel}`);
       } else {
         showToast(data.error || 'No se pudo actualizar el estado', 'error');
@@ -121,11 +127,11 @@ export default function AdminQuotesPage() {
   // Metrics
   const totalOrdersCount = orders.length;
   const activeOrdersCount = orders.filter(
-    (o) => o.status === 'PENDING' || o.status === 'IN_PREPARATION'
+    (o) => o.status === 'PENDING' || o.status === 'IN_PREPARATION' || o.status === 'CONFIRMADO' || o.status === 'PAGADO'
   ).length;
-  const deliveredOrdersCount = orders.filter((o) => o.status === 'DELIVERED').length;
+  const deliveredOrdersCount = orders.filter((o) => o.status === 'DELIVERED' || o.status === 'DESPACHADO').length;
   const totalQuotedAmount = orders
-    .filter((o) => o.status !== 'CANCELLED')
+    .filter((o) => o.status !== 'CANCELLED' && o.status !== 'CANCELADO')
     .reduce((acc, o) => acc + (Number(o.total) || 0), 0);
 
   const formatBs = (amount: number) =>
@@ -331,19 +337,23 @@ export default function AdminQuotesPage() {
                       onChange={(e) =>
                         handleUpdateStatus(ord.orderCode, e.target.value as OrderStatus)
                       }
-                      className={`text-xs font-black uppercase rounded-xl px-3.5 py-2 border cursor-pointer outline-none transition-colors ${ord.status === 'DELIVERED'
-                        ? 'bg-[#3E7B44]/15 text-[#1E4D2B] border-[#3E7B44]/40'
-                        : ord.status === 'IN_PREPARATION'
-                          ? 'bg-[#D4A359]/20 text-[#8A6220] border-[#D4A359]/50'
-                          : ord.status === 'CANCELLED'
-                            ? 'bg-red-50 text-red-700 border-red-200'
-                            : 'bg-amber-50 text-amber-900 border-amber-300'
+                      className={`text-xs font-black uppercase rounded-xl px-3.5 py-2 border cursor-pointer outline-none transition-colors ${
+                        ord.status === 'DELIVERED' || ord.status === 'DESPACHADO'
+                          ? 'bg-[#3E7B44]/15 text-[#1E4D2B] border-[#3E7B44]/40'
+                          : ord.status === 'IN_PREPARATION' || ord.status === 'CONFIRMADO' || ord.status === 'PAGADO'
+                            ? 'bg-[#D4A359]/20 text-[#8A6220] border-[#D4A359]/50'
+                            : ord.status === 'CANCELLED' || ord.status === 'CANCELADO'
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : 'bg-amber-50 text-amber-900 border-amber-300'
                         }`}
                     >
                       <option value="PENDING">PENDIENTE</option>
+                      <option value="CONFIRMADO">CONFIRMADO</option>
+                      <option value="PAGADO">PAGADO</option>
+                      <option value="DESPACHADO">DESPACHADO</option>
                       <option value="IN_PREPARATION">EN PREPARACIÓN</option>
                       <option value="DELIVERED">ENTREGADO</option>
-                      <option value="CANCELLED">CANCELADO</option>
+                      <option value="CANCELADO">CANCELADO</option>
                     </select>
 
                     {/* Print Order Dispatch Note Button */}

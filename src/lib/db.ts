@@ -357,10 +357,17 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
         items_json LONGTEXT NOT NULL,
         total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+        stock_deducted TINYINT(1) NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    try {
+      await conn.query(`ALTER TABLE quote_orders ADD COLUMN IF NOT EXISTS stock_deducted TINYINT(1) NOT NULL DEFAULT 0`);
+    } catch {
+      // Ignorar si la columna ya existe o no soporta IF NOT EXISTS
+    }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS system_settings (
@@ -1359,6 +1366,7 @@ export async function getQuotes(): Promise<QuoteOrder[]> {
           items: JSON.parse(r.items_json || '[]'),
           total: Number(r.total),
           status: r.status as OrderStatus,
+          stockDeducted: Boolean(r.stock_deducted),
           createdAt: new Date(r.created_at).toISOString()
         }));
       }
@@ -1650,24 +1658,195 @@ export async function saveCatalogItem(data: Partial<Product>): Promise<Product> 
 export const getQuoteOrders = getQuotes;
 export async function updateQuoteOrderStatus(idOrCode: number | string, status: OrderStatus): Promise<QuoteOrder | null> {
   const store = getLocalStore();
-  const index = store.quotes.findIndex(
-    q => q.orderCode === String(idOrCode) || (typeof idOrCode === 'number' && q.id === idOrCode) || q.id === Number(idOrCode)
+  const pool = getMysqlPool();
+
+  const codeStr = String(idOrCode).trim();
+  const numericId = !isNaN(Number(idOrCode)) ? Number(idOrCode) : Number(codeStr.replace(/[^0-9]/g, ''));
+
+  let orderIndex = store.quotes.findIndex(
+    q => q.orderCode === codeStr ||
+         (typeof idOrCode === 'number' && q.id === idOrCode) ||
+         q.id === Number(idOrCode) ||
+         q.orderCode?.toLowerCase() === codeStr.toLowerCase() ||
+         (numericId > 0 && q.id === numericId)
   );
-  if (index === -1) return null;
-  store.quotes[index].status = status;
-  store.quotes[index].updatedAt = new Date().toISOString();
+
+  let targetOrder: QuoteOrder | null = orderIndex !== -1 ? store.quotes[orderIndex] : null;
+
+  // Si no está en store local pero MySQL está conectado, buscar en MySQL
+  if (!targetOrder && pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM quote_orders WHERE id = ?', [numericId]);
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        targetOrder = {
+          id: Number(r.id),
+          orderCode: `HB-${r.id.toString().padStart(4, '0')}`,
+          customerName: r.customer_name,
+          customerPhone: r.customer_phone,
+          deliveryCity: r.customer_city,
+          customerNotes: r.customer_notes,
+          items: JSON.parse(r.items_json || '[]'),
+          total: Number(r.total),
+          status: r.status as OrderStatus,
+          stockDeducted: Boolean(r.stock_deducted),
+          createdAt: new Date(r.created_at).toISOString()
+        };
+        store.quotes.unshift(targetOrder);
+        orderIndex = 0;
+      }
+    } catch (e) {
+      console.warn('[MySQL fetchQuoteOrder Warning]:', e);
+    }
+  }
+
+  if (!targetOrder) return null;
+
+  const DEDUCTION_STATUSES: OrderStatus[] = [
+    'CONFIRMADO',
+    'PAGADO',
+    'DESPACHADO',
+    'IN_PREPARATION',
+    'DELIVERED'
+  ];
+
+  const REVERSAL_STATUSES: OrderStatus[] = [
+    'CANCELADO',
+    'CANCELLED'
+  ];
+
+  const isTargetDeduction = DEDUCTION_STATUSES.includes(status);
+  const isTargetReversal = REVERSAL_STATUSES.includes(status);
+
+  // Considerar deducido si flag es true o si era una orden preexistente ya en un estado de despacho
+  const wasDeducted = targetOrder.stockDeducted === true || (targetOrder.stockDeducted === undefined && DEDUCTION_STATUSES.includes(targetOrder.status));
+
+  // Consolidar cantidades por producto en la orden
+  const items = Array.isArray(targetOrder.items) ? targetOrder.items : [];
+  const requestedTotals: {
+    productId?: number;
+    sku?: string;
+    name: string;
+    qty: number;
+    matchedProductIndex: number;
+  }[] = [];
+
+  for (const it of items) {
+    const rawProd = it.item || (it as any);
+    const prodId = rawProd?.id ? Number(rawProd.id) : undefined;
+    const prodSku = rawProd?.sku ? String(rawProd.sku).trim() : undefined;
+    const prodName = rawProd?.name || rawProd?.title || 'Repuesto Hobby Bolivia';
+    const qty = Math.max(1, Number(it.quantity) || 1);
+
+    const pIndex = store.items.findIndex(p =>
+      (prodId !== undefined && p.id === prodId) ||
+      (prodSku && p.sku?.toLowerCase() === prodSku.toLowerCase())
+    );
+
+    const existing = requestedTotals.find(entry =>
+      (prodId !== undefined && entry.productId === prodId) ||
+      (prodSku && entry.sku?.toLowerCase() === prodSku.toLowerCase())
+    );
+
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      requestedTotals.push({
+        productId: prodId,
+        sku: prodSku,
+        name: prodName,
+        qty,
+        matchedProductIndex: pIndex
+      });
+    }
+  }
+
+  // 1. SALIDA DE STOCK (DESCUENTO)
+  if (isTargetDeduction && !wasDeducted) {
+    // 3. CONTROL DE STOCK INSUFICIENTE (Verificación previa integral)
+    for (const req of requestedTotals) {
+      let currentStock = 0;
+      let prodSku = req.sku || 'N/A';
+      let prodName = req.name;
+
+      if (req.matchedProductIndex !== -1) {
+        const prod = store.items[req.matchedProductIndex];
+        currentStock = prod.stock !== undefined ? Number(prod.stock) : (Number(prod.stockQuantity) || 0);
+        prodSku = prod.sku || prodSku;
+        prodName = prod.name || prodName;
+      }
+
+      if (currentStock < req.qty) {
+        throw new Error(
+          `Stock insuficiente para "${prodName}" (SKU: ${prodSku}). Solicitado: ${req.qty} unid., disponible en inventario: ${currentStock} unid.`
+        );
+      }
+    }
+
+    // Si todos cuentan con stock suficiente, proceder al descuento
+    for (const req of requestedTotals) {
+      if (req.matchedProductIndex !== -1) {
+        const prod = store.items[req.matchedProductIndex];
+        const oldStock = prod.stock !== undefined ? Number(prod.stock) : (Number(prod.stockQuantity) || 0);
+        const newStock = Math.max(0, oldStock - req.qty);
+        prod.stock = newStock;
+        prod.stockQuantity = newStock;
+        prod.updated_at = new Date().toISOString();
+
+        if (pool && prod.id) {
+          try {
+            await pool.query('UPDATE products SET stock = ? WHERE id = ?', [newStock, prod.id]);
+          } catch (e) {
+            console.warn('[MySQL deduct stock Warning]:', e);
+          }
+        }
+      }
+    }
+    targetOrder.stockDeducted = true;
+  }
+  // 2. REVERSIÓN DE STOCK (CANCELACIONES O RETORNO A PENDIENTE)
+  else if ((isTargetReversal || status === 'PENDING') && wasDeducted) {
+    for (const req of requestedTotals) {
+      if (req.matchedProductIndex !== -1) {
+        const prod = store.items[req.matchedProductIndex];
+        const oldStock = prod.stock !== undefined ? Number(prod.stock) : (Number(prod.stockQuantity) || 0);
+        const newStock = oldStock + req.qty;
+        prod.stock = newStock;
+        prod.stockQuantity = newStock;
+        prod.updated_at = new Date().toISOString();
+
+        if (pool && prod.id) {
+          try {
+            await pool.query('UPDATE products SET stock = ? WHERE id = ?', [newStock, prod.id]);
+          } catch (e) {
+            console.warn('[MySQL revert stock Warning]:', e);
+          }
+        }
+      }
+    }
+    targetOrder.stockDeducted = false;
+  }
+
+  targetOrder.status = status;
+  targetOrder.updatedAt = new Date().toISOString();
+
+  if (orderIndex !== -1) {
+    store.quotes[orderIndex] = targetOrder;
+  }
   saveLocalStore(store);
 
-  const pool = getMysqlPool();
-  if (pool && store.quotes[index].id) {
+  if (pool && targetOrder.id) {
     try {
-      await pool.query('UPDATE quote_orders SET status = ? WHERE id = ?', [status, store.quotes[index].id]);
+      await pool.query(
+        'UPDATE quote_orders SET status = ?, stock_deducted = ? WHERE id = ?',
+        [status, targetOrder.stockDeducted ? 1 : 0, targetOrder.id]
+      );
     } catch (e) {
       console.warn('[MySQL updateQuoteOrderStatus Warning]:', e);
     }
   }
 
-  return store.quotes[index];
+  return targetOrder;
 }
 
 export async function getClaimRecords(): Promise<ClaimRecord[]> {

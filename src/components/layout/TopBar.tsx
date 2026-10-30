@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { MapPin, ShieldAlert, HelpCircle, Lock } from 'lucide-react';
+import { MapPin, ShieldAlert, HelpCircle } from 'lucide-react';
 import type { SiteConfig } from '@/lib/types';
 
 interface TopBarProps {
@@ -77,14 +76,6 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
             <HelpCircle className="w-3.5 h-3.5 text-[#A89F91]" />
             <span>Ayuda</span>
           </a>
-
-          <Link
-            href="/login?reauth=1"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] font-bold transition-all border border-[#D4A359]/40 shadow-sm"
-          >
-            <Lock className="w-3 h-3 text-[#D4A359]" />
-            <span>Panel Admin</span>
-          </Link>
         </div>
 
       </div>

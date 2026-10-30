@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   ShoppingBag,
   Settings,
-  ExternalLink,
   Menu,
   X,
   LogOut,
@@ -298,23 +297,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               );
             })}
           </nav>
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="pt-4 border-t border-[#2D2622]">
-          <Link
-            href="/"
-            target="_blank"
-            className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-[#A89F91] hover:bg-[#1E1916] hover:text-[#FAF8F5] transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
-              <span>Ver Tienda Pública</span>
-            </span>
-            <span className="text-[10px] bg-[#211E1C] text-[#D4A359] px-2 py-0.5 rounded-full font-mono font-bold">
-              Live
-            </span>
-          </Link>
         </div>
 
       </aside>

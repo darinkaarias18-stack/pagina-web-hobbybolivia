@@ -195,13 +195,6 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
                 <span>Comprar Ahora</span>
                 <ArrowRight className="w-4 h-4" />
               </a>
-
-              <Link
-                href="/login?reauth=1"
-                className="text-xs font-bold text-[#D4A359] hover:underline py-1 text-center"
-              >
-                Acceder a Panel Administrativo →
-              </Link>
             </div>
           </div>
         )}
