@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   TrendingUp,
+  TrendingDown,
   DollarSign,
   Package,
   ShoppingBag,
@@ -18,6 +19,7 @@ import {
   Flame,
   ArrowUpRight,
   BarChart3,
+  BarChart2,
   CalendarDays,
   Coins,
   Search,
@@ -27,8 +29,11 @@ import {
   MapPin,
   Phone,
   AlertCircle,
+  AlertTriangle,
   CreditCard,
-  ArrowRight
+  ArrowRight,
+  Boxes,
+  SlidersHorizontal
 } from 'lucide-react';
 import type { QuoteOrder, Product, OrderStatus } from '@/lib/types';
 
@@ -41,7 +46,18 @@ interface AdminMetricsModuleProps {
   isRefreshingRate?: boolean;
 }
 
-type PeriodType = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
+type PeriodType = 'OVERVIEW' | 'WEEK' | 'MONTH' | 'DAY' | 'YEAR';
+type ChartViewMode = 'CHART' | 'LIST';
+type ProductTab = 'BEST_SELLERS' | 'STAGNANT_STOCK';
+
+interface PeriodicItem {
+  label: string;
+  shortLabel: string;
+  subLabel?: string;
+  orderCount: number;
+  totalBob: number;
+  rawKey: string;
+}
 
 export function AdminMetricsModule({
   orders,
@@ -51,7 +67,9 @@ export function AdminMetricsModule({
   onRefreshRate,
   isRefreshingRate
 }: AdminMetricsModuleProps) {
-  const [periodTab, setPeriodTab] = useState<PeriodType>('DAY');
+  const [periodTab, setPeriodTab] = useState<PeriodType>('OVERVIEW');
+  const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('CHART');
+  const [productTab, setProductTab] = useState<ProductTab>('BEST_SELLERS');
   const [customerSearch, setCustomerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
 
@@ -289,70 +307,137 @@ export function AdminMetricsModule({
     );
   }, [topCustomers, customerSearch]);
 
-  // 4. REPORTE DE PRODUCTOS MÁS VENDIDOS
-  const topProducts = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        id?: number;
-        name: string;
-        sku: string;
-        imageUrl: string;
-        brand: string;
-        categoryName: string;
-        totalUnitsSold: number;
-        totalRevenueBob: number;
-        currentStock: number;
-      }
-    >();
+  // 4.1 Mapeo de ventas acumuladas por producto
+  const productSalesMap = useMemo(() => {
+    const map = new Map<string, { totalUnitsSold: number; totalRevenueBob: number; orderCount: number }>();
 
     for (const ord of validOrders) {
       for (const it of ord.items || []) {
         const prod = it.item || (it as any);
-        const prodId = prod?.id ? Number(prod.id) : undefined;
-        const prodSku = prod?.sku ? String(prod.sku).trim() : `ITEM-${prodId || '0'}`;
-        const prodName = prod?.name || prod?.title || 'Repuesto Hobby Bolivia';
         const qty = Number(it.quantity) || 1;
         const unitPrice = Number(prod?.price) || 0;
         const lineRevenue = unitPrice * qty;
+        const prodSku = (prod?.sku ? String(prod.sku).trim() : '').toUpperCase();
+        const prodName = (prod?.name || prod?.title || '').trim().toLowerCase();
 
-        // Buscar stock actual en el catálogo vivo
-        const liveProd = products.find(
-          (p) => (prodId && p.id === prodId) || (prodSku && p.sku === prodSku)
-        );
-        const stockNow = liveProd
-          ? (liveProd.stock !== undefined ? Number(liveProd.stock) : Number(liveProd.stockQuantity) || 0)
-          : (prod?.stock !== undefined ? Number(prod.stock) : 10);
+        const key = prodSku || prodName;
+        if (!key) continue;
 
-        const key = (prodSku || prodName).toLowerCase();
         const existing = map.get(key);
-
         if (existing) {
           existing.totalUnitsSold += qty;
           existing.totalRevenueBob += lineRevenue;
+          existing.orderCount += 1;
         } else {
-          map.set(key, {
-            id: prodId,
-            name: prodName,
-            sku: prodSku,
-            imageUrl:
-              prod?.image_url ||
-              prod?.imageUrl ||
-              'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
-            brand: prod?.brand || 'Dubro',
-            categoryName: prod?.category?.name || 'Repuestos y Accesorios',
-            totalUnitsSold: qty,
-            totalRevenueBob: lineRevenue,
-            currentStock: stockNow
-          });
+          map.set(key, { totalUnitsSold: qty, totalRevenueBob: lineRevenue, orderCount: 1 });
         }
       }
     }
+    return map;
+  }, [validOrders]);
 
-    const list = Array.from(map.values());
+  // 4.2 Top Productos Más Vendidos
+  const topProducts = useMemo(() => {
+    const list: {
+      id?: number;
+      name: string;
+      sku: string;
+      imageUrl: string;
+      brand: string;
+      categoryName: string;
+      totalUnitsSold: number;
+      totalRevenueBob: number;
+      currentStock: number;
+    }[] = [];
+
+    for (const prod of products) {
+      const prodSku = (prod.sku ? String(prod.sku).trim() : '').toUpperCase();
+      const prodName = (prod.name || prod.title || '').trim().toLowerCase();
+      const sales = productSalesMap.get(prodSku) || productSalesMap.get(prodName);
+      const unitsSold = sales?.totalUnitsSold || 0;
+      const stockNow = Number(prod.stock !== undefined ? prod.stock : prod.stockQuantity) || 0;
+
+      if (unitsSold > 0) {
+        list.push({
+          id: prod.id,
+          name: prod.name || prod.title,
+          sku: prod.sku,
+          imageUrl:
+            prod.image_url ||
+            prod.imageUrl ||
+            'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
+          brand: prod.brand || 'Dubro',
+          categoryName: prod.category?.name || 'Repuestos y Accesorios',
+          totalUnitsSold: unitsSold,
+          totalRevenueBob: sales?.totalRevenueBob || 0,
+          currentStock: stockNow
+        });
+      }
+    }
+
     list.sort((a, b) => b.totalUnitsSold - a.totalUnitsSold);
     return list;
-  }, [validOrders, products]);
+  }, [products, productSalesMap]);
+
+  // 4.3 Productos Menos Vendidos que se Quedaron con Stock por Mucho Tiempo (Stock Estancado / Dead Stock)
+  const stagnantProducts = useMemo(() => {
+    const list: {
+      id?: number;
+      name: string;
+      sku: string;
+      imageUrl: string;
+      brand: string;
+      categoryName: string;
+      totalUnitsSold: number;
+      currentStock: number;
+      price: number;
+      immobilizedCapitalBob: number;
+      isZeroSales: boolean;
+    }[] = [];
+
+    for (const prod of products) {
+      const prodSku = (prod.sku ? String(prod.sku).trim() : '').toUpperCase();
+      const prodName = (prod.name || prod.title || '').trim().toLowerCase();
+      const sales = productSalesMap.get(prodSku) || productSalesMap.get(prodName);
+      const unitsSold = sales?.totalUnitsSold || 0;
+      const stockNow = Number(prod.stock !== undefined ? prod.stock : prod.stockQuantity) || 0;
+      const priceNow = Number(prod.price) || 0;
+
+      // Criterio de stock estancado: productos con stock disponible retenido en almacén (stock > 0) y ventas nulas o muy bajas (<= 2)
+      if (stockNow > 0 && unitsSold <= 2) {
+        list.push({
+          id: prod.id,
+          name: prod.name || prod.title,
+          sku: prod.sku,
+          imageUrl:
+            prod.image_url ||
+            prod.imageUrl ||
+            'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
+          brand: prod.brand || 'Dubro',
+          categoryName: prod.category?.name || 'Repuestos y Accesorios',
+          totalUnitsSold: unitsSold,
+          currentStock: stockNow,
+          price: priceNow,
+          immobilizedCapitalBob: stockNow * priceNow,
+          isZeroSales: unitsSold === 0
+        });
+      }
+    }
+
+    // Ordenar: primero los de 0 ventas (más críticos), luego por mayor capital inmovilizado
+    list.sort((a, b) => {
+      if (a.totalUnitsSold !== b.totalUnitsSold) {
+        return a.totalUnitsSold - b.totalUnitsSold;
+      }
+      return b.immobilizedCapitalBob - a.immobilizedCapitalBob;
+    });
+
+    return list;
+  }, [products, productSalesMap]);
+
+  const totalImmobilizedCapitalBob = useMemo(() => {
+    return stagnantProducts.reduce((sum, p) => sum + p.immobilizedCapitalBob, 0);
+  }, [stagnantProducts]);
 
   const filteredProductsReport = useMemo(() => {
     if (!productSearch.trim()) return topProducts;
@@ -364,6 +449,17 @@ export function AdminMetricsModule({
         p.brand.toLowerCase().includes(q)
     );
   }, [topProducts, productSearch]);
+
+  const filteredStagnantProducts = useMemo(() => {
+    if (!productSearch.trim()) return stagnantProducts;
+    const q = productSearch.toLowerCase().trim();
+    return stagnantProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q)
+    );
+  }, [stagnantProducts, productSearch]);
 
   // 5. QUE CLIENTE COMPRÓ MÁS CANTIDAD Y DE QUÉ PRODUCTO
   const largestIndividualPurchases = useMemo(() => {
@@ -414,32 +510,40 @@ export function AdminMetricsModule({
 
   // 6. VENTAS POR SEMANA, POR DÍA, POR MES Y POR AÑO
   const periodicSales = useMemo(() => {
-    const byDay = new Map<string, { label: string; orderCount: number; totalBob: number; rawKey: string }>();
-    const byWeek = new Map<string, { label: string; orderCount: number; totalBob: number; rawKey: string }>();
-    const byMonth = new Map<string, { label: string; orderCount: number; totalBob: number; rawKey: string }>();
-    const byYear = new Map<string, { label: string; orderCount: number; totalBob: number; rawKey: string }>();
+    const byDay = new Map<string, PeriodicItem>();
+    const byWeek = new Map<string, PeriodicItem>();
+    const byMonth = new Map<string, PeriodicItem>();
+    const byYear = new Map<string, PeriodicItem>();
 
     for (const ord of validOrders) {
       const d = ord.createdAt ? new Date(ord.createdAt) : new Date();
       const amount = Number(ord.total) || 0;
 
-      // 6.1 Por Día (Formato YYYY-MM-DD y DD/MM/AAAA)
+      // 6.1 Por Día
       const dayKey = d.toISOString().slice(0, 10);
       const dayLabel = d.toLocaleDateString('es-BO', {
         day: '2-digit',
         month: 'short',
         year: 'numeric'
       });
+      const shortDay = `${d.getDate()} ${d.toLocaleDateString('es-BO', { month: 'short' })}`;
+      const subDay = d.toLocaleDateString('es-BO', { weekday: 'short' });
       const dayEntry = byDay.get(dayKey);
       if (dayEntry) {
         dayEntry.orderCount += 1;
         dayEntry.totalBob += amount;
       } else {
-        byDay.set(dayKey, { label: dayLabel, orderCount: 1, totalBob: amount, rawKey: dayKey });
+        byDay.set(dayKey, {
+          label: dayLabel,
+          shortLabel: shortDay,
+          subLabel: subDay,
+          orderCount: 1,
+          totalBob: amount,
+          rawKey: dayKey
+        });
       }
 
-      // 6.2 Por Semana (Considerando semana exacta de Lunes a Domingo)
-      // d.getDay(): 0 (Domingo) .. 6 (Sábado). Si es Domingo (0), restamos 6 días; si no, (getDay() - 1)
+      // 6.2 Por Semana (Lunes a Domingo)
       const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay(); // 1 (Lunes) .. 7 (Domingo)
       const monday = new Date(d);
       monday.setDate(d.getDate() - (dayOfWeek - 1));
@@ -455,18 +559,24 @@ export function AdminMetricsModule({
       const sunMonth = String(sunday.getMonth() + 1).padStart(2, '0');
       const sunYear = sunday.getFullYear();
 
-      // Clave para ordenamiento cronológico descendente (YYYY-MM-DD del Lunes)
       const weekKey = `${monday.getFullYear()}-${monMonth}-${monDay}`;
-      
-      // Formato solicitado: semana desde día lunes hasta día domingo
       const weekLabel = `Semana: Lunes ${monDay}/${monMonth} al Domingo ${sunDay}/${sunMonth}/${sunYear}`;
+      const shortWeek = `Sem. ${monDay}/${monMonth}`;
+      const subWeek = `al ${sunDay}/${sunMonth}`;
 
       const weekEntry = byWeek.get(weekKey);
       if (weekEntry) {
         weekEntry.orderCount += 1;
         weekEntry.totalBob += amount;
       } else {
-        byWeek.set(weekKey, { label: weekLabel, orderCount: 1, totalBob: amount, rawKey: weekKey });
+        byWeek.set(weekKey, {
+          label: weekLabel,
+          shortLabel: shortWeek,
+          subLabel: subWeek,
+          orderCount: 1,
+          totalBob: amount,
+          rawKey: weekKey
+        });
       }
 
       // 6.3 Por Mes (Ej: "Octubre 2026")
@@ -477,6 +587,9 @@ export function AdminMetricsModule({
       });
       const formattedMonthLabel =
         monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+      const shortMonth = formattedMonthLabel.split(' ')[0];
+      const subMonth = formattedMonthLabel.split(' ')[1] || '';
+
       const monthEntry = byMonth.get(monthKey);
       if (monthEntry) {
         monthEntry.orderCount += 1;
@@ -484,6 +597,8 @@ export function AdminMetricsModule({
       } else {
         byMonth.set(monthKey, {
           label: formattedMonthLabel,
+          shortLabel: shortMonth,
+          subLabel: subMonth,
           orderCount: 1,
           totalBob: amount,
           rawKey: monthKey
@@ -498,11 +613,18 @@ export function AdminMetricsModule({
         yearEntry.orderCount += 1;
         yearEntry.totalBob += amount;
       } else {
-        byYear.set(yearKey, { label: yearLabel, orderCount: 1, totalBob: amount, rawKey: yearKey });
+        byYear.set(yearKey, {
+          label: yearLabel,
+          shortLabel: yearKey,
+          subLabel: 'Gestión',
+          orderCount: 1,
+          totalBob: amount,
+          rawKey: yearKey
+        });
       }
     }
 
-    const sortDesc = (map: Map<string, { label: string; orderCount: number; totalBob: number; rawKey: string }>) => {
+    const sortDesc = (map: Map<string, PeriodicItem>) => {
       const arr = Array.from(map.values());
       arr.sort((a, b) => b.rawKey.localeCompare(a.rawKey));
       return arr;
@@ -516,21 +638,73 @@ export function AdminMetricsModule({
     };
   }, [validOrders]);
 
+  // Ítems de la Comparativa General de KPIs (Ventas del Día, Esta Semana, Mes Actual, Año Actual)
+  const overviewItems: PeriodicItem[] = useMemo(() => [
+    {
+      label: 'Ventas del Día (Hoy)',
+      shortLabel: 'Hoy',
+      subLabel: 'Ventas del Día',
+      orderCount: performanceMetrics.todayCount,
+      totalBob: performanceMetrics.todayTotalBob,
+      rawKey: '1-today'
+    },
+    {
+      label: 'Esta Semana (Lun - Dom)',
+      shortLabel: 'Esta Semana',
+      subLabel: 'Lun - Dom',
+      orderCount: performanceMetrics.thisWeekCount,
+      totalBob: performanceMetrics.thisWeekTotalBob,
+      rawKey: '2-week'
+    },
+    {
+      label: `Mes Actual (${performanceMetrics.monthName})`,
+      shortLabel: performanceMetrics.monthName,
+      subLabel: 'Mes en Curso',
+      orderCount: performanceMetrics.thisMonthCount,
+      totalBob: performanceMetrics.thisMonthTotalBob,
+      rawKey: '3-month'
+    },
+    {
+      label: `Año ${performanceMetrics.currentYear}`,
+      shortLabel: `Año ${performanceMetrics.currentYear}`,
+      subLabel: 'Acumulado',
+      orderCount: performanceMetrics.thisYearCount,
+      totalBob: performanceMetrics.thisYearTotalBob,
+      rawKey: '4-year'
+    }
+  ], [performanceMetrics]);
+
   // Selección de período activo para visualización
   const activePeriodData = useMemo(() => {
     switch (periodTab) {
-      case 'DAY':
-        return { title: 'Ventas por Día', items: periodicSales.byDay, unit: 'Día' };
+      case 'OVERVIEW':
+        return { title: 'Comparativa de Rendimiento Comercial', items: overviewItems, unit: 'Período' };
       case 'WEEK':
-        return { title: 'Ventas por Semana', items: periodicSales.byWeek, unit: 'Semana' };
+        return { title: 'Ventas por Semana (Lunes a Domingo)', items: periodicSales.byWeek, unit: 'Semana' };
       case 'MONTH':
         return { title: 'Ventas por Mes', items: periodicSales.byMonth, unit: 'Mes' };
+      case 'DAY':
+        return { title: 'Ventas por Día', items: periodicSales.byDay, unit: 'Día' };
       case 'YEAR':
         return { title: 'Ventas por Año', items: periodicSales.byYear, unit: 'Año' };
     }
-  }, [periodTab, periodicSales]);
+  }, [periodTab, overviewItems, periodicSales]);
 
-  // Valor máximo para barras proporcionales
+  // Ítems para el gráfico de barras verticales (ordenados cronológicamente de izquierda a derecha)
+  const chartItems = useMemo(() => {
+    if (periodTab === 'OVERVIEW') {
+      return overviewItems;
+    }
+    return [...activePeriodData.items].reverse();
+  }, [periodTab, overviewItems, activePeriodData]);
+
+  // Altura máxima con 25% de margen superior para los valores flotantes
+  const maxChartBob = useMemo(() => {
+    const max = Math.max(...chartItems.map((i) => i.totalBob), 0);
+    return max > 0 ? max * 1.25 : 1000;
+  }, [chartItems]);
+
+  // Valor máximo para barras proporcionales en vista de lista
   const maxPeriodTotal = useMemo(() => {
     return Math.max(...activePeriodData.items.map((i) => i.totalBob), 1);
   }, [activePeriodData]);
@@ -658,6 +832,266 @@ export function AdminMetricsModule({
             </div>
           </div>
         </div>
+
+        {/* ================= GRÁFICO DE BARRAS VERTICALES DE RENDIMIENTO ================= */}
+        <div className="bg-[#FAF8F5] rounded-3xl p-5 sm:p-6 border border-[#E2DCD3] shadow-sm space-y-5">
+          {/* Cabecera del Gráfico con Controles */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <BarChart3 className="w-4 h-4 text-[#D4A359]" />
+                <span className="text-xs font-black uppercase tracking-wider text-[#D4A359]">
+                  Gráfico de Barras Verticales · Tendencia de Ingresos
+                </span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-[#1A1817]">
+                {activePeriodData.title}
+              </h3>
+              <p className="text-xs text-[#8C827A] mt-0.5">
+                Volumen de facturación expresado en Bolivianos (Bs.) y cantidad de pedidos por período.
+              </p>
+            </div>
+
+            {/* Controles: Tabs de Período + Selector Gráfico/Lista */}
+            <div className="flex items-center flex-wrap gap-2.5">
+              {/* Tabs de Período */}
+              <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setPeriodTab('OVERVIEW')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    periodTab === 'OVERVIEW'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                >
+                  Comparativa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodTab('WEEK')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    periodTab === 'WEEK'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                >
+                  Por Semana
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodTab('MONTH')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    periodTab === 'MONTH'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                >
+                  Por Mes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodTab('DAY')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    periodTab === 'DAY'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                >
+                  Por Día
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodTab('YEAR')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    periodTab === 'YEAR'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                >
+                  Por Año
+                </button>
+              </div>
+
+              {/* View Switcher: Barras vs Lista */}
+              <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('CHART')}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                    chartViewMode === 'CHART'
+                      ? 'bg-[#D4A359] text-[#161311] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                  title="Ver Gráfico de Barras Verticales"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Barras</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('LIST')}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                    chartViewMode === 'LIST'
+                      ? 'bg-[#D4A359] text-[#161311] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                  title="Ver Lista Detallada"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Lista</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* CUERPO DEL GRÁFICO / LISTA */}
+          {chartItems.length === 0 ? (
+            <div className="p-12 text-center text-xs text-[#8C827A] bg-white rounded-2xl border border-[#E2DCD3]">
+              No se registran ventas para este período seleccionado.
+            </div>
+          ) : chartViewMode === 'CHART' ? (
+            /* ================= GRÁFICO DE BARRAS VERTICALES ================= */
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#E2DCD3] shadow-2xs">
+              <div className="relative pt-6 pb-2">
+                {/* Líneas Guía del Eje Y */}
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-12 pt-6 pl-14 sm:pl-18">
+                  <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
+                    <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
+                      {formatBs(maxChartBob)}
+                    </span>
+                  </div>
+                  <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
+                    <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
+                      {formatBs(maxChartBob * 0.75)}
+                    </span>
+                  </div>
+                  <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
+                    <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
+                      {formatBs(maxChartBob * 0.5)}
+                    </span>
+                  </div>
+                  <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
+                    <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
+                      {formatBs(maxChartBob * 0.25)}
+                    </span>
+                  </div>
+                  <div className="border-b-2 border-[#1A1817] w-full relative">
+                    <span className="text-[10px] font-mono text-[#1A1817] font-bold -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
+                      Bs. 0
+                    </span>
+                  </div>
+                </div>
+
+                {/* Columnas de Barras Verticales */}
+                <div className="pl-14 sm:pl-18 overflow-x-auto pb-2 scrollbar-thin">
+                  <div className="flex items-end justify-around gap-3 sm:gap-6 min-w-[520px] h-72 sm:h-80 pt-6 pb-12">
+                    {chartItems.map((item, idx) => {
+                      const barHeightPercent = maxChartBob > 0 ? Math.round((item.totalBob / maxChartBob) * 100) : 0;
+                      const isHighest = item.totalBob > 0 && item.totalBob === Math.max(...chartItems.map((c) => c.totalBob));
+
+                      return (
+                        <div
+                          key={idx}
+                          className="flex-1 flex flex-col items-center h-full justify-end group relative min-w-[70px] sm:min-w-[90px]"
+                        >
+                          {/* Floating Info on Top */}
+                          <div className="mb-2 text-center transition-transform group-hover:-translate-y-1 z-10">
+                            <span className="font-mono font-black text-xs sm:text-sm text-[#1A1817] block whitespace-nowrap">
+                              {formatBs(item.totalBob)}
+                            </span>
+                            <span className="inline-block px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2DCD3] text-[10px] font-bold text-[#5C5650] whitespace-nowrap shadow-2xs">
+                              {item.orderCount} {item.orderCount === 1 ? 'pedido' : 'pedidos'}
+                            </span>
+                          </div>
+
+                          {/* Columna Vertical de la Barra */}
+                          <div
+                            className="w-full max-w-[56px] sm:max-w-[74px] bg-[#FAF8F5] border border-[#E2DCD3] rounded-t-2xl relative overflow-hidden flex items-end justify-center shadow-2xs group-hover:border-[#D4A359] group-hover:shadow-md transition-all cursor-pointer"
+                            style={{ height: '100%' }}
+                            title={`${item.label} · ${formatBs(item.totalBob)} en ${item.orderCount} pedido(s)`}
+                          >
+                            {/* Barra Rellena con Gradiente */}
+                            <div
+                              className={`w-full rounded-t-2xl transition-all duration-700 ease-out flex flex-col justify-between items-center py-2 ${
+                                isHighest
+                                  ? 'bg-gradient-to-t from-[#B88738] via-[#D4A359] to-[#E5BE7E] shadow-md shadow-[#D4A359]/30'
+                                  : 'bg-gradient-to-t from-[#211E1C] via-[#38332E] to-[#5C5650]'
+                              }`}
+                              style={{ height: `${Math.max(barHeightPercent, item.totalBob > 0 ? 8 : 2)}%` }}
+                            >
+                              {barHeightPercent >= 22 && (
+                                <span className="text-[10px] font-mono font-black text-white drop-shadow-xs">
+                                  {Math.round((item.totalBob / (Math.max(...chartItems.map((c) => c.totalBob)) || 1)) * 100)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Etiquetas del Eje X (Abajo de la línea base) */}
+                          <div className="mt-3 text-center w-full px-1">
+                            <p className="font-black text-xs text-[#1A1817] truncate" title={item.label}>
+                              {item.shortLabel}
+                            </p>
+                            {item.subLabel && (
+                              <p className="text-[10px] text-[#8C827A] truncate font-medium mt-0.5">
+                                {item.subLabel}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ================= VISTA LISTA DETALLADA ================= */
+            <div className="space-y-3">
+              {activePeriodData.items.map((item, idx) => {
+                const percentage = Math.round((item.totalBob / maxPeriodTotal) * 100);
+                return (
+                  <div
+                    key={idx}
+                    className="bg-white p-4 rounded-2xl border border-[#E2DCD3] hover:border-[#D4A359]/60 transition-all space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-[#211E1C] text-[#D4A359] font-mono font-black text-xs flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <span className="font-black text-sm text-[#1A1817]">
+                          {item.label}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2DCD3] text-[10px] font-bold text-[#5C5650]">
+                          {item.orderCount} {item.orderCount === 1 ? 'pedido' : 'pedidos'}
+                        </span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="font-mono font-black text-sm sm:text-base text-[#1A1817] block">
+                          {formatBs(item.totalBob)}
+                        </span>
+                        <span className="font-mono text-[11px] text-[#8C827A]">
+                          {formatUsd(exchangeRate > 0 ? item.totalBob / exchangeRate : 0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="w-full h-2.5 bg-[#FAF8F5] rounded-full overflow-hidden border border-[#E2DCD3]">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#B88738] to-[#D4A359] rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(percentage, 5)}%` }}
+                        title={`${percentage}% del valor máximo`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ================= BANNER: TOTAL FACTURADO HISTÓRICO ================= */}
@@ -764,9 +1198,14 @@ export function AdminMetricsModule({
               <p className="text-3xl font-black text-[#1A1817] tracking-tight font-mono">
                 {performanceMetrics.activeProductsCount} / {performanceMetrics.totalProductsCount}
               </p>
-              <p className="text-xs text-[#8C827A] pt-1">
-                Repuestos listos para venta en tienda
-              </p>
+              <div className="flex items-center justify-between gap-1 pt-1">
+                <span className="text-xs text-[#8C827A]">Repuestos en catálogo</span>
+                {stagnantProducts.length > 0 && (
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                    ⚠️ {stagnantProducts.length} estancados
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -834,123 +1273,7 @@ export function AdminMetricsModule({
         </div>
       )}
 
-      {/* 4. VENTAS POR SEMANA, POR DÍA, POR MES Y POR AÑO */}
-      <div className="bg-[#FAF8F5] rounded-3xl p-6 sm:p-7 border border-[#E2DCD3] shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Calendar className="w-4 h-4 text-[#D4A359]" />
-              <span className="text-xs font-black uppercase tracking-wider text-[#D4A359]">
-                Desglose Temporal de Ingresos
-              </span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-black text-[#1A1817]">
-              {activePeriodData.title}
-            </h3>
-          </div>
-
-          {/* Selector de Período Interactivo */}
-          <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-xs">
-            <button
-              type="button"
-              onClick={() => setPeriodTab('DAY')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                periodTab === 'DAY'
-                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                  : 'text-[#8C827A] hover:text-[#1A1817]'
-              }`}
-            >
-              Por Día
-            </button>
-            <button
-              type="button"
-              onClick={() => setPeriodTab('WEEK')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                periodTab === 'WEEK'
-                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                  : 'text-[#8C827A] hover:text-[#1A1817]'
-              }`}
-            >
-              Por Semana
-            </button>
-            <button
-              type="button"
-              onClick={() => setPeriodTab('MONTH')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                periodTab === 'MONTH'
-                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                  : 'text-[#8C827A] hover:text-[#1A1817]'
-              }`}
-            >
-              Por Mes
-            </button>
-            <button
-              type="button"
-              onClick={() => setPeriodTab('YEAR')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                periodTab === 'YEAR'
-                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                  : 'text-[#8C827A] hover:text-[#1A1817]'
-              }`}
-            >
-              Por Año
-            </button>
-          </div>
-        </div>
-
-        {/* Visualización de Barras y Métricas de Ventas */}
-        {activePeriodData.items.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[#8C827A]">
-            No hay registros de ventas para este período.
-          </div>
-        ) : (
-          <div className="space-y-3.5">
-            {activePeriodData.items.map((item, idx) => {
-              const percentage = Math.round((item.totalBob / maxPeriodTotal) * 100);
-              return (
-                <div
-                  key={idx}
-                  className="bg-white p-4 rounded-2xl border border-[#E2DCD3] hover:border-[#D4A359]/60 transition-all space-y-2.5"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-lg bg-[#211E1C] text-[#D4A359] font-mono font-black text-xs flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
-                      <span className="font-black text-sm text-[#1A1817]">
-                        {item.label}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2DCD3] text-[10px] font-bold text-[#5C5650]">
-                        {item.orderCount} {item.orderCount === 1 ? 'pedido' : 'pedidos'}
-                      </span>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="font-mono font-black text-sm sm:text-base text-[#1A1817] block">
-                        {formatBs(item.totalBob)}
-                      </span>
-                      <span className="font-mono text-[11px] text-[#8C827A]">
-                        {formatUsd(exchangeRate > 0 ? item.totalBob / exchangeRate : 0)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Barra Proporcional Warm Tech */}
-                  <div className="w-full h-2.5 bg-[#FAF8F5] rounded-full overflow-hidden border border-[#E2DCD3]">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#B88738] to-[#D4A359] rounded-full transition-all duration-500"
-                      style={{ width: `${Math.max(percentage, 5)}%` }}
-                      title={`${percentage}% del valor máximo registrado en este período`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 5. DOS COLUMNAS: REPORTE DE CLIENTES QUE COMPRARON MÁS Y PRODUCTOS MÁS VENDIDOS */}
+      {/* 4. DOS COLUMNAS: REPORTE DE CLIENTES QUE COMPRARON MÁS Y CONTROL DE ROTACIÓN DE STOCK */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* COLUMNA 1: CLIENTES QUE COMPRARON MÁS */}
         <div className="bg-[#FAF8F5] rounded-3xl p-6 border border-[#E2DCD3] shadow-sm flex flex-col justify-between space-y-5">
@@ -996,15 +1319,14 @@ export function AdminMetricsModule({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className={`w-7 h-7 rounded-xl font-mono font-black text-xs flex items-center justify-center shrink-0 ${
-                          idx === 0
+                        className={`w-7 h-7 rounded-xl font-mono font-black text-xs flex items-center justify-center shrink-0 ${idx === 0
                             ? 'bg-[#D4A359] text-[#161311]'
                             : idx === 1
                               ? 'bg-[#8C827A] text-white'
                               : idx === 2
                                 ? 'bg-[#B88738]/50 text-[#161311]'
                                 : 'bg-[#FAF8F5] text-[#5C5650] border border-[#E2DCD3]'
-                        }`}
+                          }`}
                       >
                         {idx + 1}
                       </span>
@@ -1035,83 +1357,188 @@ export function AdminMetricsModule({
           </div>
         </div>
 
-        {/* COLUMNA 2: PRODUCTOS MÁS VENDIDOS */}
+        {/* COLUMNA 2: ROTACIÓN DE INVENTARIO (MÁS VENDIDOS & STOCK ESTANCADO) */}
         <div className="bg-[#FAF8F5] rounded-3xl p-6 border border-[#E2DCD3] shadow-sm flex flex-col justify-between space-y-5">
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#E2DCD3]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2DCD3]">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-[#D4A359] flex items-center gap-1.5">
                   <Flame className="w-3.5 h-3.5 text-[#D4A359]" />
-                  <span>Rotación de Inventario</span>
+                  <span>Control de Inventario & Rotación</span>
                 </span>
                 <h3 className="text-lg font-black text-[#1A1817] mt-0.5">
-                  Productos Más Vendidos
+                  {productTab === 'BEST_SELLERS' ? 'Productos Más Vendidos' : 'Stock Estancado / Menor Rotación'}
                 </h3>
               </div>
-              <span className="px-2.5 py-1 rounded-xl bg-[#211E1C] text-[#D4A359] font-mono text-xs font-bold">
-                {topProducts.length} repuestos
-              </span>
+
+              {/* Tabs Más Vendidos vs Stock Estancado */}
+              <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setProductTab('BEST_SELLERS')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    productTab === 'BEST_SELLERS'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>Más Vendidos ({topProducts.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProductTab('STAGNANT_STOCK')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    productTab === 'STAGNANT_STOCK'
+                      ? 'bg-amber-500 text-[#161311] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Stock Estancado ({stagnantProducts.length})</span>
+                </button>
+              </div>
             </div>
+
+            {/* Banner de Diagnóstico para Stock Estancado */}
+            {productTab === 'STAGNANT_STOCK' && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold">
+                    Alerta de Baja Rotación: {stagnantProducts.length} repuestos sin ventas o con rotación mínima.
+                  </p>
+                  <p className="text-[11px] text-amber-800">
+                    Capital inmovilizado en almacén: <strong className="font-mono font-black">{formatBs(totalImmobilizedCapitalBob)}</strong>. Considera aplicar promociones o liquidaciones para liberar inventario.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Buscador de Productos */}
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-[#8C827A] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, SKU o marca..."
+                placeholder={
+                  productTab === 'BEST_SELLERS'
+                    ? "Buscar por nombre, SKU o marca..."
+                    : "Buscar repuesto con stock estancado..."
+                }
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
                 className="w-full text-xs pl-8 pr-3 py-2 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] placeholder:text-[#8C827A] focus:border-[#D4A359] outline-none font-medium"
               />
             </div>
 
-            {/* Lista de Productos Más Vendidos */}
+            {/* Lista: Más Vendidos vs Stock Estancado */}
             <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-              {filteredProductsReport.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#8C827A]">
-                  No se encontraron productos con este criterio.
-                </div>
-              ) : (
-                filteredProductsReport.map((prod, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 bg-white rounded-2xl border border-[#E2DCD3] hover:border-[#D4A359]/60 transition-all flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-xl bg-[#FAF8F5] p-1 border border-[#E2DCD3] flex items-center justify-center shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={prod.imageUrl}
-                          alt={prod.name}
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[10px] font-bold text-[#D4A359]">
-                            {prod.sku}
-                          </span>
-                          <span className="text-[10px] text-[#8C827A]">· {prod.brand}</span>
+              {productTab === 'BEST_SELLERS' ? (
+                filteredProductsReport.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-[#8C827A]">
+                    No se encontraron productos con este criterio.
+                  </div>
+                ) : (
+                  filteredProductsReport.map((prod, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-white rounded-2xl border border-[#E2DCD3] hover:border-[#D4A359]/60 transition-all flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-[#FAF8F5] p-1 border border-[#E2DCD3] flex items-center justify-center shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={prod.imageUrl}
+                            alt={prod.name}
+                            className="max-h-full max-w-full object-contain"
+                          />
                         </div>
-                        <p className="font-black text-xs text-[#1A1817] truncate" title={prod.name}>
-                          {prod.name}
-                        </p>
-                        <span className="text-[10px] text-[#5C5650] block">
-                          Stock almacén: <strong className={prod.currentStock < 5 ? 'text-red-600 font-bold' : 'text-[#1A1817]'}>{prod.currentStock} unid.</strong>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[10px] font-bold text-[#D4A359]">
+                              {prod.sku}
+                            </span>
+                            <span className="text-[10px] text-[#8C827A]">· {prod.brand}</span>
+                          </div>
+                          <p className="font-black text-xs text-[#1A1817] truncate" title={prod.name}>
+                            {prod.name}
+                          </p>
+                          <span className="text-[10px] text-[#5C5650] block">
+                            Stock almacén: <strong className={prod.currentStock < 5 ? 'text-red-600 font-bold' : 'text-[#1A1817]'}>{prod.currentStock} unid.</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-[#211E1C] text-[#FAF8F5] font-mono font-black text-xs block">
+                          {prod.totalUnitsSold} vendidas
+                        </span>
+                        <span className="font-mono font-semibold text-[11px] text-[#5C5650] block mt-1">
+                          {formatBs(prod.totalRevenueBob)}
                         </span>
                       </div>
                     </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-[#211E1C] text-[#FAF8F5] font-mono font-black text-xs block">
-                        {prod.totalUnitsSold} vendidas
-                      </span>
-                      <span className="font-mono font-semibold text-[11px] text-[#5C5650] block mt-1">
-                        {formatBs(prod.totalRevenueBob)}
-                      </span>
-                    </div>
+                  ))
+                )
+              ) : (
+                filteredStagnantProducts.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-[#8C827A]">
+                    No se encontraron productos estancados con este criterio.
                   </div>
-                ))
+                ) : (
+                  filteredStagnantProducts.map((prod, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-white rounded-2xl border border-amber-200/80 hover:border-amber-400 transition-all flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-amber-50/50 p-1 border border-amber-200 flex items-center justify-center shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={prod.imageUrl}
+                            alt={prod.name}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[10px] font-bold text-[#D4A359]">
+                              {prod.sku}
+                            </span>
+                            <span className="text-[10px] text-[#8C827A]">· {prod.brand}</span>
+                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              prod.isZeroSales ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {prod.isZeroSales ? 'Sin Ventas' : 'Baja Rotación'}
+                            </span>
+                          </div>
+                          <p className="font-black text-xs text-[#1A1817] truncate" title={prod.name}>
+                            {prod.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-[10px] text-[#5C5650] pt-0.5">
+                            <span>Stock retenido: <strong className="text-amber-800 font-bold">{prod.currentStock} unid.</strong></span>
+                            <span>·</span>
+                            <span>Precio: <strong className="font-mono">{formatBs(prod.price)}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className={`px-2 py-0.5 rounded-lg font-mono font-black text-xs block ${
+                          prod.isZeroSales ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-900'
+                        }`}>
+                          {prod.totalUnitsSold} vendidas
+                        </span>
+                        <div className="mt-1">
+                          <span className="text-[10px] text-[#8C827A] block leading-none">Inmovilizado:</span>
+                          <span className="font-mono font-black text-xs text-[#1A1817]">
+                            {formatBs(prod.immobilizedCapitalBob)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )
               )}
             </div>
           </div>

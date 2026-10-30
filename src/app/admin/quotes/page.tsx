@@ -28,7 +28,8 @@ import {
   Kanban,
   Table as TableIcon,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  GripVertical
 } from 'lucide-react';
 import type { QuoteOrder, OrderStatus } from '@/lib/types';
 
@@ -44,6 +45,10 @@ export default function AdminQuotesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('kanban'); // Kanban por defecto
   const [updatingCode, setUpdatingCode] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Drag and drop para Tablero Kanban
+  const [draggedOrderCode, setDraggedOrderCode] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<OrderStatus | null>(null);
 
   // Modales
   const [detailOrder, setDetailOrder] = useState<QuoteOrder | null>(null);
@@ -511,11 +516,41 @@ export default function AdminQuotesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4.5 items-start overflow-x-auto pb-6">
           {kanbanColumns.map((col) => {
             const totalColBob = col.orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+            const isDropTarget = dragOverColumnId === col.id;
 
             return (
               <div
                 key={col.id}
-                className="bg-[#FAF8F5] rounded-3xl p-3 sm:p-3.5 border border-[#E2DCD3] flex flex-col shadow-xs min-h-[580px] max-h-[82vh]"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverColumnId !== col.id) {
+                    setDragOverColumnId(col.id);
+                  }
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  if (dragOverColumnId === col.id) {
+                    setDragOverColumnId(null);
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverColumnId(null);
+                  const orderCode = e.dataTransfer.getData('text/plain') || draggedOrderCode;
+                  if (orderCode) {
+                    const targetOrder = orders.find((o) => o.orderCode === orderCode);
+                    if (targetOrder && normalizeStatus(targetOrder.status) !== col.id) {
+                      handleUpdateStatus(orderCode, col.id);
+                    }
+                  }
+                  setDraggedOrderCode(null);
+                }}
+                className={`bg-[#FAF8F5] rounded-3xl p-3 sm:p-3.5 border transition-all duration-200 flex flex-col shadow-xs min-h-[580px] max-h-[82vh] ${
+                  isDropTarget
+                    ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 bg-[#FDF9F2] scale-[1.01]'
+                    : 'border-[#E2DCD3]'
+                }`}
               >
                 {/* Cabecera de Columna Kanban */}
                 <div className={`p-3 rounded-2xl bg-white border border-[#E2DCD3] shadow-2xs mb-3 border-t-4 ${col.headerBorder}`}>
@@ -538,6 +573,13 @@ export default function AdminQuotesPage() {
                   </div>
                 </div>
 
+                {/* Zona de Soltado Destacada al Arrastrar */}
+                {isDropTarget && (
+                  <div className="mb-3 p-3 rounded-2xl border-2 border-dashed border-[#D4A359] bg-[#D4A359]/15 text-center text-xs font-black text-[#161311] animate-pulse flex items-center justify-center gap-2">
+                    <span>⬇ Soltar aquí para mover a {col.title}</span>
+                  </div>
+                )}
+
                 {/* Lista de Tarjetas de Pedidos */}
                 <div className="space-y-3 overflow-y-auto pr-1 flex-1 scrollbar-thin">
                   {col.orders.length === 0 ? (
@@ -553,18 +595,36 @@ export default function AdminQuotesPage() {
                       const waitInfo = getWaitingTime(ord.createdAt);
                       const city = ord.deliveryCity || 'La Paz';
                       const isUpdating = updatingCode === ord.orderCode;
+                      const isBeingDragged = draggedOrderCode === ord.orderCode;
                       const firstItem = ord.items && ord.items[0] ? (ord.items[0].item || ord.items[0] as any) : null;
 
                       return (
                         <div
                           key={ord.orderCode}
-                          className="bg-white rounded-2xl p-4 border border-[#E2DCD3] shadow-2xs hover:shadow-md transition-all space-y-3 group hover:border-[#D4A359]/60"
+                          draggable={!isUpdating}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', ord.orderCode);
+                            e.dataTransfer.effectAllowed = 'move';
+                            setDraggedOrderCode(ord.orderCode);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedOrderCode(null);
+                            setDragOverColumnId(null);
+                          }}
+                          className={`bg-white rounded-2xl p-4 border border-[#E2DCD3] shadow-2xs hover:shadow-md transition-all space-y-3 group hover:border-[#D4A359]/60 cursor-grab active:cursor-grabbing select-none ${
+                            isBeingDragged ? 'opacity-40 scale-[0.98] border-dashed border-[#D4A359]' : ''
+                          }`}
                         >
-                          {/* Fila 1: Código + Semáforo de Tiempo */}
+                          {/* Fila 1: Grip + Código + Semáforo de Tiempo */}
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono font-black text-xs text-[#D4A359] bg-[#211E1C] px-2.5 py-1 rounded-lg border border-[#D4A359]/30 shadow-2xs">
-                              #{ord.orderCode}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="cursor-grab active:cursor-grabbing text-[#8C827A] group-hover:text-[#D4A359] transition-colors" title="Arrastrar para mover entre columnas">
+                                <GripVertical className="w-3.5 h-3.5" />
+                              </span>
+                              <span className="font-mono font-black text-xs text-[#D4A359] bg-[#211E1C] px-2.5 py-1 rounded-lg border border-[#D4A359]/30 shadow-2xs">
+                                #{ord.orderCode}
+                              </span>
+                            </div>
 
                             {/* Semáforo */}
                             {waitInfo.color === 'green' ? (

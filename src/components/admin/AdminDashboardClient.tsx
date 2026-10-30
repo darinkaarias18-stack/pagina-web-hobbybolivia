@@ -8,7 +8,8 @@ import {
   RefreshCw,
   Loader2,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  ShoppingBag
 } from 'lucide-react';
 import type { Product, QuoteOrder } from '@/lib/types';
 import { AdminMetricsModule } from './AdminMetricsModule';
@@ -118,11 +119,10 @@ export function AdminDashboardClient() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-xs font-bold animate-in slide-in-from-bottom-5 duration-200 ${
-            toast.type === 'success'
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-xs font-bold animate-in slide-in-from-bottom-5 duration-200 ${toast.type === 'success'
               ? 'bg-[#161311] text-[#D4A359] border-[#D4A359]/40'
               : 'bg-red-950 text-red-200 border-red-800'
-          }`}
+            }`}
         >
           {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
           <span>{toast.message}</span>
@@ -143,8 +143,9 @@ export function AdminDashboardClient() {
         <div className="flex items-center flex-wrap gap-2.5">
           <Link
             href="/admin/quotes"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
           >
+            <ShoppingBag className="w-4 h-4 text-[#161311]" />
             <span>Ver Todos los Pedidos</span>
           </Link>
 
@@ -171,9 +172,8 @@ export function AdminDashboardClient() {
               {autoUpdate ? 'Auto' : 'Manual'}
             </span>
             <RefreshCw
-              className={`w-3.5 h-3.5 text-[#8C827A] group-hover:text-[#D4A359] transition-colors shrink-0 ${
-                isRefreshingRate ? 'animate-spin text-[#D4A359]' : 'group-hover:rotate-180 transition-transform duration-500'
-              }`}
+              className={`w-3.5 h-3.5 text-[#8C827A] group-hover:text-[#D4A359] transition-colors shrink-0 ${isRefreshingRate ? 'animate-spin text-[#D4A359]' : 'group-hover:rotate-180 transition-transform duration-500'
+                }`}
             />
           </button>
 
