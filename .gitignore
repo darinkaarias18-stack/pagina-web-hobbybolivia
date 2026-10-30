@@ -36,6 +36,14 @@ yarn-error.log*
 # local data storage
 .data/
 
+# product photos stored in public (ignored for GitHub)
+/public/uploads/products/*
+!/public/uploads/products/.gitkeep
+/public/products/*
+!/public/products/.gitkeep
+/public/images/products/*
+!/public/images/products/.gitkeep
+
 # vercel
 .vercel
 
