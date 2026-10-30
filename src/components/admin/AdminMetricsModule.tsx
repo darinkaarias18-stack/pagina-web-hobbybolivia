@@ -859,55 +859,50 @@ export function AdminMetricsModule({
                 <button
                   type="button"
                   onClick={() => setPeriodTab('OVERVIEW')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    periodTab === 'OVERVIEW'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'OVERVIEW'
                       ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                 >
                   Comparativa
                 </button>
                 <button
                   type="button"
                   onClick={() => setPeriodTab('WEEK')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    periodTab === 'WEEK'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'WEEK'
                       ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                 >
                   Por Semana
                 </button>
                 <button
                   type="button"
                   onClick={() => setPeriodTab('MONTH')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    periodTab === 'MONTH'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'MONTH'
                       ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                 >
                   Por Mes
                 </button>
                 <button
                   type="button"
                   onClick={() => setPeriodTab('DAY')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    periodTab === 'DAY'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'DAY'
                       ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                 >
                   Por Día
                 </button>
                 <button
                   type="button"
                   onClick={() => setPeriodTab('YEAR')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    periodTab === 'YEAR'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'YEAR'
                       ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                 >
                   Por Año
                 </button>
@@ -918,11 +913,10 @@ export function AdminMetricsModule({
                 <button
                   type="button"
                   onClick={() => setChartViewMode('CHART')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                    chartViewMode === 'CHART'
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${chartViewMode === 'CHART'
                       ? 'bg-[#D4A359] text-[#161311] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                   title="Ver Gráfico de Barras Verticales"
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
@@ -931,11 +925,10 @@ export function AdminMetricsModule({
                 <button
                   type="button"
                   onClick={() => setChartViewMode('LIST')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                    chartViewMode === 'LIST'
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${chartViewMode === 'LIST'
                       ? 'bg-[#D4A359] text-[#161311] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                   title="Ver Lista Detallada"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -1013,11 +1006,10 @@ export function AdminMetricsModule({
                           >
                             {/* Barra Rellena con Gradiente */}
                             <div
-                              className={`w-full rounded-t-2xl transition-all duration-700 ease-out flex flex-col justify-between items-center py-2 ${
-                                isHighest
+                              className={`w-full rounded-t-2xl transition-all duration-700 ease-out flex flex-col justify-between items-center py-2 ${isHighest
                                   ? 'bg-gradient-to-t from-[#B88738] via-[#D4A359] to-[#E5BE7E] shadow-md shadow-[#D4A359]/30'
                                   : 'bg-gradient-to-t from-[#211E1C] via-[#38332E] to-[#5C5650]'
-                              }`}
+                                }`}
                               style={{ height: `${Math.max(barHeightPercent, item.totalBob > 0 ? 8 : 2)}%` }}
                             >
                               {barHeightPercent >= 22 && (
@@ -1320,12 +1312,12 @@ export function AdminMetricsModule({
                     <div className="flex items-center gap-3 min-w-0">
                       <span
                         className={`w-7 h-7 rounded-xl font-mono font-black text-xs flex items-center justify-center shrink-0 ${idx === 0
-                            ? 'bg-[#D4A359] text-[#161311]'
-                            : idx === 1
-                              ? 'bg-[#8C827A] text-white'
-                              : idx === 2
-                                ? 'bg-[#B88738]/50 text-[#161311]'
-                                : 'bg-[#FAF8F5] text-[#5C5650] border border-[#E2DCD3]'
+                          ? 'bg-[#D4A359] text-[#161311]'
+                          : idx === 1
+                            ? 'bg-[#8C827A] text-white'
+                            : idx === 2
+                              ? 'bg-[#B88738]/50 text-[#161311]'
+                              : 'bg-[#FAF8F5] text-[#5C5650] border border-[#E2DCD3]'
                           }`}
                       >
                         {idx + 1}
@@ -1376,11 +1368,10 @@ export function AdminMetricsModule({
                 <button
                   type="button"
                   onClick={() => setProductTab('BEST_SELLERS')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                    productTab === 'BEST_SELLERS'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${productTab === 'BEST_SELLERS'
                       ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                 >
                   <Flame className="w-3.5 h-3.5" />
                   <span>Más Vendidos ({topProducts.length})</span>
@@ -1388,11 +1379,10 @@ export function AdminMetricsModule({
                 <button
                   type="button"
                   onClick={() => setProductTab('STAGNANT_STOCK')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                    productTab === 'STAGNANT_STOCK'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${productTab === 'STAGNANT_STOCK'
                       ? 'bg-amber-500 text-[#161311] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
-                  }`}
+                    }`}
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />
                   <span>Stock Estancado ({stagnantProducts.length})</span>
@@ -1506,9 +1496,8 @@ export function AdminMetricsModule({
                               {prod.sku}
                             </span>
                             <span className="text-[10px] text-[#8C827A]">· {prod.brand}</span>
-                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
-                              prod.isZeroSales ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
-                            }`}>
+                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${prod.isZeroSales ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
                               {prod.isZeroSales ? 'Sin Ventas' : 'Baja Rotación'}
                             </span>
                           </div>
@@ -1524,9 +1513,8 @@ export function AdminMetricsModule({
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className={`px-2 py-0.5 rounded-lg font-mono font-black text-xs block ${
-                          prod.isZeroSales ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-900'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded-lg font-mono font-black text-xs block ${prod.isZeroSales ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-900'
+                          }`}>
                           {prod.totalUnitsSold} vendidas
                         </span>
                         <div className="mt-1">

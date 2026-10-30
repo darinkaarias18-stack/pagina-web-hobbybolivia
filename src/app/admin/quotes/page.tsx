@@ -372,8 +372,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setViewMode('kanban')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${viewMode === 'kanban'
-                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                  : 'text-[#8C827A] hover:text-[#1A1817]'
+                ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                : 'text-[#8C827A] hover:text-[#1A1817]'
                 }`}
               title="Ver en formato tablero Kanban interactivo"
             >
@@ -384,8 +384,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setViewMode('table')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${viewMode === 'table'
-                  ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                  : 'text-[#8C827A] hover:text-[#1A1817]'
+                ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                : 'text-[#8C827A] hover:text-[#1A1817]'
                 }`}
               title="Ver en formato tabla tabular clásica"
             >
@@ -446,8 +446,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setActiveTab('ALL')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'ALL'
-                  ? 'bg-[#211E1C] text-[#D4A359]'
-                  : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
+                ? 'bg-[#211E1C] text-[#D4A359]'
+                : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
                 }`}
             >
               Todos ({counts.all})
@@ -456,8 +456,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setActiveTab('PEDIDO')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'PEDIDO'
-                  ? 'bg-purple-700 text-white'
-                  : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
+                ? 'bg-purple-700 text-white'
+                : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
                 }`}
             >
               Pedidos ({counts.pedido})
@@ -466,8 +466,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setActiveTab('PENDING')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'PENDING'
-                  ? 'bg-amber-500 text-[#161311]'
-                  : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
+                ? 'bg-amber-500 text-[#161311]'
+                : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
                 }`}
             >
               Pendientes ({counts.pending})
@@ -476,8 +476,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setActiveTab('PAID')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'PAID'
-                  ? 'bg-[#3E7B44] text-white'
-                  : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
+                ? 'bg-[#3E7B44] text-white'
+                : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
                 }`}
             >
               Pagados ({counts.paid})
@@ -486,8 +486,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setActiveTab('DISPATCHED')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'DISPATCHED'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
                 }`}
             >
               Despachados ({counts.dispatched})
@@ -496,8 +496,8 @@ export default function AdminQuotesPage() {
               type="button"
               onClick={() => setActiveTab('CANCELLED')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'CANCELLED'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
+                ? 'bg-red-600 text-white'
+                : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
                 }`}
             >
               Cancelados ({counts.cancelled})
@@ -546,11 +546,10 @@ export default function AdminQuotesPage() {
                   }
                   setDraggedOrderCode(null);
                 }}
-                className={`bg-[#FAF8F5] rounded-3xl p-3 sm:p-3.5 border transition-all duration-200 flex flex-col shadow-xs min-h-[580px] max-h-[82vh] ${
-                  isDropTarget
+                className={`bg-[#FAF8F5] rounded-3xl p-3 sm:p-3.5 border transition-all duration-200 flex flex-col shadow-xs min-h-[580px] max-h-[82vh] ${isDropTarget
                     ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 bg-[#FDF9F2] scale-[1.01]'
                     : 'border-[#E2DCD3]'
-                }`}
+                  }`}
               >
                 {/* Cabecera de Columna Kanban */}
                 <div className={`p-3 rounded-2xl bg-white border border-[#E2DCD3] shadow-2xs mb-3 border-t-4 ${col.headerBorder}`}>
@@ -611,9 +610,8 @@ export default function AdminQuotesPage() {
                             setDraggedOrderCode(null);
                             setDragOverColumnId(null);
                           }}
-                          className={`bg-white rounded-2xl p-4 border border-[#E2DCD3] shadow-2xs hover:shadow-md transition-all space-y-3 group hover:border-[#D4A359]/60 cursor-grab active:cursor-grabbing select-none ${
-                            isBeingDragged ? 'opacity-40 scale-[0.98] border-dashed border-[#D4A359]' : ''
-                          }`}
+                          className={`bg-white rounded-2xl p-4 border border-[#E2DCD3] shadow-2xs hover:shadow-md transition-all space-y-3 group hover:border-[#D4A359]/60 cursor-grab active:cursor-grabbing select-none ${isBeingDragged ? 'opacity-40 scale-[0.98] border-dashed border-[#D4A359]' : ''
+                            }`}
                         >
                           {/* Fila 1: Grip + Código + Semáforo de Tiempo */}
                           <div className="flex items-center justify-between gap-2">
@@ -896,14 +894,14 @@ export default function AdminQuotesPage() {
                               handleUpdateStatus(ord.orderCode, e.target.value as OrderStatus)
                             }
                             className={`text-xs font-black rounded-xl px-3 py-1.5 pr-7 border cursor-pointer outline-none transition-all appearance-none shadow-2xs ${currentMappedValue === 'PEDIDO'
-                                ? 'bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200/80'
-                                : currentMappedValue === 'PAGADO'
-                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-400 hover:bg-emerald-200/80'
-                                  : currentMappedValue === 'DESPACHADO'
-                                    ? 'bg-blue-100 text-blue-900 border-blue-400 hover:bg-blue-200/80'
-                                    : currentMappedValue === 'CANCELADO'
-                                      ? 'bg-red-100 text-red-900 border-red-300 hover:bg-red-200/80'
-                                      : 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200/80'
+                              ? 'bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200/80'
+                              : currentMappedValue === 'PAGADO'
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-400 hover:bg-emerald-200/80'
+                                : currentMappedValue === 'DESPACHADO'
+                                  ? 'bg-blue-100 text-blue-900 border-blue-400 hover:bg-blue-200/80'
+                                  : currentMappedValue === 'CANCELADO'
+                                    ? 'bg-red-100 text-red-900 border-red-300 hover:bg-red-200/80'
+                                    : 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200/80'
                               }`}
                           >
                             <option value="PEDIDO">Pedido</option>

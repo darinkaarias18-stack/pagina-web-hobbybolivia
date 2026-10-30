@@ -15,7 +15,8 @@ import {
   Users,
   Clock,
   BarChart3,
-  Package
+  Package,
+  Layers
 } from 'lucide-react';
 
 // Tiempo máximo de inactividad antes de cerrar la sesión automáticamente (15 minutos)
@@ -181,6 +182,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const allNavItems = [
     { label: 'Dashboard & Métricas', href: '/admin', icon: BarChart3, superadminOnly: false },
     { label: 'Productos y Stock', href: '/admin/products', icon: Package, superadminOnly: false },
+    { label: 'Categorías', href: '/admin/categories', icon: Layers, superadminOnly: false },
     { label: 'Gestión de Pedidos', href: '/admin/quotes', icon: ShoppingBag, superadminOnly: false },
     { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins, superadminOnly: true },
     { label: 'Gestión de Usuarios', href: '/admin/users', icon: Users, superadminOnly: true },
