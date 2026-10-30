@@ -331,9 +331,8 @@ export default function AdminQuotesPage() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom duration-200 ${
-            toast.type === 'success' ? 'bg-[#3E7B44]' : 'bg-red-600'
-          }`}
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom duration-200 ${toast.type === 'success' ? 'bg-[#3E7B44]' : 'bg-red-600'
+            }`}
         >
           {toast.type === 'success' ? (
             <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -367,11 +366,10 @@ export default function AdminQuotesPage() {
             <button
               type="button"
               onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                viewMode === 'kanban'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${viewMode === 'kanban'
                   ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                   : 'text-[#8C827A] hover:text-[#1A1817]'
-              }`}
+                }`}
               title="Ver en formato tablero Kanban interactivo"
             >
               <Kanban className="w-3.5 h-3.5" />
@@ -380,11 +378,10 @@ export default function AdminQuotesPage() {
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                viewMode === 'table'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${viewMode === 'table'
                   ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
                   : 'text-[#8C827A] hover:text-[#1A1817]'
-              }`}
+                }`}
               title="Ver en formato tabla tabular clásica"
             >
               <TableIcon className="w-3.5 h-3.5" />
@@ -443,66 +440,60 @@ export default function AdminQuotesPage() {
             <button
               type="button"
               onClick={() => setActiveTab('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
-                activeTab === 'ALL'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'ALL'
                   ? 'bg-[#211E1C] text-[#D4A359]'
                   : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
-              }`}
+                }`}
             >
               Todos ({counts.all})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('PEDIDO')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
-                activeTab === 'PEDIDO'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'PEDIDO'
                   ? 'bg-purple-700 text-white'
                   : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
-              }`}
+                }`}
             >
               Pedidos ({counts.pedido})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('PENDING')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
-                activeTab === 'PENDING'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'PENDING'
                   ? 'bg-amber-500 text-[#161311]'
                   : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
-              }`}
+                }`}
             >
               Pendientes ({counts.pending})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('PAID')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
-                activeTab === 'PAID'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'PAID'
                   ? 'bg-[#3E7B44] text-white'
                   : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
-              }`}
+                }`}
             >
               Pagados ({counts.paid})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('DISPATCHED')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
-                activeTab === 'DISPATCHED'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'DISPATCHED'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
-              }`}
+                }`}
             >
               Despachados ({counts.dispatched})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('CANCELLED')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
-                activeTab === 'CANCELLED'
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activeTab === 'CANCELLED'
                   ? 'bg-red-600 text-white'
                   : 'bg-white text-[#5C5650] border border-[#E2DCD3]'
-              }`}
+                }`}
             >
               Cancelados ({counts.cancelled})
             </button>
@@ -792,10 +783,10 @@ export default function AdminQuotesPage() {
                             <span>
                               {ord.createdAt
                                 ? new Date(ord.createdAt).toLocaleDateString('es-BO', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                  })
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric'
+                                })
                                 : 'Fecha reciente'}
                             </span>
                           </div>
@@ -844,8 +835,7 @@ export default function AdminQuotesPage() {
                             onChange={(e) =>
                               handleUpdateStatus(ord.orderCode, e.target.value as OrderStatus)
                             }
-                            className={`text-xs font-black rounded-xl px-3 py-1.5 pr-7 border cursor-pointer outline-none transition-all appearance-none shadow-2xs ${
-                              currentMappedValue === 'PEDIDO'
+                            className={`text-xs font-black rounded-xl px-3 py-1.5 pr-7 border cursor-pointer outline-none transition-all appearance-none shadow-2xs ${currentMappedValue === 'PEDIDO'
                                 ? 'bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200/80'
                                 : currentMappedValue === 'PAGADO'
                                   ? 'bg-emerald-100 text-emerald-900 border-emerald-400 hover:bg-emerald-200/80'
@@ -854,7 +844,7 @@ export default function AdminQuotesPage() {
                                     : currentMappedValue === 'CANCELADO'
                                       ? 'bg-red-100 text-red-900 border-red-300 hover:bg-red-200/80'
                                       : 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200/80'
-                            }`}
+                              }`}
                           >
                             <option value="PEDIDO">Pedido</option>
                             <option value="PENDING">Pendiente de Pago</option>
@@ -1141,10 +1131,10 @@ export default function AdminQuotesPage() {
                       <span>
                         {printOrder.createdAt
                           ? new Date(printOrder.createdAt).toLocaleDateString('es-BO', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            })
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })
                           : 'Fecha actual'}
                       </span>
                     </div>

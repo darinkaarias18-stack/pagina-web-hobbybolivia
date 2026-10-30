@@ -132,18 +132,22 @@ export function AdminDashboardClient() {
       {/* Header Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-[#D4A359]"></span>
-            <span className="text-xs font-black uppercase tracking-wider text-[#D4A359]">
-              Panel de Control · Inteligencia de Negocio
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
-            Dashboard & Métricas Comerciales
+            Panel de Control Hobby Bolivia
           </h1>
+          <p className="text-xs sm:text-sm text-[#8C827A] mt-0.5">
+            Métricas de ingresos, pedidos y logística · Almacén Central La Paz
+          </p>
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
+          <Link
+            href="/admin/quotes"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer"
+          >
+            <span>Ver Todos los Pedidos</span>
+          </Link>
+
           {/* Quick Currency Status (Botón interactivo para actualizar con fecha y hora de última actualización) */}
           <button
             type="button"

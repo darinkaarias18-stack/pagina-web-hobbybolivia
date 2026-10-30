@@ -26,7 +26,9 @@ import {
   Sparkles,
   MapPin,
   Phone,
-  AlertCircle
+  AlertCircle,
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 import type { QuoteOrder, Product, OrderStatus } from '@/lib/types';
 
@@ -93,8 +95,23 @@ export function AdminMetricsModule({
       0
     );
 
-    const pendingOrders = validOrders.filter((o) => o.status === 'PENDING');
+    const pendingOrders = validOrders.filter(
+      (o) => o.status === 'PENDING' || o.status === 'PEDIDO'
+    );
     const pendingAmountBob = pendingOrders.reduce(
+      (sum, o) => sum + (Number(o.total) || 0),
+      0
+    );
+
+    const toDispatchOrders = validOrders.filter(
+      (o) =>
+        o.status === 'IN_PREPARATION' ||
+        o.status === 'CONFIRMADO' ||
+        o.status === 'PAGADO' ||
+        o.status === 'PENDING' ||
+        o.status === 'PEDIDO'
+    );
+    const toDispatchAmountBob = toDispatchOrders.reduce(
       (sum, o) => sum + (Number(o.total) || 0),
       0
     );
@@ -124,11 +141,90 @@ export function AdminMetricsModule({
       inPrepAmountBob,
       pendingCount: pendingOrders.length,
       pendingAmountBob,
+      toDispatchCount: toDispatchOrders.length,
+      toDispatchAmountBob,
       totalOrdersCount: validOrders.length,
       averageTicket,
       deliverySuccessRate
     };
   }, [validOrders, exchangeRate]);
+
+  // Métricas temporales del modelo visual: Día, Semana (Lun-Dom), Mes Actual y Año Actual
+  const performanceMetrics = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+
+    // 1. VENTAS DEL DÍA (Hoy)
+    const todayOrders = validOrders.filter(
+      (o) => o.createdAt && new Date(o.createdAt).toDateString() === todayStr
+    );
+    const todayTotalBob = todayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const todayCount = todayOrders.length;
+
+    // 2. ESTA SEMANA (Lunes a Domingo)
+    const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+    const thisMonday = new Date(now);
+    thisMonday.setDate(now.getDate() - (dayOfWeek - 1));
+    thisMonday.setHours(0, 0, 0, 0);
+
+    const thisSunday = new Date(thisMonday);
+    thisSunday.setDate(thisMonday.getDate() + 6);
+    thisSunday.setHours(23, 59, 59, 999);
+
+    const thisWeekOrders = validOrders.filter((o) => {
+      if (!o.createdAt) return false;
+      const d = new Date(o.createdAt);
+      return d >= thisMonday && d <= thisSunday;
+    });
+    const thisWeekTotalBob = thisWeekOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const thisWeekCount = thisWeekOrders.length;
+
+    // 3. MES ACTUAL (ej. OCTUBRE / NOVIEMBRE)
+    const currentMonthIndex = now.getMonth();
+    const currentYear = now.getFullYear();
+    const thisMonthOrders = validOrders.filter((o) => {
+      if (!o.createdAt) return false;
+      const d = new Date(o.createdAt);
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonthIndex;
+    });
+    const thisMonthTotalBob = thisMonthOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const thisMonthCount = thisMonthOrders.length;
+    const thisMonthAverageTicket = thisMonthCount > 0 ? thisMonthTotalBob / thisMonthCount : 0;
+    const monthName = now
+      .toLocaleDateString('es-BO', { month: 'long' })
+      .toUpperCase();
+
+    // 4. AÑO ACTUAL (ej. 2026)
+    const thisYearOrders = validOrders.filter((o) => {
+      if (!o.createdAt) return false;
+      const d = new Date(o.createdAt);
+      return d.getFullYear() === currentYear;
+    });
+    const thisYearTotalBob = thisYearOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const thisYearCount = thisYearOrders.length;
+
+    // 5. CATÁLOGO ACTIVO
+    const activeProductsCount = products.filter(
+      (p) => p.is_active !== false && p.isActive !== false
+    ).length;
+    const totalProductsCount = products.length;
+
+    return {
+      todayTotalBob,
+      todayCount,
+      thisWeekTotalBob,
+      thisWeekCount,
+      thisMonthTotalBob,
+      thisMonthCount,
+      thisMonthAverageTicket,
+      monthName,
+      thisYearTotalBob,
+      thisYearCount,
+      currentYear,
+      activeProductsCount,
+      totalProductsCount
+    };
+  }, [validOrders, products]);
 
   // 3. REPORTE DE CLIENTES QUE COMPRARON MÁS
   const topCustomers = useMemo(() => {
@@ -452,111 +548,225 @@ export function AdminMetricsModule({
     })}`;
 
   return (
-    <div className="space-y-7 animate-in fade-in duration-300">
-      {/* 2. TARJETAS DE RESUMEN EJECUTIVO (KPIs: VENTAS, DESPACHADOS, ENTREGADOS) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: Ventas Acumuladas */}
-        <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A]">
-              Ventas Acumuladas
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-[#D4A359]/15 text-[#B88738] flex items-center justify-center border border-[#D4A359]/30">
-              <DollarSign className="w-5 h-5 text-[#B88738]" />
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* ================= SECCIÓN 1: $ RENDIMIENTO DE VENTAS COMERCIALES ================= */}
+      <div className="space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-700 font-serif font-black text-xl">$</span>
+            <h2 className="text-lg font-black text-[#1A1817] tracking-tight">
+              Rendimiento de Ventas Comerciales
+            </h2>
+          </div>
+          <span className="text-xs text-[#8C827A] font-medium">
+            Moneda activa: <strong className="text-[#1A1817]">Bs. (BOB)</strong> · TC Oficial: 1 USD = Bs. {exchangeRate.toFixed(2)}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: VENTAS DEL DÍA */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden border-t-4 border-t-emerald-500 hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                Ventas del Día
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-emerald-700" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
+                {formatBs(performanceMetrics.todayTotalBob)}
+              </p>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-[#8C827A] font-medium">Hoy</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                  {performanceMetrics.todayCount} pedidos
+                </span>
+              </div>
             </div>
           </div>
-          <div className="space-y-1">
-            <p className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
-              {formatBs(salesSummary.totalAccumulatedSalesBob)}
-            </p>
-            <div className="flex items-center justify-between text-xs pt-1">
-              <span className="font-mono font-bold text-[#8C827A]">
-                ≈ {formatUsd(salesSummary.totalAccumulatedSalesUsd)}
+
+          {/* Card 2: ESTA SEMANA */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden border-t-4 border-t-indigo-500 hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                Esta Semana
               </span>
-              <span className="font-bold text-[#D4A359] bg-[#211E1C] px-2 py-0.5 rounded-md text-[10px]">
-                {salesSummary.totalOrdersCount} órdenes
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center">
+                <CalendarDays className="w-4 h-4 text-indigo-700" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
+                {formatBs(performanceMetrics.thisWeekTotalBob)}
+              </p>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-[#8C827A] font-medium">Lun - Dom</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">
+                  {performanceMetrics.thisWeekCount} pedidos
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: MES (MES ACTUAL) */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden border-t-4 border-t-purple-500 hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                Mes ({performanceMetrics.monthName})
               </span>
+              <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-purple-700" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
+                {formatBs(performanceMetrics.thisMonthTotalBob)}
+              </p>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-[#8C827A] font-medium text-[11px]">
+                  Ticket prom: {formatBs(performanceMetrics.thisMonthAverageTicket)}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">
+                  {performanceMetrics.thisMonthCount} pedidos
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: AÑO ACTUAL */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden border-t-4 border-t-[#D4A359] hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                Año {performanceMetrics.currentYear}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-[#D4A359]/20 text-[#8A6220] flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-[#8A6220]" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
+                {formatBs(performanceMetrics.thisYearTotalBob)}
+              </p>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-[#8C827A] font-medium">Acumulado {performanceMetrics.currentYear}</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#D4A359]/20 text-[#8A6220]">
+                  {performanceMetrics.thisYearCount} pedidos
+                </span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* KPI 2: Pedidos Despachados */}
-        <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A]">
-              Pedidos Despachados
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
-              <Truck className="w-5 h-5 text-amber-700" />
+      {/* ================= BANNER: TOTAL FACTURADO HISTÓRICO ================= */}
+      <div className="bg-[#183522] text-[#FAF8F5] rounded-2xl px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md border border-emerald-900/40">
+        <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
+          <div className="w-6 h-6 rounded-md bg-emerald-800/60 flex items-center justify-center shrink-0 text-emerald-300">
+            <CreditCard className="w-3.5 h-3.5" />
+          </div>
+          <span>
+            Total Facturado Histórico: <strong className="text-white font-mono font-black">{formatBs(salesSummary.totalAccumulatedSalesBob)}</strong> en <strong className="text-emerald-300">{salesSummary.totalOrdersCount} pedidos</strong> procesados con éxito.
+          </span>
+        </div>
+
+        <Link
+          href="/admin/quotes"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 hover:text-white transition-colors shrink-0 group"
+        >
+          <span>Ver reporte de transacciones</span>
+          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      </div>
+
+      {/* ================= SECCIÓN 2: ESTADO OPERATIVO & DESPACHO ================= */}
+      <div className="space-y-3.5">
+        <div className="flex items-center gap-2 pb-1">
+          <Clock className="w-5 h-5 text-[#8C827A]" />
+          <h2 className="text-lg font-black text-[#1A1817] tracking-tight">
+            Estado Operativo & Despacho
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Op Card 1: POR DESPACHAR */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                Por Despachar
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-amber-700" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-3xl font-black text-[#1A1817] tracking-tight font-mono">
+                {salesSummary.toDispatchCount}
+              </p>
+              <p className="text-xs text-[#8C827A] pt-1">
+                En preparación en almacén Hobby Bolivia
+              </p>
             </div>
           </div>
-          <div className="space-y-1">
-            <div className="flex items-baseline gap-2">
-              <p className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
+
+          {/* Op Card 2: EN RUTA / ENTREGAS */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                En Ruta / Entregas
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
+                <Truck className="w-4 h-4 text-blue-700" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-3xl font-black text-[#1A1817] tracking-tight font-mono">
                 {salesSummary.dispatchedCount}
               </p>
-              <span className="text-xs font-bold text-[#8C827A]">en tránsito</span>
-            </div>
-            <div className="flex items-center justify-between text-xs pt-1">
-              <span className="font-semibold text-[#5C5650]">
-                Monto: {formatBs(salesSummary.dispatchedAmountBob)}
-              </span>
-              <span className="font-mono text-[10px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
-                Salida Realizada
-              </span>
+              <p className="text-xs text-[#8C827A] pt-1">
+                {salesSummary.dispatchedCount === 1 ? '1 pedido en tránsito a destino' : `${salesSummary.dispatchedCount} pedidos en tránsito a destino`}
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* KPI 3: Pedidos Entregados */}
-        <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A]">
-              Pedidos Entregados
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-[#3E7B44]/15 text-[#3E7B44] flex items-center justify-center border border-[#3E7B44]/30">
-              <CheckCircle2 className="w-5 h-5 text-[#3E7B44]" />
+          {/* Op Card 3: PEDIDOS ENTREGADOS */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                Pedidos Entregados
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+              </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-baseline gap-2">
-              <p className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
+            <div className="space-y-1">
+              <p className="text-3xl font-black text-[#1A1817] tracking-tight font-mono">
                 {salesSummary.deliveredCount}
               </p>
-              <span className="text-xs font-bold text-[#3E7B44]">completados</span>
-            </div>
-            <div className="flex items-center justify-between text-xs pt-1">
-              <span className="font-semibold text-[#5C5650]">
-                Monto: {formatBs(salesSummary.deliveredAmountBob)}
-              </span>
-              <span className="font-mono text-[10px] font-bold text-[#3E7B44] bg-[#3E7B44]/15 px-2 py-0.5 rounded-md">
-                {salesSummary.deliverySuccessRate}% efectividad
-              </span>
+              <p className="text-xs text-[#3E7B44] font-medium pt-1">
+                {salesSummary.deliverySuccessRate}% efectividad de entrega
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* KPI 4: Ticket Promedio y En Proceso */}
-        <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A]">
-              Ticket Promedio
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center border border-[#D4A359]/30">
-              <TrendingUp className="w-5 h-5 text-[#D4A359]" />
+          {/* Op Card 4: CATÁLOGO ACTIVO */}
+          <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-sm relative overflow-hidden group hover:border-[#D4A359]/60 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10.5px] font-black uppercase tracking-wider text-[#5C5650]">
+                Catálogo Activo
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center">
+                <Package className="w-4 h-4 text-[#D4A359]" />
+              </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <p className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
-              {formatBs(salesSummary.averageTicket)}
-            </p>
-            <div className="flex items-center justify-between text-xs pt-1">
-              <span className="text-[#8C827A]">
-                Por despachar: {salesSummary.inPrepCount + salesSummary.pendingCount}
-              </span>
-              <span className="text-[10px] font-bold text-[#1A1817] bg-[#E2DCD3] px-2 py-0.5 rounded-md">
-                {formatBs(salesSummary.inPrepAmountBob + salesSummary.pendingAmountBob)}
-              </span>
+            <div className="space-y-1">
+              <p className="text-3xl font-black text-[#1A1817] tracking-tight font-mono">
+                {performanceMetrics.activeProductsCount} / {performanceMetrics.totalProductsCount}
+              </p>
+              <p className="text-xs text-[#8C827A] pt-1">
+                Repuestos listos para venta en tienda
+              </p>
             </div>
           </div>
         </div>
