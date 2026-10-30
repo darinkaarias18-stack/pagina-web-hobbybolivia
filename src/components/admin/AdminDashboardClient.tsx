@@ -20,6 +20,7 @@ import {
   Plane,
   Activity,
   Coins,
+  RefreshCw,
   UploadCloud,
   Image as ImageIcon,
   Loader2,
@@ -38,6 +39,8 @@ export function AdminDashboardClient() {
   const [exchangeRate, setExchangeRate] = useState<number>(6.96);
   const [autoUpdate, setAutoUpdate] = useState<boolean>(true);
   const [todayDateStr, setTodayDateStr] = useState<string>('');
+  const [lastUpdatedStr, setLastUpdatedStr] = useState<string>('');
+  const [isRefreshingRate, setIsRefreshingRate] = useState<boolean>(false);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,8 +80,8 @@ export function AdminDashboardClient() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  // Comprimir imagen automáticamente en el navegador si pesa más de 1 MB antes de enviarla
-  const compressImageClientSide = (file: File, maxBytes = 1024 * 1024): Promise<File> => {
+  // Comprimir imagen automáticamente en el navegador a WebP (máx. 1000px y <= 250 KB)
+  const compressImageClientSide = (file: File, maxBytes = 250 * 1024): Promise<File> => {
     return new Promise((resolve) => {
       if (file.type === 'image/svg+xml') {
         resolve(file);
@@ -92,7 +95,7 @@ export function AdminDashboardClient() {
         URL.revokeObjectURL(objectUrl);
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        const maxDim = 1400;
+        const maxDim = 1000; // Máximo 1000px manteniendo proporción
 
         if (width > maxDim || height > maxDim) {
           if (width > height) {
@@ -113,7 +116,7 @@ export function AdminDashboardClient() {
         }
         ctx.drawImage(img, 0, 0, width, height);
 
-        let quality = 0.85;
+        let quality = 0.82;
         const tryCompress = () => {
           canvas.toBlob(
             (blob) => {
@@ -121,7 +124,7 @@ export function AdminDashboardClient() {
                 resolve(file);
                 return;
               }
-              if (blob.size <= maxBytes || quality <= 0.35) {
+              if (blob.size <= maxBytes || quality <= 0.40) {
                 const baseName = file.name.replace(/\.[^/.]+$/, '');
                 const compressedFile = new File([blob], `${baseName}.webp`, {
                   type: 'image/webp',
@@ -129,7 +132,7 @@ export function AdminDashboardClient() {
                 });
                 resolve(compressedFile);
               } else {
-                quality -= 0.12;
+                quality -= 0.10;
                 tryCompress();
               }
             },
@@ -153,7 +156,16 @@ export function AdminDashboardClient() {
   const handleImageFile = async (file: File) => {
     setImageError(null);
 
-    // 1. Formatos web permitidos: .jpg, .jpeg, .png, .webp
+    // 1. Validación de tamaño original: si supera 10 MB, rechazar inmediatamente
+    const MAX_RAW_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_RAW_SIZE) {
+      const msg = "El archivo original es demasiado pesado para procesar (máximo 10 MB).";
+      setImageError(msg);
+      showToast(msg, "error");
+      return;
+    }
+
+    // 2. Formatos web permitidos: .jpg, .jpeg, .png, .webp
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
     const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
     const isMimeOk = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
@@ -166,9 +178,9 @@ export function AdminDashboardClient() {
 
     setIsUploadingImage(true);
     try {
-      // 2. Comprimir automáticamente a <= 1 MB antes de subir a la base de datos
-      const MAX_DB_IMAGE_SIZE = 1 * 1024 * 1024; // 1 MB
-      const processedFile = await compressImageClientSide(file, MAX_DB_IMAGE_SIZE);
+      // 3. Pre-procesamiento de compresión interna automática (máx 1000px y <= 250 KB)
+      const MAX_TARGET_BYTES = 250 * 1024; // 250 KB
+      const processedFile = await compressImageClientSide(file, MAX_TARGET_BYTES);
 
       const uploadFormData = new FormData();
       uploadFormData.append('file', processedFile);
@@ -181,8 +193,9 @@ export function AdminDashboardClient() {
       const data = await res.json();
       if (data.success && data.url) {
         const finalKb = data.optimizedSize ? Math.round(data.optimizedSize / 1024) : Math.round(processedFile.size / 1024);
+        // Regla de base de datos: guardamos la ruta relativa de texto (ej. /uploads/products/xxx.webp), nunca BLOB
         setFormData(prev => ({ ...prev, image_url: data.url }));
-        showToast(`Imagen comprimida y optimizada (${finalKb} KB <= 1 MB)`);
+        showToast(`Foto optimizada a WebP: ${finalKb} KB (≤ 250 KB)`);
       } else {
         setImageError(data.error || "Error al subir la imagen");
       }
@@ -219,8 +232,23 @@ export function AdminDashboardClient() {
       if (prodData.success) setProducts(prodData.data);
       if (catData.success) setCategories(catData.data);
       if (rateData.success && rateData.data) {
-        setExchangeRate(Number(rateData.data.exchangeRate) || 6.96);
+        const r = Number(rateData.data.exchangeRate) || 6.96;
+        setExchangeRate(r);
         setAutoUpdate(rateData.data.autoUpdate !== false);
+
+        const raw = rateData.data.lastChecked || rateData.data.updatedAt;
+        const d = raw ? new Date(raw) : new Date();
+        const dStr = d.toLocaleDateString('es-BO', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        const tStr = d.toLocaleTimeString('es-BO', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        setLastUpdatedStr(`${dStr} ${tStr}`);
       }
     } catch (err) {
       console.error(err);
@@ -230,15 +258,59 @@ export function AdminDashboardClient() {
     }
   };
 
+  // Botón para actualizar el tipo de cambio oficial cuando alguien lo requiera
+  const handleRefreshExchangeRate = async () => {
+    if (isRefreshingRate) return;
+    setIsRefreshingRate(true);
+    try {
+      const res = await fetch('/api/exchange-rate?refresh=true&t=' + Date.now(), { cache: 'no-store' });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        const newRate = Number(json.data.exchangeRate) || 6.96;
+        setExchangeRate(newRate);
+        setAutoUpdate(json.data.autoUpdate !== false);
+
+        const raw = json.data.lastChecked || json.data.updatedAt;
+        const d = raw ? new Date(raw) : new Date();
+        const dStr = d.toLocaleDateString('es-BO', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        const tStr = d.toLocaleTimeString('es-BO', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        const fullTimestamp = `${dStr} ${tStr}`;
+        setLastUpdatedStr(fullTimestamp);
+
+        showToast(`Tipo de cambio actualizado: 1 USD = Bs. ${newRate.toFixed(2)} (${fullTimestamp})`);
+      } else {
+        showToast(json.error || 'No se pudo actualizar el tipo de cambio', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error de red al actualizar el tipo de cambio', 'error');
+    } finally {
+      setIsRefreshingRate(false);
+    }
+  };
 
   useEffect(() => {
-    setTodayDateStr(
-      new Date().toLocaleDateString('es-BO', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      })
-    );
+    const now = new Date();
+    const dStr = now.toLocaleDateString('es-BO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const tStr = now.toLocaleTimeString('es-BO', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    setTodayDateStr(dStr);
+    setLastUpdatedStr(`${dStr} ${tStr}`);
     fetchData();
   }, []);
 
@@ -517,14 +589,21 @@ export function AdminDashboardClient() {
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
-          {/* Quick Currency Status (Solo informativo con fecha actual) */}
-          <div
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#FAF8F5] text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs select-none"
-            title="Tipo de cambio oficial vigente a la fecha de hoy"
+          {/* Quick Currency Status (Botón interactivo para actualizar con fecha y hora de última actualización) */}
+          <button
+            type="button"
+            onClick={handleRefreshExchangeRate}
+            disabled={isRefreshingRate}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none"
+            title={`Clic para actualizar el tipo de cambio oficial ahora. Última actualización: ${lastUpdatedStr || 'reciente'}`}
           >
-            <Coins className="w-4 h-4 text-[#D4A359]" />
+            {isRefreshingRate ? (
+              <Loader2 className="w-4 h-4 text-[#D4A359] animate-spin shrink-0" />
+            ) : (
+              <Coins className="w-4 h-4 text-[#D4A359] shrink-0 group-hover:scale-110 transition-transform" />
+            )}
             <span>
-              TC Oficial{todayDateStr ? ` (${todayDateStr})` : ''}:
+              TC Oficial{lastUpdatedStr ? ` (${lastUpdatedStr})` : ''}:
             </span>
             <span className="font-mono font-black text-[#1A1817]">
               Bs. {exchangeRate.toFixed(2)}
@@ -532,7 +611,12 @@ export function AdminDashboardClient() {
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold">
               {autoUpdate ? 'Auto' : 'Manual'}
             </span>
-          </div>
+            <RefreshCw
+              className={`w-3.5 h-3.5 text-[#8C827A] group-hover:text-[#D4A359] transition-colors shrink-0 ${
+                isRefreshingRate ? 'animate-spin text-[#D4A359]' : 'group-hover:rotate-180 transition-transform duration-500'
+              }`}
+            />
+          </button>
 
           <Link
             href="/"
@@ -998,7 +1082,7 @@ export function AdminDashboardClient() {
                         <div className="py-2 flex flex-col items-center gap-2.5">
                           <Loader2 className="w-9 h-9 text-[#D4A359] animate-spin" />
                           <span className="text-xs font-bold text-[#1A1817]">
-                            Subiendo y optimizando imagen...
+                            Comprimiendo y optimizando foto a WebP (≤ 250 KB)...
                           </span>
                         </div>
                       ) : (
@@ -1011,7 +1095,7 @@ export function AdminDashboardClient() {
                               Haz clic para subir o arrastra la foto aquí
                             </p>
                             <p className="text-[11px] text-[#8C827A]">
-                              Formatos permitidos: JPG, PNG o WebP
+                              JPG, PNG o WebP (compresión automática WebP ≤ 250 KB, máx. 1000px)
                             </p>
                           </div>
                           <span className="mt-1 px-4 py-2 rounded-xl bg-[#FAF8F5] border border-[#E2DCD3] text-[#1A1817] font-bold text-xs">

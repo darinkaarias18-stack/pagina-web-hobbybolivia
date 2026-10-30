@@ -98,6 +98,13 @@ export default function AdminSettingsPage() {
           const r = Number(rateJson.data.exchangeRate) || 11.997;
           setExchangeRate(r);
           setCalcBob((50 * r).toFixed(2));
+          const raw = rateJson.data.lastChecked || rateJson.data.updatedAt;
+          if (raw) {
+            const d = new Date(raw);
+            const dStr = d.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const tStr = d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false });
+            setRateDateStr(`${dStr} ${tStr}`);
+          }
         }
       })
       .catch(() => { });

@@ -26,36 +26,35 @@ import type {
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
-export const MAX_CATALOG_IMAGE_BYTES = 1 * 1024 * 1024; // Límite estricto de 1 MB (1,048,576 bytes) por imagen en el catálogo
+export const MAX_CATALOG_IMAGE_BYTES = 250 * 1024; // Límite estricto de 250 KB (256,000 bytes) por imagen en el catálogo
 
 /**
- * Verifica que cualquier imagen local o base64 registrada en la base de datos no supere 1 MB.
+ * Verifica que cualquier imagen local registrada en la base de datos no supere 250 KB
+ * y prohíbe terminantemente almacenar datos binarios (BLOB / Base64) en MariaDB/MySQL.
  */
-export function assertCatalogImageUnder1MB(imageUrl?: string | null): void {
+export function assertCatalogImageUnder250KB(imageUrl?: string | null): void {
   if (!imageUrl) return;
   const trimmed = imageUrl.trim();
 
-  // 1. Si es data URI (base64), calcular bytes reales
-  if (trimmed.startsWith('data:image/')) {
-    const base64Part = trimmed.split(',')[1] || '';
-    const byteLength = Buffer.byteLength(base64Part, 'base64');
-    if (byteLength > MAX_CATALOG_IMAGE_BYTES) {
-      throw new Error(`La imagen excede el tamaño máximo permitido en la base de datos (1 MB). Tamaño detectado: ${(byteLength / (1024 * 1024)).toFixed(2)} MB.`);
-    }
-    return;
+  // 1. REGLA DE BASE DE DATOS: Prohibido almacenar binarios BLOB o base64 en la BD
+  if (trimmed.startsWith('data:image/') || trimmed.length > 2000) {
+    throw new Error('No se permite almacenar imágenes en formato binario (BLOB / Base64) en la base de datos. Se debe registrar únicamente la ruta relativa del archivo en el servidor (ej. /uploads/products/nombre.webp).');
   }
 
-  // 2. Si es un archivo local subido a /uploads/..., verificar peso en disco
+  // 2. Si es un archivo local subido a /uploads/..., verificar que en disco no supere 250 KB
   if (trimmed.startsWith('/uploads/')) {
     const localPath = path.join(process.cwd(), 'public', trimmed.replace(/^\//, ''));
     if (fs.existsSync(localPath)) {
       const stats = fs.statSync(localPath);
       if (stats.size > MAX_CATALOG_IMAGE_BYTES) {
-        throw new Error(`La imagen subida supera el límite máximo de 1 MB permitido en la base de datos (${(stats.size / (1024 * 1024)).toFixed(2)} MB).`);
+        throw new Error(`La imagen optimizada supera el límite máximo de 250 KB permitido en el servidor (${(stats.size / 1024).toFixed(1)} KB).`);
       }
     }
   }
 }
+
+// Alias para compatibilidad con llamadas existentes
+export const assertCatalogImageUnder1MB = assertCatalogImageUnder250KB;
 
 export const DEFAULT_SUPERADMIN: User = {
   id: 1,
@@ -1665,10 +1664,10 @@ export async function updateQuoteOrderStatus(idOrCode: number | string, status: 
 
   let orderIndex = store.quotes.findIndex(
     q => q.orderCode === codeStr ||
-         (typeof idOrCode === 'number' && q.id === idOrCode) ||
-         q.id === Number(idOrCode) ||
-         q.orderCode?.toLowerCase() === codeStr.toLowerCase() ||
-         (numericId > 0 && q.id === numericId)
+      (typeof idOrCode === 'number' && q.id === idOrCode) ||
+      q.id === Number(idOrCode) ||
+      q.orderCode?.toLowerCase() === codeStr.toLowerCase() ||
+      (numericId > 0 && q.id === numericId)
   );
 
   let targetOrder: QuoteOrder | null = orderIndex !== -1 ? store.quotes[orderIndex] : null;

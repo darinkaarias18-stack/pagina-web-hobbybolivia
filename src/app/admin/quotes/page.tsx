@@ -337,8 +337,7 @@ export default function AdminQuotesPage() {
                       onChange={(e) =>
                         handleUpdateStatus(ord.orderCode, e.target.value as OrderStatus)
                       }
-                      className={`text-xs font-black uppercase rounded-xl px-3.5 py-2 border cursor-pointer outline-none transition-colors ${
-                        ord.status === 'DELIVERED' || ord.status === 'DESPACHADO'
+                      className={`text-xs font-black uppercase rounded-xl px-3.5 py-2 border cursor-pointer outline-none transition-colors ${ord.status === 'DELIVERED' || ord.status === 'DESPACHADO'
                           ? 'bg-[#3E7B44]/15 text-[#1E4D2B] border-[#3E7B44]/40'
                           : ord.status === 'IN_PREPARATION' || ord.status === 'CONFIRMADO' || ord.status === 'PAGADO'
                             ? 'bg-[#D4A359]/20 text-[#8A6220] border-[#D4A359]/50'
