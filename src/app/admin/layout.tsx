@@ -13,7 +13,9 @@ import {
   LogOut,
   Coins,
   Users,
-  Clock
+  Clock,
+  BarChart3,
+  Package
 } from 'lucide-react';
 
 // Tiempo máximo de inactividad antes de cerrar la sesión automáticamente (15 minutos)
@@ -177,7 +179,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const allNavItems = [
-    { label: 'Productos y Stock', href: '/admin', icon: LayoutDashboard, superadminOnly: false },
+    { label: 'Dashboard & Métricas', href: '/admin', icon: BarChart3, superadminOnly: false },
+    { label: 'Productos y Stock', href: '/admin/products', icon: Package, superadminOnly: false },
     { label: 'Gestión de Pedidos', href: '/admin/quotes', icon: ShoppingBag, superadminOnly: false },
     { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins, superadminOnly: true },
     { label: 'Gestión de Usuarios', href: '/admin/users', icon: Users, superadminOnly: true },
@@ -279,7 +282,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <nav className="space-y-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href === '/admin' && pathname === '/admin/items');
+              const isActive = item.href === '/admin'
+                ? pathname === '/admin'
+                : pathname.startsWith(item.href);
 
               return (
                 <Link

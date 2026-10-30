@@ -1803,8 +1803,8 @@ export async function updateQuoteOrderStatus(idOrCode: number | string, status: 
     }
     targetOrder.stockDeducted = true;
   }
-  // 2. REVERSIÓN DE STOCK (CANCELACIONES O RETORNO A PENDIENTE)
-  else if ((isTargetReversal || status === 'PENDING') && wasDeducted) {
+  // 2. REVERSIÓN DE STOCK (CANCELACIONES O RETORNO A PEDIDO / PENDIENTE)
+  else if ((isTargetReversal || status === 'PENDING' || status === 'PEDIDO') && wasDeducted) {
     for (const req of requestedTotals) {
       if (req.matchedProductIndex !== -1) {
         const prod = store.items[req.matchedProductIndex];

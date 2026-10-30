@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       customerNotes: customerNotes || cardMessage || "",
       items,
       total: Number(total) || 0,
-      status: "PENDING"
+      status: "PEDIDO"
     });
 
     return NextResponse.json({

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function AdminItemsPage() {
-  redirect('/admin');
+  redirect('/admin/products');
 }
