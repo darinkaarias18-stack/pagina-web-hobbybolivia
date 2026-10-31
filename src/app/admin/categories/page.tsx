@@ -677,7 +677,7 @@ export default function AdminCategoriesPage() {
                 <tr>
                   <th className="py-3 px-3 text-center w-14">N°</th>
                   <th className="py-3 px-4 w-28">SKU / CÓDIGO</th>
-                  <th className="py-3 px-4">NOMBRE DEL REPUESTO</th>
+                  <th className="py-3 px-4">NOMBRE DEL PRODUCTO</th>
                   <th className="py-3 px-4">CATEGORÍA</th>
                   <th className="py-3 px-3 text-center">PRECIO USD</th>
                   <th className="py-3 px-3 text-center">PRECIO (BS.)</th>
@@ -786,7 +786,7 @@ export default function AdminCategoriesPage() {
                     <tr>
                       <th className="py-3 px-3 text-center w-14">N°</th>
                       <th className="py-3 px-4">SKU / CÓDIGO</th>
-                      <th className="py-3 px-4">NOMBRE DEL REPUESTO</th>
+                      <th className="py-3 px-4">NOMBRE DEL PRODUCTO</th>
                       <th className="py-3 px-3 text-center">PRECIO USD</th>
                       <th className="py-3 px-3 text-center">PRECIO (BS.)</th>
                       <th className="py-3 px-3 text-center">STOCK</th>

@@ -1053,15 +1053,6 @@ export function AdminProductsClient() {
             />
           </button>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] rounded-full text-xs font-black uppercase tracking-wider transition-all shadow-xs cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-[#D4A359] hover:text-[#161311]" />
-            <span>Nuevo Producto</span>
-          </button>
-
           <Link
             href="/"
             target="_blank"
@@ -1282,9 +1273,9 @@ export function AdminProductsClient() {
                     IMAGEN
                   </th>
 
-                  {/* INMOVILIZADO 3: NOMBRE DEL REPUESTO (solo nombre, ancho amplio sin truncar) */}
+                  {/* INMOVILIZADO 3: NOMBRE DEL PRODUCTO (solo nombre, ancho amplio sin truncar) */}
                   <th className="sticky left-[255px] z-30 bg-[#181615] text-[#FAF8F5] py-4 px-4 w-[350px] min-w-[320px] max-w-[420px] border-b border-[#E2DCD3]/60 border-r border-[#3A3530] shadow-[6px_0_15px_-4px_rgba(0,0,0,0.35)] text-left">
-                    NOMBRE DEL REPUESTO
+                    NOMBRE DEL PRODUCTO
                   </th>
 
                   {/* COLUMNAS DESLIZABLES */}
@@ -1682,11 +1673,11 @@ export function AdminProductsClient() {
 
                 {/* COLUMNA DERECHA (7/12): INFORMACIÓN TÉCNICA, PRECIOS Y DESCRIPCIÓN */}
                 <div className="lg:col-span-7 space-y-4">
-                  {/* Fila 1: Nombre del Repuesto + SKU Oficial */}
+                  {/* Fila 1: Nombre del Producto + SKU Oficial */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
                     <div className="sm:col-span-8">
                       <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
-                        Nombre del Repuesto *
+                        Nombre del Producto *
                       </label>
                       <input
                         type="text"
