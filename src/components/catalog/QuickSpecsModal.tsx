@@ -16,6 +16,9 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
   const { addToCart } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const [isHovered, setIsHovered] = useState(false);
 
   if (!product) return null;
 
@@ -33,7 +36,13 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
     }, 900);
   };
 
-  const [imgFailed, setImgFailed] = useState(false);
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    setZoomPos({ x, y });
+  };
+
   const rawImg = product.image_url || (product.images && product.images[0]) || product.imageUrl;
   const isInvalidImg = !rawImg || rawImg.trim() === '' || rawImg.includes('d0721149ad-dubq3570tn-t');
   const isPlaceholder = isInvalidImg || imgFailed;
@@ -46,31 +55,47 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
       {/* Modal Dialog */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E2DCD3] overflow-hidden flex flex-col md:flex-row max-h-[90vh]"
+        className="relative w-full max-w-3xl bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E2DCD3] overflow-hidden flex flex-col md:flex-row max-h-[90vh]"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
           type="button"
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white hover:bg-[#EBE5DB] text-[#1A1817] border border-[#E2DCD3] transition-colors cursor-pointer"
+          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white hover:bg-[#EBE5DB] text-[#1A1817] border border-[#E2DCD3] transition-colors cursor-pointer shadow-xs"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Left: Product Image on Pure White or Beige for placeholder */}
-        <div className={`w-full md:w-1/2 p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#E2DCD3] ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-white'}`}>
-          <div className="w-full h-56 sm:h-64 flex items-center justify-center overflow-hidden rounded-2xl">
+        {/* Left: Product Image on Soft Neutral with Zoom / Lupa */}
+        <div className={`w-full md:w-1/2 p-3.5 sm:p-4 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#E2DCD3] ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-neutral-50/80'}`}>
+          <div
+            onMouseMove={handleMouseMove}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="w-full aspect-square relative rounded-2xl overflow-hidden bg-white border border-[#E8E2D8] shadow-xs flex items-center justify-center cursor-zoom-in"
+          >
+            {/* SKU Badge flotante en esquina inferior izquierda sin tapar el producto */}
+            <span className="absolute bottom-3 left-3 z-10 text-[10px] font-mono font-bold text-[#D4A359] bg-[#211E1C]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#D4A359]/30 shadow-xs pointer-events-none select-none">
+              SKU: {product.sku}
+            </span>
+
+            {/* Hint de Zoom en esquina superior derecha */}
+            <span className={`absolute top-3 right-3 z-10 text-[9px] font-semibold text-neutral-500 bg-white/85 backdrop-blur-md px-2 py-0.5 rounded-md border border-neutral-200/60 shadow-2xs transition-opacity duration-200 pointer-events-none ${isHovered ? 'opacity-0' : 'opacity-80'}`}>
+              Lupa 1.5x
+            </span>
+
             <img
               src={imgSrc}
               alt={name}
-              className={isPlaceholder ? 'w-full h-full object-cover rounded-xl' : 'max-h-full max-w-full object-contain'}
+              style={{
+                transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
+              }}
+              className={`w-full h-full select-none transition-transform duration-200 ease-out ${
+                isHovered ? 'scale-150' : 'scale-100'
+              } ${isPlaceholder ? 'object-cover' : 'object-contain p-3'}`}
+              loading="lazy"
               onError={() => setImgFailed(true)}
             />
-          </div>
-          <div className="mt-3 text-center">
-            <span className="text-xs font-mono font-bold text-[#D4A359] bg-[#211E1C] px-3 py-1 rounded-full">
-              SKU: {product.sku}
-            </span>
           </div>
         </div>
 

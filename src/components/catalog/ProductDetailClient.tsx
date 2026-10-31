@@ -51,6 +51,15 @@ export function ProductDetailClient({
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'shipping'>('desc');
   const [copiedLink, setCopiedLink] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    setZoomPos({ x, y });
+  };
 
   // Precios
   const rate = exchangeRate > 0 ? exchangeRate : 11.8552;
@@ -161,7 +170,12 @@ export function ProductDetailClient({
 
           {/* ================= COLUMNA IZQUIERDA: GALERÍA DE IMÁGENES ================= */}
           <div className="lg:col-span-6 space-y-4">
-            <div className={`rounded-3xl p-6 sm:p-8 border border-[#E2DCD3] shadow-sm relative overflow-hidden flex items-center justify-center min-h-[380px] sm:min-h-[460px] ${selectedImage.includes('placeholder.webp') ? 'bg-[#FAF8F5]' : 'bg-white'}`}>
+            <div
+              onMouseMove={handleMouseMove}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className={`rounded-3xl p-6 sm:p-8 border border-[#E2DCD3] shadow-sm relative overflow-hidden flex items-center justify-center min-h-[380px] sm:min-h-[460px] cursor-zoom-in ${selectedImage.includes('placeholder.webp') ? 'bg-[#FAF8F5]' : 'bg-white'}`}
+            >
               {/* Badges de Estado */}
               <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
                 {product.badge && (
@@ -184,11 +198,16 @@ export function ProductDetailClient({
                 {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
               </button>
 
-              {/* Imagen Principal */}
+              {/* Imagen Principal con Lupa / Zoom interactivo */}
               <img
                 src={selectedImage}
                 alt={product.name || product.title}
-                className={`max-h-[360px] sm:max-h-[420px] w-auto max-w-full mx-auto transition-transform duration-300 hover:scale-105 select-none ${selectedImage.includes('placeholder.webp') ? 'object-cover rounded-2xl shadow-sm' : 'object-contain'}`}
+                style={{
+                  transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
+                }}
+                className={`max-h-[360px] sm:max-h-[420px] w-auto max-w-full mx-auto transition-transform duration-200 ease-out select-none ${
+                  isHovered ? 'scale-150' : 'scale-100'
+                } ${selectedImage.includes('placeholder.webp') ? 'object-cover rounded-2xl shadow-sm' : 'object-contain'}`}
                 onError={(e) => {
                   const target = e.currentTarget as HTMLImageElement;
                   if (!target.src.includes('placeholder.webp')) {
