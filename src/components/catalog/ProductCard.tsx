@@ -72,8 +72,8 @@ export function ProductCard({
       className="group relative rounded-2xl bg-white border border-neutral-100 shadow-sm hover:border-[#D4A359] hover:shadow-2xl hover:scale-[1.15] hover:z-30 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
       title="Clic para ver detalles y cotizar"
     >
-      {/* 1. Fondo de la Imagen y Contenedor Superior con aspect ratio constante y sin huecos blancos */}
-      <div className={`w-full aspect-[4/3] relative overflow-hidden flex items-center justify-center border-b border-neutral-100 ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-neutral-50'}`}>
+      {/* 1. Fondo de la Imagen y Contenedor Superior con aspect ratio cuadrado simetrico sin recortes */}
+      <div className={`w-full aspect-square relative overflow-hidden flex items-center justify-center border-b border-neutral-100 ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-white'}`}>
         {/* Distintivo / Badge en esquina superior derecha con diseño pulido */}
         {validBadge && (
           <span
@@ -90,7 +90,7 @@ export function ProductCard({
         <img
           src={imageSource}
           alt={name}
-          className={`w-full h-full mx-auto select-none ${isPlaceholder ? 'object-cover' : 'object-contain'}`}
+          className={`w-full h-full mx-auto select-none ${isPlaceholder ? 'object-cover' : 'object-contain p-2'}`}
           loading="lazy"
           decoding="async"
           onError={() => {
