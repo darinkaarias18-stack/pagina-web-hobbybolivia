@@ -38,7 +38,7 @@ export function ProductCard({
     e.stopPropagation();
     addToCart(product, 1);
     setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1500);
+    setTimeout(() => setJustAdded(false), 700);
   };
 
   const rawImage = product.image_url || (product.images && product.images[0]) || product.imageUrl;
@@ -132,13 +132,13 @@ export function ProductCard({
             )}
           </div>
 
-          {/* Botones Redondeados (rounded-full) con hover suave individual */}
+          {/* Botones Redondeados (rounded-full) con micro-interacciones visuales */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleQuickView}
               type="button"
               title="Vista rápida del producto"
-              className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 flex items-center justify-center transition-all duration-200 hover:scale-105 cursor-pointer"
+              className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-amber-100 text-neutral-600 hover:text-amber-800 border border-neutral-200/80 hover:border-amber-400 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-90 cursor-pointer shadow-2xs"
             >
               <Eye className="w-3.5 h-3.5" />
             </button>
@@ -147,9 +147,9 @@ export function ProductCard({
               onClick={handleAddToCart}
               type="button"
               title={justAdded ? "¡Añadido al carrito!" : "Añadir al carrito"}
-              className={`w-8 h-8 rounded-full font-bold transition-all duration-200 shadow-xs flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 ${justAdded
-                ? 'bg-[#3E7B44] text-white'
-                : 'bg-neutral-900 hover:bg-[#D4A359] text-white hover:text-neutral-950'
+              className={`w-8 h-8 rounded-full font-bold transition-all duration-200 shadow-xs flex items-center justify-center cursor-pointer ${justAdded
+                ? 'bg-emerald-600 text-white scale-110 shadow-md ring-2 ring-emerald-400/40'
+                : 'bg-neutral-900 hover:bg-amber-600 hover:scale-110 text-white hover:text-white active:scale-90'
                 }`}
             >
               {justAdded ? (
