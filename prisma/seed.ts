@@ -395,6 +395,38 @@ export async function main() {
         }
       }
       console.log(`✨ Categoría 'OTROS PRODUCTOS' y sus ${OTROS_PRODUCTOS_ITEMS.length} productos registrados exitosamente con prisma.category.upsert y prisma.product.upsert.`);
+
+      // 12. Asignación exclusiva de imageUrl para 15 productos de 'OTROS PRODUCTOS' mediante prisma.product.update
+      const OTROS_PRODUCTOS_IMAGE_MAPPINGS: Record<string, string> = {
+        'AIB10255': '/products/AIB10255.jpg',
+        'AIB10266': '/products/AIB10266.jpg',
+        'AIB10520': '/products/AIB10520.jpg',
+        'AIB11168': '/products/AIB11168.jpg',
+        'AIB11518': '/products/AIB11518.jpg',
+        'AIB11736': '/products/AIB11736.jpg',
+        'AIB12930': '/products/AIB12930.jpg',
+        'AIB14300': '/products/AIB14300.jpg',
+        'AIB17204': '/products/AIB17204.jpg',
+        'AIB17672': '/products/AIB17672.jpg',
+        'AIB18738': '/products/AIB18738.jpg',
+        'AIB18987': '/products/AIB18987.jpg',
+        'AIB19365': '/products/AIB19365.jpg',
+        'AIB19580': '/products/AIB19580.jpg',
+        'AIB20015': '/products/AIB20015.jpg',
+      };
+
+      for (const [sku, imageUrl] of Object.entries(OTROS_PRODUCTOS_IMAGE_MAPPINGS)) {
+        try {
+          await prisma.product.update({
+            where: { sku },
+            data: { imageUrl }
+          });
+          console.log(`📸 [Prisma Update] Imagen asignada a SKU ${sku} -> ${imageUrl}`);
+        } catch (updateErr: any) {
+          console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
+        }
+      }
+      console.log(`🎯 ${Object.keys(OTROS_PRODUCTOS_IMAGE_MAPPINGS).length} productos de 'OTROS PRODUCTOS' actualizados con prisma.product.update (precios y stock intactos).`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {

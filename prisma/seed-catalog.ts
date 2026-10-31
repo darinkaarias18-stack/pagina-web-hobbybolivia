@@ -3576,8 +3576,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'Futaba FASST 8Ch',
-    image_url: '/products/aib14300.jpg',
-    imageUrl: '/products/aib14300.jpg',
+    image_url: '/products/AIB14300.jpg',
+    imageUrl: '/products/AIB14300.jpg',
     is_active: true
   },
   {
