@@ -3862,8 +3862,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Patín de Cola .40-.60',
-    image_url: '/products/AIB20031.gif',
-    imageUrl: '/products/AIB20031.gif',
+    image_url: '/products/AIB20031.jpg',
+    imageUrl: '/products/AIB20031.jpg',
     is_active: true
   },
   {
@@ -3928,8 +3928,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Bujía OS #8',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB2691.jpg',
+    imageUrl: '/products/AIB2691.jpg',
     is_active: true
   },
   {
@@ -4104,8 +4104,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 58,
     stockQuantity: 58,
     badge: 'Cable Y 150mm',
-    image_url: '/products/AIB9692_TN.jpg',
-    imageUrl: '/products/AIB9692_TN.jpg',
+    image_url: '/products/AIB9692.jpg',
+    imageUrl: '/products/AIB9692.jpg',
     is_active: true
   },
   {
@@ -4236,8 +4236,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 9,
     stockQuantity: 9,
     badge: 'Sub C 4200mAh',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIBSC4200.jpg',
+    imageUrl: '/products/AIBSC4200.jpg',
     is_active: true
   }
 ];
