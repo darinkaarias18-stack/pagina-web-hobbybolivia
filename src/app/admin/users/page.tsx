@@ -22,7 +22,9 @@ import {
   Copy,
   Phone,
   MessageCircle,
-  ChevronDown
+  ChevronDown,
+  X,
+  User as UserIcon
 } from 'lucide-react';
 import type { User, UserRole } from '@/lib/types';
 
@@ -81,6 +83,7 @@ export default function AdminUsersPage() {
     phone?: string;
     emailDispatch: EmailDispatchInfo;
   } | null>(null);
+  const [copiedAccess, setCopiedAccess] = useState(false);
 
   // Edit User Modal (Superadmin can edit name, Gmail, password, phone, and Role)
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -844,91 +847,128 @@ export default function AdminUsersPage() {
       )}
 
       {/* ========================================================
-          MODAL: CONFIRMACIÓN DE ENVÍO DE ACCESOS AL GMAIL DEL ADMIN
+          MODAL: CONFIRMACIÓN DE ENVÍO DE ACCESOS AL ADMIN
       ======================================================== */}
       {dispatchedAccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/75 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white text-[#1A1817] rounded-3xl max-w-lg w-full shadow-2xl border border-[#E2DCD3] p-6 sm:p-7 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-[#1F6E43] text-white flex items-center justify-center shadow-xs">
-                  <MessageCircle className="w-5 h-5 text-white" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white text-[#1A1817] rounded-3xl max-w-md sm:max-w-lg w-full shadow-2xl border border-[#E2DCD3] overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Cabecera del Modal */}
+            <div className="p-6 pb-4 border-b border-[#E2DCD3] flex items-start justify-between gap-3 bg-[#FAF8F5]">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                  <MessageCircle className="w-6 h-6 fill-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-[#1A1817]">
-                    Administrador Creado · Accesos Listos
+                  <h3 className="text-base font-black text-[#1A1817] leading-snug">
+                    Administrador Creado
                   </h3>
-                  <span className="text-[11px] text-[#8C827A] flex items-center gap-1">
-                    <span>WhatsApp registrado:</span>
-                    <strong className="text-[#1F6E43] font-mono">{dispatchedAccess.phone || 'Sin número'}</strong>
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                    <span className="text-xs text-[#5C5650] font-medium">
+                      WhatsApp: <strong className="text-emerald-700 font-mono font-bold">{dispatchedAccess.phone || 'Sin número'}</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setDispatchedAccess(null)}
-                className="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#8C827A] hover:text-[#1A1817] flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white hover:bg-[#211E1C] text-[#8C827A] hover:text-[#D4A359] border border-[#E2DCD3] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                title="Cerrar ventana"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[#8C827A] font-bold">Nombre:</span>
-                <span className="font-black text-[#1A1817]">{dispatchedAccess.adminName}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#8C827A] font-bold">Usuario:</span>
-                <span className="font-mono font-black text-[#1A1817]">{dispatchedAccess.username}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#8C827A] font-bold">Contraseña:</span>
-                <span className="font-mono font-black text-[#D4A359] bg-[#211E1C] px-2.5 py-0.5 rounded-lg">
-                  {dispatchedAccess.password}
-                </span>
-              </div>
-              {dispatchedAccess.phone && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[#8C827A] font-bold">Teléfono / WhatsApp:</span>
-                  <span className="font-mono font-black text-[#1F6E43] flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-[#1F6E43]" />
-                    {dispatchedAccess.phone}
+            <div className="p-6 space-y-4">
+              {/* Tarjeta de Credenciales Oficiales */}
+              <div className="rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] overflow-hidden shadow-2xs">
+                <div className="px-4 py-2.5 bg-[#F2EDE4] border-b border-[#E2DCD3] flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#7A7067] flex items-center gap-1.5">
+                    <Key className="w-3 h-3 text-[#D4A359]" />
+                    Credenciales de Acceso
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100/70 border border-amber-300/60 px-2 py-0.5 rounded-md">
+                    Acceso Oficial
                   </span>
                 </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-[#8C827A] font-bold">Rol asignado:</span>
-                <span className="font-black text-[#1A1817]">ADMIN</span>
+
+                <div className="p-4 space-y-3 text-xs">
+                  {/* Nombre */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#7A7067] font-semibold flex items-center gap-1.5">
+                      <UserIcon className="w-3.5 h-3.5 text-[#8C827A]" />
+                      Nombre:
+                    </span>
+                    <span className="font-black text-[#1A1817] text-right">{dispatchedAccess.adminName}</span>
+                  </div>
+
+                  {/* Usuario / Correo */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#7A7067] font-semibold flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-[#8C827A]" />
+                      Usuario:
+                    </span>
+                    <span className="font-mono font-bold text-[#1A1817] text-right truncate max-w-[240px]">
+                      {dispatchedAccess.username}
+                    </span>
+                  </div>
+
+                  {/* Contraseña */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#7A7067] font-semibold flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-[#8C827A]" />
+                      Contraseña:
+                    </span>
+                    <span className="font-mono font-black text-[#D4A359] bg-[#211E1C] px-3 py-1 rounded-xl text-xs tracking-wider border border-[#3A3530] shadow-2xs">
+                      {dispatchedAccess.password}
+                    </span>
+                  </div>
+
+                  {/* Teléfono / WhatsApp */}
+                  {dispatchedAccess.phone && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[#7A7067] font-semibold flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-[#8C827A]" />
+                        Teléfono / WhatsApp:
+                      </span>
+                      <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200 text-xs">
+                        {dispatchedAccess.phone}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Rol Asignado */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#7A7067] font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C827A]" />
+                      Rol asignado:
+                    </span>
+                    <span className="font-black text-[11px] px-2.5 py-0.5 rounded-full bg-[#211E1C] text-[#D4A359] border border-[#3A3530]">
+                      ADMINISTRADOR
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#1E4D2B] text-xs space-y-1">
-              <p className="font-bold flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4 text-[#1F6E43] shrink-0" />
-                <span>Despacho directo por WhatsApp</span>
-              </p>
-              <p className="text-[11px] text-[#335C3D]">
-                Haz clic en <strong>Enviar por WhatsApp</strong> para abrir la conversación con el número registrado{' '}
-                <strong className="text-[#1F6E43] font-mono">{dispatchedAccess.phone || dispatchedAccess.username}</strong>{' '}
-                con los datos de acceso prellenados y listos para enviar.
-              </p>
-            </div>
+              {/* Callout WhatsApp */}
+              <div className="p-3.5 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] text-[#14532D] text-xs flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                  <MessageCircle className="w-4 h-4 fill-white" />
+                </div>
+                <div className="space-y-0.5 flex-1">
+                  <h4 className="font-black text-xs text-[#14532D]">
+                    Despacho directo por WhatsApp
+                  </h4>
+                  <p className="text-[11px] text-[#166534] leading-relaxed">
+                    Al hacer clic en <strong className="font-bold">Enviar por WhatsApp</strong> se abrirá el chat con los datos de acceso prellenados y listos para enviar.
+                  </p>
+                </div>
+              </div>
 
-            <div className="pt-3 border-t border-[#E2DCD3] flex flex-wrap items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(dispatchedAccess.emailDispatch.bodyText);
-                  showToast('Credenciales copiadas al portapapeles');
-                }}
-                className="px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-[#EFEAE2] text-[#1A1817] border border-[#E2DCD3] font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <Copy className="w-3.5 h-3.5 text-[#D4A359]" />
-                <span>Copiar Accesos</span>
-              </button>
-
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* Barra de Acciones Estructurada */}
+              <div className="pt-2 space-y-2.5">
+                {/* Botón Principal: WhatsApp (Ancho Completo, Destacado) */}
                 {dispatchedAccess.emailDispatch.whatsappShareUrl && (
                   <button
                     type="button"
@@ -939,21 +979,47 @@ export default function AdminUsersPage() {
                         'noopener,noreferrer'
                       )
                     }
-                    className="px-5 py-2.5 rounded-full bg-[#1F6E43] hover:bg-[#185534] active:scale-[0.98] text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    className="w-full py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Enviar por WhatsApp</span>
+                    <MessageCircle className="w-4 h-4 fill-white" />
+                    <span>Enviar Accesos por WhatsApp</span>
                     <ExternalLink className="w-3.5 h-3.5 text-white/80" />
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setDispatchedAccess(null)}
-                  className="px-5 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Listo
-                </button>
+                {/* Botones Secundarios: Copiar Accesos y Listo (50% / 50% Cuadrícula) */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(dispatchedAccess.emailDispatch.bodyText);
+                      setCopiedAccess(true);
+                      setTimeout(() => setCopiedAccess(false), 2500);
+                      showToast('Credenciales copiadas al portapapeles');
+                    }}
+                    className="py-2.5 px-3 rounded-xl bg-[#FAF8F5] hover:bg-[#F0ECE1] text-[#1A1817] border border-[#E2DCD3] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                  >
+                    {copiedAccess ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700 font-black">¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-[#D4A359]" />
+                        <span>Copiar Accesos</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDispatchedAccess(null)}
+                    className="py-2.5 px-3 rounded-xl bg-white hover:bg-[#FAF8F5] text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3] font-bold text-xs flex items-center justify-center transition-all cursor-pointer"
+                  >
+                    Listo / Cerrar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
