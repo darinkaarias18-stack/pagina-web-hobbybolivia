@@ -67,7 +67,7 @@ export function ProductCard({
   return (
     <div
       onClick={() => handleQuickView()}
-      className="group relative rounded-2xl bg-white border border-[#E2DCD3] hover:border-[#D4A359] hover:shadow-2xl hover:scale-110 hover:z-20 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
+      className="group relative rounded-2xl bg-white border border-[#E2DCD3] hover:border-[#D4A359] hover:shadow-2xl hover:scale-[1.20] hover:z-30 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
       title="Clic para ver detalles y cotizar"
     >
       {/* 1. Contenedor de Imagen con Aspect Ratio uniforme, sin padding restrictivo y fondo neutro */}
