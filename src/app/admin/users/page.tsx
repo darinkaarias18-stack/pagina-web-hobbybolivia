@@ -27,6 +27,7 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import type { User, UserRole } from '@/lib/types';
+import { CatalogBackupExportModule } from '@/components/admin/CatalogBackupExportModule';
 
 export const COUNTRY_CODES = [
   { code: '+591', flag: '🇧🇴', name: 'Bolivia (+591)', placeholder: '77012345' },
@@ -462,6 +463,9 @@ export default function AdminUsersPage() {
           </button>
         </div>
       </div>
+
+      {/* Módulo Oficial de Exportación y Respaldo del Catálogo */}
+      <CatalogBackupExportModule />
 
       {/* Users Table Card */}
       <div className="bg-white rounded-3xl border border-[#E2DCD3] shadow-xs overflow-hidden">

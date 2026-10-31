@@ -75,3 +75,4 @@ for (const [sku, imageUrl] of Object.entries(SPINNERS_CONSTRUCCION_IMAGE_MAPPING
 fs.writeFileSync(initialDataPath, initialDataContent, 'utf8');
 
 console.log('✨ Mapeo de 21 repuestos (Spinners & Construcción) aplicado con éxito a seed-catalog.ts e initial-data.ts');
+
