@@ -19,9 +19,30 @@ import {
   CheckCircle2,
   Mail,
   ExternalLink,
-  Copy
+  Copy,
+  Phone,
+  MessageCircle,
+  ChevronDown
 } from 'lucide-react';
 import type { User, UserRole } from '@/lib/types';
+
+export const COUNTRY_CODES = [
+  { code: '+591', flag: '🇧🇴', name: 'Bolivia (+591)', placeholder: '77012345' },
+  { code: '+54', flag: '🇦🇷', name: 'Argentina (+54)', placeholder: '9112345678' },
+  { code: '+51', flag: '🇵🇪', name: 'Perú (+51)', placeholder: '987654321' },
+  { code: '+56', flag: '🇨🇱', name: 'Chile (+56)', placeholder: '912345678' },
+  { code: '+55', flag: '🇧🇷', name: 'Brasil (+55)', placeholder: '11987654321' },
+  { code: '+57', flag: '🇨🇴', name: 'Colombia (+57)', placeholder: '3001234567' },
+  { code: '+593', flag: '🇪🇨', name: 'Ecuador (+593)', placeholder: '991234567' },
+  { code: '+595', flag: '🇵🇾', name: 'Paraguay (+595)', placeholder: '981123456' },
+  { code: '+598', flag: '🇺🇾', name: 'Uruguay (+598)', placeholder: '99123456' },
+  { code: '+58', flag: '🇻🇪', name: 'Venezuela (+58)', placeholder: '4121234567' },
+  { code: '+52', flag: '🇲🇽', name: 'México (+52)', placeholder: '5512345678' },
+  { code: '+1', flag: '🇺🇸', name: 'EE.UU. / Canadá (+1)', placeholder: '2025550143' },
+  { code: '+34', flag: '🇪🇸', name: 'España (+34)', placeholder: '612345678' },
+  { code: '+507', flag: '🇵🇦', name: 'Panamá (+507)', placeholder: '61234567' },
+  { code: '+506', flag: '🇨🇷', name: 'Costa Rica (+506)', placeholder: '81234567' },
+];
 
 interface EmailDispatchInfo {
   sentViaSmtp: boolean;
@@ -29,7 +50,9 @@ interface EmailDispatchInfo {
   subject: string;
   bodyText: string;
   gmailComposeUrl: string;
+  whatsappShareUrl?: string;
   mailtoUrl: string;
+  errorMessage?: string;
 }
 
 export default function AdminUsersPage() {
@@ -42,6 +65,8 @@ export default function AdminUsersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newGmailUser, setNewGmailUser] = useState('');
+  const [newCountryCode, setNewCountryCode] = useState('+591');
+  const [newPhone, setNewPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newIsActive, setNewIsActive] = useState(true);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
@@ -53,14 +78,17 @@ export default function AdminUsersPage() {
     adminName: string;
     username: string;
     password: string;
+    phone?: string;
     emailDispatch: EmailDispatchInfo;
   } | null>(null);
 
-  // Edit User Modal (Superadmin can edit name, Gmail, password, and Role)
+  // Edit User Modal (Superadmin can edit name, Gmail, password, phone, and Role)
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editCountryCode, setEditCountryCode] = useState('+591');
+  const [editPhone, setEditPhone] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editRole, setEditRole] = useState<UserRole>('ADMIN');
   const [editIsActive, setEditIsActive] = useState(true);
@@ -144,9 +172,10 @@ export default function AdminUsersPage() {
     const cleanName = newName.trim();
     const cleanGmail = newGmailUser.trim().toLowerCase();
     const cleanPassword = newPassword.trim();
+    const cleanPhoneDigits = newPhone.trim().replace(/[^\d]/g, '');
 
-    if (!cleanName || !cleanGmail || !cleanPassword) {
-      setCreateError('Nombre completo, correo Gmail de usuario y contraseña son obligatorios.');
+    if (!cleanName || !cleanGmail || !cleanPassword || !cleanPhoneDigits) {
+      setCreateError('Nombre completo, correo Gmail, número de teléfono/celular y contraseña son obligatorios.');
       return;
     }
 
@@ -173,6 +202,8 @@ export default function AdminUsersPage() {
           username: cleanGmail,
           email: cleanGmail,
           password: cleanPassword,
+          countryCode: newCountryCode,
+          phone: cleanPhoneDigits,
           role: 'ADMIN',
           isActive: newIsActive
         })
@@ -187,6 +218,8 @@ export default function AdminUsersPage() {
       setNewName('');
       setNewGmailUser('');
       setNewPassword('');
+      setNewPhone('');
+      setNewCountryCode('+591');
       setNewIsActive(true);
 
       if (data.emailDispatch) {
@@ -194,14 +227,13 @@ export default function AdminUsersPage() {
           adminName: cleanName,
           username: cleanGmail,
           password: cleanPassword,
+          phone: `${newCountryCode} ${cleanPhoneDigits}`,
           emailDispatch: data.emailDispatch
         });
       }
 
       showToast(
-        data.emailDispatch?.sentViaSmtp
-          ? `Administrador "${cleanGmail}" creado y accesos enviados a su Gmail.`
-          : `Administrador "${cleanGmail}" creado. Envía o confirma sus accesos por Gmail.`
+        `Administrador "${cleanGmail}" creado con éxito. Listo para enviar accesos por WhatsApp.`
       );
       loadUsers();
     } catch (err: unknown) {
@@ -247,6 +279,9 @@ export default function AdminUsersPage() {
     setEditName(user.name || '');
     setEditUsername(user.username || '');
     setEditEmail(user.email || user.username || '');
+    setEditCountryCode(user.countryCode || '+591');
+    const existingDigits = user.phone ? user.phone.replace(/^\+\d+\s*/, '') : '';
+    setEditPhone(existingDigits);
     setEditPassword('');
     setEditRole(user.role || 'ADMIN');
     setEditIsActive(user.isActive !== false);
@@ -272,10 +307,13 @@ export default function AdminUsersPage() {
     setEditSaving(true);
     try {
       const cleanUsername = editUsername.trim().toLowerCase();
+      const cleanPhoneDigits = editPhone.trim().replace(/[^\d]/g, '');
       const payload: Record<string, unknown> = {
         name: editName.trim(),
         username: cleanUsername,
         email: editEmail.trim().toLowerCase() || cleanUsername,
+        countryCode: editCountryCode,
+        phone: cleanPhoneDigits ? `${editCountryCode} ${cleanPhoneDigits}` : '',
         role: isPrimaryMasterAccount(editingUser) ? 'SUPERADMIN' : editRole,
         isActive: isPrimaryMasterAccount(editingUser) ? true : editIsActive
       };
@@ -449,11 +487,12 @@ export default function AdminUsersPage() {
           <table className="w-full table-fixed text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#FAF8F5] border-b border-[#E2DCD3] text-[#8C827A] font-black uppercase tracking-wider text-[10px]">
-                <th className="py-3.5 px-4 w-[28%]">Usuario (Gmail)</th>
-                <th className="py-3.5 px-4 w-[22%]">Nombre Completo</th>
-                <th className="py-3.5 px-4 w-[18%]">Rol Asignado</th>
-                <th className="py-3.5 px-4 w-[13%]">Estado</th>
-                <th className="py-3.5 px-4 text-right w-[19%]">Acciones</th>
+                <th className="py-3.5 px-4 w-[24%]">Usuario (Gmail)</th>
+                <th className="py-3.5 px-4 w-[18%]">Nombre Completo</th>
+                <th className="py-3.5 px-4 w-[20%]">Teléfono / WhatsApp</th>
+                <th className="py-3.5 px-4 w-[15%]">Rol Asignado</th>
+                <th className="py-3.5 px-4 w-[10%]">Estado</th>
+                <th className="py-3.5 px-4 text-right w-[13%]">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EFEAE2]">
@@ -504,7 +543,28 @@ export default function AdminUsersPage() {
                       {u.name}
                     </td>
 
-                    {/* 3. Rol Asignado (Editable por Superadmin para cuentas Admin) */}
+                    {/* 3. Teléfono / WhatsApp con Código de País */}
+                    <td className="py-3.5 px-4">
+                      {u.phone ? (
+                        <div className="flex items-center gap-1.5 font-mono text-xs text-[#1A1817]">
+                          <Phone className="w-3.5 h-3.5 text-[#D4A359] shrink-0" />
+                          <span className="font-bold whitespace-nowrap">{u.phone}</span>
+                          <a
+                            href={`https://api.whatsapp.com/send?phone=${u.phone.replace(/[^\d]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 transition-colors cursor-pointer ml-1 inline-flex items-center"
+                            title="Contactar o enviar mensaje por WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-[#8C827A] italic">No registrado</span>
+                      )}
+                    </td>
+
+                    {/* 4. Rol Asignado (Editable por Superadmin para cuentas Admin) */}
                     <td className="py-3.5 px-4">
                       {isPrimaryMaster ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#161311] text-[#D4A359] border border-[#D4A359]/40 shadow-xs">
@@ -604,7 +664,7 @@ export default function AdminUsersPage() {
                     Crear Nuevo Usuario Admin
                   </h3>
                   <span className="text-[11px] text-[#8C827A]">
-                    El usuario debe ser un correo Gmail a donde se enviarán sus accesos
+                    El usuario debe ser un correo Gmail (los accesos se enviarán por WhatsApp)
                   </span>
                 </div>
               </div>
@@ -641,7 +701,7 @@ export default function AdminUsersPage() {
 
               <div>
                 <label className="font-bold text-[#1A1817] block mb-1">
-                  Usuario (Correo Gmail donde recibirá los accesos) *
+                  Usuario (Correo Gmail de Acceso) *
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-[#D4A359] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -656,6 +716,45 @@ export default function AdminUsersPage() {
                 </div>
                 <span className="text-[10px] text-[#8C827A] mt-1 block">
                   Regla obligatoria: debe terminar en <strong>@gmail.com</strong>. A este correo se enviarán el usuario y la contraseña.
+                </span>
+              </div>
+
+              <div>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Número de Teléfono / Celular de Contacto *
+                </label>
+                <div className="flex items-center gap-2">
+                  {/* Selector de Código de País */}
+                  <div className="relative shrink-0 w-36 sm:w-44">
+                    <select
+                      value={newCountryCode}
+                      onChange={(e) => setNewCountryCode(e.target.value)}
+                      className="w-full pl-3 pr-8 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all cursor-pointer appearance-none"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.flag} {c.code} ({c.name.split(' ')[0]})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#8C827A] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  {/* Input de dígitos numéricos */}
+                  <div className="relative flex-1">
+                    <Phone className="w-4 h-4 text-[#D4A359] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="tel"
+                      required
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value.replace(/[^\d]/g, ''))}
+                      placeholder={COUNTRY_CODES.find((c) => c.code === newCountryCode)?.placeholder || '77012345'}
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
+                    />
+                  </div>
+                </div>
+                <span className="text-[10px] text-[#8C827A] mt-1 block">
+                  Elige el código del país y escribe los números correspondientes para WhatsApp y contacto.
                 </span>
               </div>
 
@@ -752,15 +851,16 @@ export default function AdminUsersPage() {
           <div className="bg-white text-[#1A1817] rounded-3xl max-w-lg w-full shadow-2xl border border-[#E2DCD3] p-6 sm:p-7 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-[#3E7B44] text-white flex items-center justify-center shadow-xs">
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-2xl bg-[#1F6E43] text-white flex items-center justify-center shadow-xs">
+                  <MessageCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="text-base font-black text-[#1A1817]">
                     Administrador Creado · Accesos Listos
                   </h3>
-                  <span className="text-[11px] text-[#8C827A]">
-                    Destinatario: {dispatchedAccess.username}
+                  <span className="text-[11px] text-[#8C827A] flex items-center gap-1">
+                    <span>WhatsApp registrado:</span>
+                    <strong className="text-[#1F6E43] font-mono">{dispatchedAccess.phone || 'Sin número'}</strong>
                   </span>
                 </div>
               </div>
@@ -779,7 +879,7 @@ export default function AdminUsersPage() {
                 <span className="font-black text-[#1A1817]">{dispatchedAccess.adminName}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#8C827A] font-bold">Usuario (Gmail):</span>
+                <span className="text-[#8C827A] font-bold">Usuario:</span>
                 <span className="font-mono font-black text-[#1A1817]">{dispatchedAccess.username}</span>
               </div>
               <div className="flex items-center justify-between">
@@ -788,25 +888,32 @@ export default function AdminUsersPage() {
                   {dispatchedAccess.password}
                 </span>
               </div>
+              {dispatchedAccess.phone && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8C827A] font-bold">Teléfono / WhatsApp:</span>
+                  <span className="font-mono font-black text-[#1F6E43] flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-[#1F6E43]" />
+                    {dispatchedAccess.phone}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-[#8C827A] font-bold">Rol asignado:</span>
                 <span className="font-black text-[#1A1817]">ADMIN</span>
               </div>
             </div>
 
-            {dispatchedAccess.emailDispatch.sentViaSmtp ? (
-              <div className="p-3 rounded-2xl bg-[#3E7B44]/15 border border-[#3E7B44]/30 text-[#1E4D2B] text-xs font-bold">
-                El correo con el usuario y la contraseña se envió automáticamente a{' '}
-                <span className="underline">{dispatchedAccess.username}</span>.
-              </div>
-            ) : (
-              <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#D4A359]/50 text-[#1A1817] text-xs space-y-2">
-                <p className="font-semibold text-[#5C5650]">
-                  Haz clic en <strong>Enviar por Gmail</strong> para despachar el correo con las credenciales directamente a{' '}
-                  <strong className="text-[#1A1817]">{dispatchedAccess.username}</strong>:
-                </p>
-              </div>
-            )}
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#1E4D2B] text-xs space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4 text-[#1F6E43] shrink-0" />
+                <span>Despacho directo por WhatsApp</span>
+              </p>
+              <p className="text-[11px] text-[#335C3D]">
+                Haz clic en <strong>Enviar por WhatsApp</strong> para abrir la conversación con el número registrado{' '}
+                <strong className="text-[#1F6E43] font-mono">{dispatchedAccess.phone || dispatchedAccess.username}</strong>{' '}
+                con los datos de acceso prellenados y listos para enviar.
+              </p>
+            </div>
 
             <div className="pt-3 border-t border-[#E2DCD3] flex flex-wrap items-center justify-between gap-2">
               <button
@@ -815,28 +922,30 @@ export default function AdminUsersPage() {
                   navigator.clipboard.writeText(dispatchedAccess.emailDispatch.bodyText);
                   showToast('Credenciales copiadas al portapapeles');
                 }}
-                className="px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-[#EFEAE2] text-[#1A1817] border border-[#E2DCD3] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-[#EFEAE2] text-[#1A1817] border border-[#E2DCD3] font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <Copy className="w-3.5 h-3.5 text-[#D4A359]" />
                 <span>Copiar Accesos</span>
               </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.open(
-                      dispatchedAccess.emailDispatch.gmailComposeUrl,
-                      '_blank',
-                      'noopener,noreferrer'
-                    )
-                  }
-                  className="px-5 py-2.5 rounded-full bg-[#211E1C] hover:bg-[#2E2926] text-white border border-[#D4A359] font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
-                >
-                  <Mail className="w-3.5 h-3.5 text-[#D4A359]" />
-                  <span className="text-white">Enviar por Gmail</span>
-                  <ExternalLink className="w-3 h-3 text-[#D4A359]" />
-                </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {dispatchedAccess.emailDispatch.whatsappShareUrl && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.open(
+                        dispatchedAccess.emailDispatch.whatsappShareUrl,
+                        '_blank',
+                        'noopener,noreferrer'
+                      )
+                    }
+                    className="px-5 py-2.5 rounded-full bg-[#1F6E43] hover:bg-[#185534] active:scale-[0.98] text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Enviar por WhatsApp</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-white/80" />
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -925,6 +1034,38 @@ export default function AdminUsersPage() {
                     onChange={(e) => setEditEmail(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-semibold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-[#1A1817] block mb-1">
+                  Teléfono / Celular de Contacto
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative shrink-0 w-36 sm:w-44">
+                    <select
+                      value={editCountryCode}
+                      onChange={(e) => setEditCountryCode(e.target.value)}
+                      className="w-full pl-3 pr-8 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all cursor-pointer appearance-none"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.flag} {c.code} ({c.name.split(' ')[0]})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#8C827A] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                  <div className="relative flex-1">
+                    <Phone className="w-4 h-4 text-[#D4A359] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="tel"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value.replace(/[^\d]/g, ''))}
+                      placeholder={COUNTRY_CODES.find((c) => c.code === editCountryCode)?.placeholder || '77012345'}
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:bg-white focus:border-[#D4A359] outline-none transition-all"
+                    />
+                  </div>
                 </div>
               </div>
 

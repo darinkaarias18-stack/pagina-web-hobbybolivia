@@ -14,8 +14,7 @@ const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.svg'];
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser(request);
-    // En producción requiere sesión válida
-    if (!user && process.env.NODE_ENV === 'production') {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Acceso no autorizado' },
         { status: 401 }

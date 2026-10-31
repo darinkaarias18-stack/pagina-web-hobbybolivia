@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
       name: u.name,
       username: u.username,
       email: u.email,
+      phone: u.phone || '',
+      countryCode: u.countryCode || '+591',
       role: u.role,
       isActive: u.isActive,
       createdAt: u.createdAt,
@@ -44,10 +46,13 @@ export async function POST(request: NextRequest) {
     const rawGmail = (body.username || body.email || '').trim().toLowerCase();
     const rawPassword = (body.password || '').trim();
     const rawName = (body.name || '').trim();
+    const rawCountryCode = (body.countryCode || '+591').trim();
+    const rawPhoneNumber = (body.phone || '').trim().replace(/[^\d]/g, '');
+    const cleanFullPhone = rawPhoneNumber ? `${rawCountryCode} ${rawPhoneNumber}` : '';
 
-    if (!rawName || !rawGmail || !rawPassword) {
+    if (!rawName || !rawGmail || !rawPassword || !rawPhoneNumber) {
       return NextResponse.json(
-        { success: false, error: "El nombre completo, correo Gmail de usuario y contraseña son obligatorios." },
+        { success: false, error: "Nombre completo, correo Gmail, número de celular/teléfono y contraseña son obligatorios." },
         { status: 400 }
       );
     }
@@ -58,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Por regla del sistema, el usuario debe ser un correo válido de Gmail (ejemplo@gmail.com), a donde se enviarán los accesos."
+          error: "Por regla del sistema, el usuario debe ser un correo válido de Gmail (ejemplo@gmail.com) para autenticarse en el sistema."
         },
         { status: 400 }
       );
@@ -81,6 +86,8 @@ export async function POST(request: NextRequest) {
       name: rawName,
       username: rawGmail,
       email: rawGmail,
+      phone: cleanFullPhone,
+      countryCode: rawCountryCode,
       password: rawPassword,
       role: 'ADMIN',
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : true
@@ -97,18 +104,21 @@ export async function POST(request: NextRequest) {
       adminName: newUser.name,
       username: rawGmail,
       password: rawPassword,
-      loginUrl
+      loginUrl,
+      phone: cleanFullPhone
     });
 
     return NextResponse.json({
       success: true,
-      message: `Usuario Administrador creado exitosamente. Accesos preparados para ${rawGmail}.`,
+      message: `Usuario Administrador creado exitosamente. Accesos listos para despachar por WhatsApp al número ${cleanFullPhone}.`,
       emailDispatch,
       data: {
         id: newUser.id,
         name: newUser.name,
         username: newUser.username,
         email: newUser.email,
+        phone: newUser.phone,
+        countryCode: newUser.countryCode,
         role: newUser.role,
         isActive: newUser.isActive,
         createdAt: newUser.createdAt

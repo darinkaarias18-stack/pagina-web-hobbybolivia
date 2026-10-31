@@ -7,13 +7,15 @@ export type ClaimType = "RECLAMO" | "QUEJA";
 export type ClaimStatus = "PENDIENTE" | "EN_PROCESO" | "RESUELTO";
 export type UserRole = "SUPERADMIN" | "ADMIN";
 
-export type ProductBadge = "Best Seller" | "Nuevo" | "Popular" | "Pocas Unidades" | "Oferta";
+export type ProductBadge = "Best Seller" | "Nuevo" | "Popular" | "Pocas Unidades" | "Oferta" | string;
 
 export interface User {
   id: number;
   name: string;
   username: string;
   email?: string;
+  phone?: string;
+  countryCode?: string;
   password?: string;
   role: UserRole;
   isActive: boolean;
@@ -97,6 +99,8 @@ export interface Product {
   specs_line: string; // ej. '2200KV | XT60 | 45g'
   compatible_models: string; // ej. 'Aviones RC Glow/Gasolina, Drones, Planeadores'
   price: number; // en Bs.
+  priceUsd?: number; // Precio base en USD
+  price_usd?: number;
   currency?: 'Bs.' | 'USD' | string; // 'Bs.' o 'USD'
   display_currency?: 'Bs.' | 'USD';
   old_price?: number | null; // en Bs.
@@ -105,8 +109,8 @@ export interface Product {
   stock: number;
   stockQuantity: number;
   badge?: ProductBadge | null;
-  image_url: string;
-  imageUrl?: string;
+  image_url?: string | null;
+  imageUrl?: string | null;
   images: string[];
   is_active: boolean;
   isActive: boolean;

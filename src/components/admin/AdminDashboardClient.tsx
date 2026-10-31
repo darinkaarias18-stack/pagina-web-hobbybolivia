@@ -120,8 +120,8 @@ export function AdminDashboardClient() {
       {toast && (
         <div
           className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-xs font-bold animate-in slide-in-from-bottom-5 duration-200 ${toast.type === 'success'
-              ? 'bg-[#161311] text-[#D4A359] border-[#D4A359]/40'
-              : 'bg-red-950 text-red-200 border-red-800'
+            ? 'bg-[#161311] text-[#D4A359] border-[#D4A359]/40'
+            : 'bg-red-950 text-red-200 border-red-800'
             }`}
         >
           {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
@@ -130,7 +130,7 @@ export function AdminDashboardClient() {
       )}
 
       {/* Header Top Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
             Panel de Control Hobby Bolivia
@@ -143,18 +143,18 @@ export function AdminDashboardClient() {
         <div className="flex items-center flex-wrap gap-2.5">
           <Link
             href="/admin/quotes"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap shrink-0"
           >
             <ShoppingBag className="w-4 h-4 text-[#161311]" />
             <span>Ver Todos los Pedidos</span>
           </Link>
 
-          {/* Quick Currency Status (Botón interactivo para actualizar con fecha y hora de última actualización) */}
+          {/* Quick Currency Status */}
           <button
             type="button"
             onClick={handleRefreshExchangeRate}
             disabled={isRefreshingRate}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none whitespace-nowrap shrink-0"
             title={`Clic para actualizar el tipo de cambio oficial ahora. Última actualización: ${lastUpdatedStr || 'reciente'}`}
           >
             {isRefreshingRate ? (
@@ -177,10 +177,11 @@ export function AdminDashboardClient() {
             />
           </button>
 
+          {/* Ver Tienda Pública al lado derecho después de TC Oficial */}
           <Link
             href="/"
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white hover:bg-[#FAF8F5] text-[#1A1817] hover:text-[#D4A359] font-bold text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all whitespace-nowrap shrink-0"
           >
             <span>Ver Tienda Pública</span>
             <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />

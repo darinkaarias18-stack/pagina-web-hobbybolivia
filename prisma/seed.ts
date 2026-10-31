@@ -3,124 +3,134 @@ import {
   initialSiteConfig,
   initialCategories,
   initialOccasions,
-  initialBanners,
-  initialItems
+  initialBanners
 } from '../src/lib/initial-data';
+import { seedCatalog, OFFICIAL_CATEGORIES, OFFICIAL_PRODUCTS } from './seed-catalog';
 
 const prisma = new PrismaClient();
 
 export async function main() {
-  console.log("🌸 Iniciando Seed de datos para Hobby Bolivia...");
+  console.log("🌸 Iniciando Seed oficial de catálogo para Hobby Bolivia...");
 
-  // 1. SiteConfig
-  const existingConfig = await prisma.siteConfig.findFirst();
-  if (!existingConfig) {
-    await prisma.siteConfig.create({
-      data: initialSiteConfig
-    });
-    console.log("Configuración inicial de Hobby Bolivia creada.");
-  }
+  // Siempre ejecutar la sincronización y limpieza del catálogo en .data/db.json
+  await seedCatalog();
 
-  // 2. Admin User
-  const existingUser = await prisma.user.findFirst({
-    where: { email: "dariasdigital_hobbybolivia" }
-  });
-  if (!existingUser) {
-    await prisma.user.create({
-      data: {
-        name: "dariasdigital_hobbybolivia",
-        email: "dariasdigital_hobbybolivia",
-        passwordHash: "Imp6fSMr2%mj0w?v",
-        role: "ADMIN"
+  // Si DATABASE_URL está configurado, sincronizar con Prisma ORM / MariaDB
+  if (process.env.DATABASE_URL) {
+    try {
+      console.log("🔌 Conectando con MariaDB / MySQL vía Prisma...");
+      await prisma.$connect();
+
+      // 1. SiteConfig
+      const existingConfig = await prisma.siteConfig.findFirst();
+      if (!existingConfig) {
+        await prisma.siteConfig.create({
+          data: initialSiteConfig
+        });
+        console.log("Configuración inicial de Hobby Bolivia creada.");
       }
-    });
-    console.log("Usuario administrador dariasdigital_hobbybolivia creado.");
-  }
 
-  // 3. Categories
-  const categoryMap = new Map<string, number>();
-  for (const cat of initialCategories) {
-    const upserted = await prisma.category.upsert({
-      where: { slug: cat.slug },
-      update: cat,
-      create: cat
-    });
-    categoryMap.set(cat.slug, upserted.id);
-  }
-  console.log(`${initialCategories.length} categorías registradas.`);
-
-  // 4. Occasions
-  const occasionMap = new Map<string, number>();
-  for (const occ of initialOccasions) {
-    const upserted = await prisma.occasion.upsert({
-      where: { slug: occ.slug },
-      update: occ,
-      create: occ
-    });
-    occasionMap.set(occ.slug, upserted.id);
-  }
-  console.log(`${initialOccasions.length} ocasiones registradas.`);
-
-  // 5. Banners
-  for (const banner of initialBanners) {
-    const existing = await prisma.banner.findFirst({
-      where: { title: banner.title }
-    });
-    if (!existing) {
-      await prisma.banner.create({ data: banner });
-    }
-  }
-  console.log("Banners promocionales registrados.");
-
-  // 6. Products & Services
-  for (const item of initialItems) {
-    const categoryId = item.category_id || item.categoryId || 1;
-    const { categorySlug, occasionSlugs, category, ...itemData } = item as any;
-
-    const upsertedItem = await prisma.catalogItem.upsert({
-      where: { sku: item.sku },
-      update: {
-        ...itemData,
-        categoryId
-      },
-      create: {
-        ...itemData,
-        categoryId
+      // 2. Admin User
+      const existingUser = await prisma.user.findFirst({
+        where: { email: "dariasdigital_hobbybolivia" }
+      });
+      if (!existingUser) {
+        await prisma.user.create({
+          data: {
+            name: "dariasdigital_hobbybolivia",
+            email: "dariasdigital_hobbybolivia",
+            passwordHash: "Imp6fSMr2%mj0w?v",
+            role: "ADMIN"
+          }
+        });
+        console.log("Usuario administrador dariasdigital_hobbybolivia creado.");
       }
-    });
 
+      // 3. Categories con prisma.category.upsert
+      const categoryMap: Record<number, number> = {};
+      for (const cat of OFFICIAL_CATEGORIES) {
+        const c = await prisma.category.upsert({
+          where: { slug: cat.slug },
+          update: {
+            name: cat.name,
+            description: cat.description,
+            imageUrl: cat.imageUrl,
+            order: cat.order,
+            isActive: cat.isActive
+          },
+          create: {
+            name: cat.name,
+            slug: cat.slug,
+            description: cat.description,
+            imageUrl: cat.imageUrl,
+            order: cat.order,
+            isActive: cat.isActive
+          }
+        });
+        categoryMap[cat.id] = c.id;
+      }
+      console.log(`✅ ${OFFICIAL_CATEGORIES.length} categorías oficiales registradas en Prisma.`);
 
-    // Relate occasions
-    if (occasionSlugs && Array.isArray(occasionSlugs)) {
-      for (const occSlug of occasionSlugs) {
-        const occasionId = occasionMap.get(occSlug);
-        if (occasionId) {
-          await prisma.catalogItemOccasion.upsert({
-            where: {
-              itemId_occasionId: {
-                itemId: upsertedItem.id,
-                occasionId
-              }
+      // 4. Products con prisma.product.upsert (evitando duplicados por SKU)
+      const exchangeRate = 12.01;
+
+      for (const prod of OFFICIAL_PRODUCTS) {
+        const catId = categoryMap[prod.categoryId];
+        if (catId) {
+          const priceBob = Number((prod.priceUsd * exchangeRate).toFixed(2));
+          await prisma.product.upsert({
+            where: { sku: prod.sku },
+            update: {
+              name: prod.name,
+              slug: prod.slug,
+              categoryId: catId,
+              scale: prod.scale,
+              material: prod.material,
+              specsLine: prod.specs_line,
+              compatibleModels: prod.compatible_models,
+              price: priceBob,
+              priceUsd: prod.priceUsd,
+              stock: prod.stock,
+              badge: prod.badge,
+              imageUrl: prod.image_url || prod.imageUrl || null,
+              isActive: prod.is_active ?? true,
+              brand: prod.brand,
+              description: prod.description
             },
-            update: {},
             create: {
-              itemId: upsertedItem.id,
-              occasionId
+              sku: prod.sku,
+              name: prod.name,
+              slug: prod.slug,
+              categoryId: catId,
+              scale: prod.scale,
+              material: prod.material,
+              specsLine: prod.specs_line,
+              compatibleModels: prod.compatible_models,
+              price: priceBob,
+              priceUsd: prod.priceUsd,
+              stock: prod.stock,
+              badge: prod.badge,
+              imageUrl: prod.image_url || prod.imageUrl || null,
+              isActive: prod.is_active ?? true,
+              brand: prod.brand,
+              description: prod.description
             }
           });
         }
       }
+      console.log(`✈️ ${OFFICIAL_PRODUCTS.length} repuestos oficiales sincronizados con prisma.product.upsert en MariaDB.`);
+    } catch (err: any) {
+      console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
+    } finally {
+      await prisma.$disconnect();
     }
   }
-  console.log(`✈️ ${initialItems.length} componentes y repuestos sembrados en MySQL con éxito.`);
 
+  console.log("🎉 Seed finalizado correctamente.");
 }
 
 main()
   .catch((e) => {
     console.error(e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });

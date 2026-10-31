@@ -47,7 +47,7 @@ interface AdminMetricsModuleProps {
 }
 
 type PeriodType = 'OVERVIEW' | 'WEEK' | 'MONTH' | 'DAY' | 'YEAR';
-type ChartViewMode = 'CHART' | 'LIST';
+type ChartViewMode = 'HORIZONTAL' | 'VERTICAL';
 type ProductTab = 'BEST_SELLERS' | 'STAGNANT_STOCK';
 
 interface PeriodicItem {
@@ -68,7 +68,7 @@ export function AdminMetricsModule({
   isRefreshingRate
 }: AdminMetricsModuleProps) {
   const [periodTab, setPeriodTab] = useState<PeriodType>('OVERVIEW');
-  const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('CHART');
+  const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('HORIZONTAL');
   const [productTab, setProductTab] = useState<ProductTab>('BEST_SELLERS');
   const [customerSearch, setCustomerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
@@ -721,6 +721,111 @@ export function AdminMetricsModule({
       maximumFractionDigits: 2
     })}`;
 
+  // Paleta de colores cromática para barras (horizontales, verticales y lista)
+  const getItemColor = (rawKey: string, index: number, isOverview: boolean) => {
+    if (isOverview) {
+      if (rawKey.includes('today')) {
+        return {
+          gradient: 'from-emerald-600 via-emerald-500 to-emerald-400',
+          shadow: 'shadow-emerald-500/30',
+          border: 'border-emerald-300',
+          text: 'text-emerald-700',
+          badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+          dot: 'bg-emerald-500'
+        };
+      }
+      if (rawKey.includes('week')) {
+        return {
+          gradient: 'from-indigo-600 via-indigo-500 to-indigo-400',
+          shadow: 'shadow-indigo-500/30',
+          border: 'border-indigo-300',
+          text: 'text-indigo-700',
+          badge: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+          dot: 'bg-indigo-500'
+        };
+      }
+      if (rawKey.includes('month')) {
+        return {
+          gradient: 'from-purple-600 via-purple-500 to-purple-400',
+          shadow: 'shadow-purple-500/30',
+          border: 'border-purple-300',
+          text: 'text-purple-700',
+          badge: 'bg-purple-50 text-purple-800 border-purple-200',
+          dot: 'bg-purple-500'
+        };
+      }
+      return {
+        gradient: 'from-[#B88738] via-[#D4A359] to-[#E5BE7E]',
+        shadow: 'shadow-[#D4A359]/35',
+        border: 'border-[#D4A359]/50',
+        text: 'text-[#B88738]',
+        badge: 'bg-amber-50 text-amber-800 border-amber-200',
+        dot: 'bg-[#D4A359]'
+      };
+    }
+
+    const PALETTE = [
+      {
+        gradient: 'from-emerald-600 via-emerald-500 to-emerald-400',
+        shadow: 'shadow-emerald-500/30',
+        border: 'border-emerald-300',
+        text: 'text-emerald-700',
+        badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        dot: 'bg-emerald-500'
+      },
+      {
+        gradient: 'from-indigo-600 via-indigo-500 to-indigo-400',
+        shadow: 'shadow-indigo-500/30',
+        border: 'border-indigo-300',
+        text: 'text-indigo-700',
+        badge: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+        dot: 'bg-indigo-500'
+      },
+      {
+        gradient: 'from-purple-600 via-purple-500 to-purple-400',
+        shadow: 'shadow-purple-500/30',
+        border: 'border-purple-300',
+        text: 'text-purple-700',
+        badge: 'bg-purple-50 text-purple-800 border-purple-200',
+        dot: 'bg-purple-500'
+      },
+      {
+        gradient: 'from-[#B88738] via-[#D4A359] to-[#E5BE7E]',
+        shadow: 'shadow-[#D4A359]/35',
+        border: 'border-[#D4A359]/50',
+        text: 'text-[#B88738]',
+        badge: 'bg-amber-50 text-amber-800 border-amber-200',
+        dot: 'bg-[#D4A359]'
+      },
+      {
+        gradient: 'from-sky-600 via-sky-500 to-sky-400',
+        shadow: 'shadow-sky-500/30',
+        border: 'border-sky-300',
+        text: 'text-sky-700',
+        badge: 'bg-sky-50 text-sky-800 border-sky-200',
+        dot: 'bg-sky-500'
+      },
+      {
+        gradient: 'from-rose-600 via-rose-500 to-rose-400',
+        shadow: 'shadow-rose-500/30',
+        border: 'border-rose-300',
+        text: 'text-rose-700',
+        badge: 'bg-rose-50 text-rose-800 border-rose-200',
+        dot: 'bg-rose-500'
+      },
+      {
+        gradient: 'from-teal-600 via-teal-500 to-teal-400',
+        shadow: 'shadow-teal-500/30',
+        border: 'border-teal-300',
+        text: 'text-teal-700',
+        badge: 'bg-teal-50 text-teal-800 border-teal-200',
+        dot: 'bg-teal-500'
+      }
+    ];
+
+    return PALETTE[index % PALETTE.length];
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* ================= SECCIÓN 1: $ RENDIMIENTO DE VENTAS COMERCIALES ================= */}
@@ -833,15 +938,21 @@ export function AdminMetricsModule({
           </div>
         </div>
 
-        {/* ================= GRÁFICO DE BARRAS VERTICALES DE RENDIMIENTO ================= */}
+        {/* ================= GRÁFICO DE BARRAS DE RENDIMIENTO ================= */}
         <div className="bg-[#FAF8F5] rounded-3xl p-5 sm:p-6 border border-[#E2DCD3] shadow-sm space-y-5">
           {/* Cabecera del Gráfico con Controles */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <BarChart3 className="w-4 h-4 text-[#D4A359]" />
+                {chartViewMode === 'HORIZONTAL' ? (
+                  <BarChart2 className="w-4 h-4 text-[#D4A359]" />
+                ) : (
+                  <BarChart3 className="w-4 h-4 text-[#D4A359]" />
+                )}
                 <span className="text-xs font-black uppercase tracking-wider text-[#D4A359]">
-                  Gráfico de Barras Verticales · Tendencia de Ingresos
+                  {chartViewMode === 'HORIZONTAL'
+                    ? 'Gráfico de Barras Horizontales · Rendimiento en Colores'
+                    : 'Gráfico de Barras Verticales · Tendencia de Ingresos'}
                 </span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-[#1A1817]">
@@ -908,31 +1019,31 @@ export function AdminMetricsModule({
                 </button>
               </div>
 
-              {/* View Switcher: Barras vs Lista */}
+              {/* View Switcher: Barras Horizontales vs Barras Verticales */}
               <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
                 <button
                   type="button"
-                  onClick={() => setChartViewMode('CHART')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${chartViewMode === 'CHART'
+                  onClick={() => setChartViewMode('HORIZONTAL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${chartViewMode === 'HORIZONTAL'
                       ? 'bg-[#D4A359] text-[#161311] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
-                  title="Ver Gráfico de Barras Verticales"
+                  title="Ver Gráfico de Barras Horizontales con Colores"
                 >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Barras</span>
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span>Barras Horiz.</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setChartViewMode('LIST')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${chartViewMode === 'LIST'
+                  onClick={() => setChartViewMode('VERTICAL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${chartViewMode === 'VERTICAL'
                       ? 'bg-[#D4A359] text-[#161311] shadow-xs'
                       : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
-                  title="Ver Lista Detallada"
+                  title="Ver Gráfico de Barras Verticales con Colores"
                 >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Lista</span>
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Barras Vert.</span>
                 </button>
               </div>
             </div>
@@ -943,8 +1054,70 @@ export function AdminMetricsModule({
             <div className="p-12 text-center text-xs text-[#8C827A] bg-white rounded-2xl border border-[#E2DCD3]">
               No se registran ventas para este período seleccionado.
             </div>
-          ) : chartViewMode === 'CHART' ? (
-            /* ================= GRÁFICO DE BARRAS VERTICALES ================= */
+          ) : chartViewMode === 'HORIZONTAL' ? (
+            /* ================= GRÁFICO DE BARRAS HORIZONTALES ================= */
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#E2DCD3] shadow-2xs space-y-3.5">
+              {chartItems.map((item, idx) => {
+                const maxVal = Math.max(...chartItems.map((c) => c.totalBob), 1);
+                const barWidthPercent = Math.max(Math.round((item.totalBob / maxVal) * 100), item.totalBob > 0 ? 8 : 2);
+                const colorStyle = getItemColor(item.rawKey, idx, periodTab === 'OVERVIEW');
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5]/80 border border-[#E2DCD3] hover:border-[#D4A359] hover:bg-[#FAF8F5] transition-all group"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className={`w-3 h-3 rounded-full shrink-0 shadow-xs ${colorStyle.dot}`} />
+                        <span className="font-black text-sm text-[#1A1817]">
+                          {item.label}
+                        </span>
+                        {item.subLabel && (
+                          <span className="text-[11px] text-[#8C827A] font-medium">
+                            · {item.subLabel}
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${colorStyle.badge}`}>
+                          {item.orderCount} {item.orderCount === 1 ? 'pedido' : 'pedidos'}
+                        </span>
+                      </div>
+
+                      <div className="text-right shrink-0 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-2 sm:gap-0">
+                        <span className="font-mono font-black text-sm sm:text-base text-[#1A1817]">
+                          {formatBs(item.totalBob)}
+                        </span>
+                        <span className="font-mono text-[11px] text-[#8C827A]">
+                          {formatUsd(exchangeRate > 0 ? item.totalBob / exchangeRate : 0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pista y Barra Horizontal Rellena con Color */}
+                    <div className="w-full h-8 bg-white rounded-xl p-1 border border-[#E2DCD3] relative overflow-hidden flex items-center shadow-2xs">
+                      <div
+                        className={`h-full rounded-lg bg-gradient-to-r ${colorStyle.gradient} transition-all duration-700 ease-out flex items-center justify-end px-3 shadow-xs ${colorStyle.shadow}`}
+                        style={{ width: `${barWidthPercent}%` }}
+                        title={`${item.label} · ${formatBs(item.totalBob)} (${barWidthPercent}%)`}
+                      >
+                        {barWidthPercent >= 16 && (
+                          <span className="text-[11px] font-mono font-black text-white drop-shadow-xs">
+                            {Math.round((item.totalBob / maxVal) * 100)}%
+                          </span>
+                        )}
+                      </div>
+                      {barWidthPercent < 16 && item.totalBob > 0 && (
+                        <span className="text-[11px] font-mono font-black text-[#5C5650] ml-2.5">
+                          {Math.round((item.totalBob / maxVal) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* ================= GRÁFICO DE BARRAS VERTICALES CON COLORES ================= */
             <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#E2DCD3] shadow-2xs">
               <div className="relative pt-6 pb-2">
                 {/* Líneas Guía del Eje Y */}
@@ -981,7 +1154,8 @@ export function AdminMetricsModule({
                   <div className="flex items-end justify-around gap-3 sm:gap-6 min-w-[520px] h-72 sm:h-80 pt-6 pb-12">
                     {chartItems.map((item, idx) => {
                       const barHeightPercent = maxChartBob > 0 ? Math.round((item.totalBob / maxChartBob) * 100) : 0;
-                      const isHighest = item.totalBob > 0 && item.totalBob === Math.max(...chartItems.map((c) => c.totalBob));
+                      const maxVal = Math.max(...chartItems.map((c) => c.totalBob), 1);
+                      const colorStyle = getItemColor(item.rawKey, idx, periodTab === 'OVERVIEW');
 
                       return (
                         <div
@@ -993,7 +1167,7 @@ export function AdminMetricsModule({
                             <span className="font-mono font-black text-xs sm:text-sm text-[#1A1817] block whitespace-nowrap">
                               {formatBs(item.totalBob)}
                             </span>
-                            <span className="inline-block px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2DCD3] text-[10px] font-bold text-[#5C5650] whitespace-nowrap shadow-2xs">
+                            <span className={`inline-block px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap shadow-2xs ${colorStyle.badge}`}>
                               {item.orderCount} {item.orderCount === 1 ? 'pedido' : 'pedidos'}
                             </span>
                           </div>
@@ -1004,23 +1178,20 @@ export function AdminMetricsModule({
                             style={{ height: '100%' }}
                             title={`${item.label} · ${formatBs(item.totalBob)} en ${item.orderCount} pedido(s)`}
                           >
-                            {/* Barra Rellena con Gradiente */}
+                            {/* Barra Rellena con Gradiente de Color */}
                             <div
-                              className={`w-full rounded-t-2xl transition-all duration-700 ease-out flex flex-col justify-between items-center py-2 ${isHighest
-                                  ? 'bg-gradient-to-t from-[#B88738] via-[#D4A359] to-[#E5BE7E] shadow-md shadow-[#D4A359]/30'
-                                  : 'bg-gradient-to-t from-[#211E1C] via-[#38332E] to-[#5C5650]'
-                                }`}
+                              className={`w-full rounded-t-2xl transition-all duration-700 ease-out flex flex-col justify-between items-center py-2 bg-gradient-to-t ${colorStyle.gradient} shadow-md ${colorStyle.shadow}`}
                               style={{ height: `${Math.max(barHeightPercent, item.totalBob > 0 ? 8 : 2)}%` }}
                             >
                               {barHeightPercent >= 22 && (
                                 <span className="text-[10px] font-mono font-black text-white drop-shadow-xs">
-                                  {Math.round((item.totalBob / (Math.max(...chartItems.map((c) => c.totalBob)) || 1)) * 100)}%
+                                  {Math.round((item.totalBob / maxVal) * 100)}%
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          {/* Etiquetas del Eje X (Abajo de la línea base) */}
+                          {/* Etiquetas del Eje X */}
                           <div className="mt-3 text-center w-full px-1">
                             <p className="font-black text-xs text-[#1A1817] truncate" title={item.label}>
                               {item.shortLabel}
@@ -1037,50 +1208,6 @@ export function AdminMetricsModule({
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            /* ================= VISTA LISTA DETALLADA ================= */
-            <div className="space-y-3">
-              {activePeriodData.items.map((item, idx) => {
-                const percentage = Math.round((item.totalBob / maxPeriodTotal) * 100);
-                return (
-                  <div
-                    key={idx}
-                    className="bg-white p-4 rounded-2xl border border-[#E2DCD3] hover:border-[#D4A359]/60 transition-all space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="w-7 h-7 rounded-lg bg-[#211E1C] text-[#D4A359] font-mono font-black text-xs flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span className="font-black text-sm text-[#1A1817]">
-                          {item.label}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2DCD3] text-[10px] font-bold text-[#5C5650]">
-                          {item.orderCount} {item.orderCount === 1 ? 'pedido' : 'pedidos'}
-                        </span>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="font-mono font-black text-sm sm:text-base text-[#1A1817] block">
-                          {formatBs(item.totalBob)}
-                        </span>
-                        <span className="font-mono text-[11px] text-[#8C827A]">
-                          {formatUsd(exchangeRate > 0 ? item.totalBob / exchangeRate : 0)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="w-full h-2.5 bg-[#FAF8F5] rounded-full overflow-hidden border border-[#E2DCD3]">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#B88738] to-[#D4A359] rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(percentage, 5)}%` }}
-                        title={`${percentage}% del valor máximo`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           )}
         </div>
@@ -1369,8 +1496,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setProductTab('BEST_SELLERS')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${productTab === 'BEST_SELLERS'
-                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                 >
                   <Flame className="w-3.5 h-3.5" />
@@ -1380,8 +1507,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setProductTab('STAGNANT_STOCK')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${productTab === 'STAGNANT_STOCK'
-                      ? 'bg-amber-500 text-[#161311] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-amber-500 text-[#161311] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />

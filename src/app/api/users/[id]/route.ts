@@ -28,6 +28,8 @@ export async function GET(
         name: user.name,
         username: user.username,
         email: user.email,
+        phone: user.phone || '',
+        countryCode: user.countryCode || '+591',
         role: user.role,
         isActive: user.isActive,
         createdAt: user.createdAt,
@@ -69,6 +71,8 @@ export async function PUT(
         name: updated.name,
         username: updated.username,
         email: updated.email,
+        phone: updated.phone || '',
+        countryCode: updated.countryCode || '+591',
         role: updated.role,
         isActive: updated.isActive,
         updatedAt: updated.updatedAt

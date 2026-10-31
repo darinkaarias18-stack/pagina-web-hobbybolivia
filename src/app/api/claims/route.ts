@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getClaimRecords, getClaimRecordByCode, createClaimRecord, updateClaimStatus } from '@/lib/db';
 import type { ClaimStatus } from '@/lib/types';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, getSessionUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,6 +14,26 @@ export async function GET(request: NextRequest) {
       if (!claim) {
         return NextResponse.json({ success: false, error: "Reclamo no encontrado" }, { status: 404 });
       }
+
+      const adminUser = await getSessionUser(request);
+      if (!adminUser) {
+        // Enmascarar / omitir PII sensible (cédula, teléfono, email) para consultas públicas
+        const sanitizedClaim = {
+          id: claim.id,
+          trackingCode: claim.trackingCode,
+          fullName: claim.fullName,
+          contractedItem: claim.contractedItem,
+          orderCode: claim.orderCode,
+          type: claim.type,
+          detail: claim.detail,
+          status: claim.status,
+          adminNotes: claim.adminNotes,
+          createdAt: claim.createdAt,
+          updatedAt: claim.updatedAt
+        };
+        return NextResponse.json({ success: true, data: sanitizedClaim });
+      }
+
       return NextResponse.json({ success: true, data: claim });
     }
 

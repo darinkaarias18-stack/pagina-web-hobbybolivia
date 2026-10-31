@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getProductById, updateProduct, deleteProduct } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET(
   _request: NextRequest,
@@ -30,6 +31,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const { id } = await params;
     const productId = parseInt(id, 10);
     if (isNaN(productId)) {
@@ -66,10 +70,13 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const { id } = await params;
     const productId = parseInt(id, 10);
     if (isNaN(productId)) {

@@ -745,19 +745,33 @@ export interface ProductFilters {
 }
 
 function mapMysqlRowToProduct(row: any): Product {
+  const catId = Number(row.category_id);
+  const priceUsdVal = row.price_usd !== undefined && row.price_usd !== null
+    ? Number(row.price_usd)
+    : (row.priceUsd !== undefined && row.priceUsd !== null ? Number(row.priceUsd) : undefined);
   return {
     id: Number(row.id),
     sku: row.sku,
     name: row.name,
     title: row.name,
     slug: row.slug,
-    category_id: Number(row.category_id),
-    categoryId: Number(row.category_id),
+    category_id: catId,
+    categoryId: catId,
+    category: row.category_name ? {
+      id: catId,
+      name: row.category_name,
+      slug: row.category_slug || '',
+      order: Number(row.category_order || 0),
+      isActive: Boolean(row.category_is_active ?? true),
+      itemCount: 0
+    } : undefined,
     scale: row.scale,
     material: row.material,
     specs_line: row.specs_line,
     compatible_models: row.compatible_models,
     price: Number(row.price),
+    priceUsd: priceUsdVal,
+    price_usd: priceUsdVal,
     old_price: row.old_price ? Number(row.old_price) : undefined,
     compareAtPrice: row.old_price ? Number(row.old_price) : undefined,
     discountPercent: row.old_price && Number(row.old_price) > Number(row.price)
@@ -923,7 +937,12 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
   const pool = getMysqlPool();
   if (pool) {
     try {
-      const [rows]: any = await pool.query('SELECT * FROM products ORDER BY id ASC');
+      const [rows]: any = await pool.query(`
+        SELECT p.*, c.name AS category_name, c.slug AS category_slug, c.display_order AS category_order, c.is_active AS category_is_active
+        FROM products p
+        LEFT JOIN categories c ON c.id = p.category_id
+        ORDER BY p.id ASC
+      `);
       if (rows && rows.length > 0) {
         return rows.map(mapMysqlRowToProduct);
       }
@@ -933,14 +952,28 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
   }
 
   const store = getLocalStore();
-  return store.items;
+  return store.items.map(item => {
+    const catId = item.category_id || item.categoryId || 1;
+    const cat = store.categories.find(c => c.id === catId);
+    return {
+      ...item,
+      category_id: catId,
+      categoryId: catId,
+      category: cat || item.category
+    };
+  });
 }
 
 export async function getProductById(id: number): Promise<Product | null> {
   const pool = getMysqlPool();
   if (pool) {
     try {
-      const [rows]: any = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+      const [rows]: any = await pool.query(`
+        SELECT p.*, c.name AS category_name, c.slug AS category_slug, c.display_order AS category_order, c.is_active AS category_is_active
+        FROM products p
+        LEFT JOIN categories c ON c.id = p.category_id
+        WHERE p.id = ?
+      `, [id]);
       if (rows && rows.length > 0) {
         return mapMysqlRowToProduct(rows[0]);
       }
@@ -951,14 +984,27 @@ export async function getProductById(id: number): Promise<Product | null> {
 
   const store = getLocalStore();
   const product = store.items.find(p => p.id === id);
-  return product || null;
+  if (!product) return null;
+  const catId = product.category_id || product.categoryId || 1;
+  const cat = store.categories.find(c => c.id === catId);
+  return {
+    ...product,
+    category_id: catId,
+    categoryId: catId,
+    category: cat || product.category
+  };
 }
 
 export async function getProductBySku(sku: string): Promise<Product | null> {
   const pool = getMysqlPool();
   if (pool) {
     try {
-      const [rows]: any = await pool.query('SELECT * FROM products WHERE sku = ?', [sku]);
+      const [rows]: any = await pool.query(`
+        SELECT p.*, c.name AS category_name, c.slug AS category_slug, c.display_order AS category_order, c.is_active AS category_is_active
+        FROM products p
+        LEFT JOIN categories c ON c.id = p.category_id
+        WHERE p.sku = ?
+      `, [sku]);
       if (rows && rows.length > 0) {
         return mapMysqlRowToProduct(rows[0]);
       }
@@ -968,7 +1014,16 @@ export async function getProductBySku(sku: string): Promise<Product | null> {
   }
 
   const store = getLocalStore();
-  return store.items.find(p => p.sku?.toLowerCase() === sku.toLowerCase()) || null;
+  const found = store.items.find(p => p.sku?.toLowerCase() === sku.toLowerCase());
+  if (!found) return null;
+  const catId = found.category_id || found.categoryId || 1;
+  const cat = store.categories.find(c => c.id === catId);
+  return {
+    ...found,
+    category_id: catId,
+    categoryId: catId,
+    category: cat || found.category
+  };
 }
 
 export async function createProduct(data: Partial<Product>): Promise<Product> {
@@ -994,6 +1049,8 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
     specs_line: data.specs_line || "Componente mecánico original Hobby Bolivia",
     compatible_models: data.compatible_models || "Aviones a escala y radiocontrol",
     price: Number(data.price) || 0,
+    priceUsd: data.priceUsd !== undefined ? Number(data.priceUsd) : (data.price_usd !== undefined ? Number(data.price_usd) : undefined),
+    price_usd: data.price_usd !== undefined ? Number(data.price_usd) : (data.priceUsd !== undefined ? Number(data.priceUsd) : undefined),
     currency: data.currency || 'Bs.',
     display_currency: (data.display_currency || data.currency || 'Bs.') as any,
     old_price: data.old_price ? Number(data.old_price) : undefined,
@@ -1074,6 +1131,8 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
     name: data.name || current.name,
     title: data.name || current.title || current.name,
     price: data.price !== undefined ? Number(data.price) : current.price,
+    priceUsd: data.priceUsd !== undefined ? (data.priceUsd === null ? undefined : Number(data.priceUsd)) : (data.price_usd !== undefined ? (data.price_usd === null ? undefined : Number(data.price_usd)) : current.priceUsd),
+    price_usd: data.price_usd !== undefined ? (data.price_usd === null ? undefined : Number(data.price_usd)) : (data.priceUsd !== undefined ? (data.priceUsd === null ? undefined : Number(data.priceUsd)) : current.price_usd),
     currency: data.currency !== undefined ? data.currency : (current.currency || 'Bs.'),
     display_currency: (data.display_currency !== undefined ? data.display_currency : (current.display_currency || current.currency || 'Bs.')) as any,
     stock: data.stock !== undefined ? Number(data.stock) : current.stock,
@@ -1164,7 +1223,6 @@ export async function getCategories(): Promise<Category[]> {
         SELECT c.*, COUNT(p.id) as item_count
         FROM categories c
         LEFT JOIN products p ON p.category_id = c.id AND p.is_active = 1
-        WHERE c.is_active = 1
         GROUP BY c.id
         ORDER BY c.display_order ASC, c.id ASC
       `);
@@ -1266,11 +1324,20 @@ export async function deleteCategory(id: number): Promise<boolean> {
   const initCount = store.categories.length;
   store.categories = store.categories.filter(c => c.id !== id);
   if (store.categories.length !== initCount) {
+    // Reasignación para preservar integridad referencial de productos asociados
+    const fallbackCatId = store.categories[0]?.id || 1;
+    store.items = store.items.map(item => {
+      if (item.category_id === id || item.categoryId === id) {
+        return { ...item, category_id: fallbackCatId, categoryId: fallbackCatId };
+      }
+      return item;
+    });
     saveLocalStore(store);
 
     const pool = getMysqlPool();
     if (pool) {
       try {
+        await pool.query('UPDATE products SET category_id = ? WHERE category_id = ?', [fallbackCatId, id]);
         await pool.query('DELETE FROM categories WHERE id = ?', [id]);
       } catch (e) {
         console.warn('[MySQL deleteCategory Warning]:', e);
@@ -1481,6 +1548,8 @@ export async function getAllUsers(): Promise<User[]> {
           name: r.name || (r.username === 'superadmin' ? 'Super Administrador' : r.username),
           username: r.username,
           email: r.email || `${r.username}@hobbybolivia.com`,
+          phone: r.phone || '',
+          countryCode: r.country_code || '+591',
           role: (r.role || 'ADMIN') as UserRole,
           isActive: r.is_active !== undefined ? Boolean(r.is_active) : true,
           createdAt: r.created_at || new Date().toISOString()
@@ -1540,6 +1609,8 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
     name: userData.name || userData.username || 'Usuario Admin',
     username: (userData.username || userData.email || `admin_${nextId}`).trim().toLowerCase(),
     email: (userData.email || userData.username || '').trim().toLowerCase(),
+    phone: userData.phone ? String(userData.phone).trim() : '',
+    countryCode: userData.countryCode ? String(userData.countryCode).trim() : '+591',
     password: userData.password || 'admin1234*',
     role: (userData.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as UserRole,
     isActive: userData.isActive !== undefined ? Boolean(userData.isActive) : true,
@@ -1584,6 +1655,8 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
     name: data.name !== undefined ? data.name : current.name,
     username: data.username !== undefined ? data.username.trim().toLowerCase() : current.username,
     email: data.email !== undefined ? data.email.trim().toLowerCase() : current.email,
+    phone: data.phone !== undefined ? data.phone : current.phone,
+    countryCode: data.countryCode !== undefined ? data.countryCode : current.countryCode,
     role: data.role !== undefined ? (data.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') : current.role,
     isActive: data.isActive !== undefined ? Boolean(data.isActive) : current.isActive,
     password: data.password && data.password.trim() ? data.password.trim() : current.password,

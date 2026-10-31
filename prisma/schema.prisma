@@ -61,8 +61,11 @@ model Category {
   order         Int           @default(0)
   itemCount     Int           @default(0)
   items         CatalogItem[]
+  products      Product[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@map("categories")
 }
 
 model Occasion {
@@ -128,6 +131,33 @@ model CatalogItemOccasion {
   occasion   Occasion    @relation(fields: [occasionId], references: [id], onDelete: Cascade)
 
   @@id([itemId, occasionId])
+}
+
+model Product {
+  id               Int           @id @default(autoincrement())
+  sku              String        @unique
+  name             String
+  slug             String        @unique
+  categoryId       Int           @map("category_id")
+  category         Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  scale            String?       @default("RC Estándar")
+  material         String?       @default("Compuesto")
+  specsLine        String?       @map("specs_line")
+  compatibleModels String?       @map("compatible_models") @db.Text
+  price            Decimal       @db.Decimal(10, 2)
+  priceUsd         Decimal?      @map("price_usd") @db.Decimal(10, 2)
+  oldPrice         Decimal?      @map("old_price") @db.Decimal(10, 2)
+  stock            Int           @default(10)
+  badge            String?
+  imageUrl         String?       @map("image_url") @db.VarChar(500)
+  imageSizeBytes   Int           @default(0) @map("image_size_bytes")
+  isActive         Boolean       @default(true) @map("is_active")
+  brand            String?       @default("Hobby Bolivia")
+  description      String?       @db.Text
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  @@map("products")
 }
 
 enum BannerPlacement {

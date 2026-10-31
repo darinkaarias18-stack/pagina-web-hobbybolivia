@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getCatalogItemById, saveCatalogItem, deleteCatalogItem } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -30,6 +31,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const { id } = await params;
     const numId = parseInt(id, 10);
     if (isNaN(numId)) {
@@ -58,6 +62,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const { id } = await params;
     const numId = parseInt(id, 10);
     if (isNaN(numId)) {
