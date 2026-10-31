@@ -69,11 +69,11 @@ export function ProductCard({
   return (
     <div
       onClick={() => handleQuickView()}
-      className="group relative rounded-2xl bg-white border border-neutral-100 shadow-sm hover:border-[#D4A359] hover:shadow-2xl hover:scale-[1.15] hover:z-30 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
+      className="group relative rounded-2xl bg-white border-2 border-[#D4A359]/60 hover:border-[#D4A359] shadow-sm hover:shadow-2xl hover:scale-[1.15] hover:z-30 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
       title="Clic para ver detalles y cotizar"
     >
-      {/* 1. Fondo de la Imagen y Contenedor Superior con aspect ratio cuadrado simetrico sin recortes */}
-      <div className={`w-full aspect-square relative overflow-hidden flex items-center justify-center border-b border-neutral-100 ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-white'}`}>
+      {/* 1. Fondo de la Imagen y Contenedor Superior con aspect ratio cuadrado simetrico sin recortes y borde delimitado */}
+      <div className={`w-full aspect-square relative overflow-hidden flex items-center justify-center border-b-2 border-[#D4A359]/40 ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-white'}`}>
         {/* Distintivo / Badge en esquina superior derecha con diseño pulido */}
         {validBadge && (
           <span
@@ -104,7 +104,7 @@ export function ProductCard({
       {/* 2. Tipografía y Jerarquía Visual */}
       <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between">
         <div>
-          <span className="inline-block text-xs font-medium text-amber-700/80 tracking-wider uppercase font-mono">
+          <span className="inline-block text-xs font-medium text-amber-700/90 tracking-wider uppercase font-mono">
             {systemSku}
           </span>
 
@@ -116,8 +116,8 @@ export function ProductCard({
           </h3>
         </div>
 
-        {/* 3. Zona Inferior: Separador, Precio y Botones de Acción */}
-        <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
+        {/* 3. Zona Inferior: Separador engrosado, Precio y Botones de Acción */}
+        <div className="mt-3 pt-3 border-t-2 border-[#D4A359]/30 flex items-center justify-between gap-2">
           {/* Bloque de Precio Resaltado */}
           <div className="min-w-0 flex-1 text-left">
             {isUsd ? (
