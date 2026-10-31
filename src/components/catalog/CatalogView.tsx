@@ -210,19 +210,103 @@ export function CatalogView({
     }
   };
 
-  const activeFiltersCount = useMemo(() => {
-    return [
-      activeCategorySlug !== 'all',
-      searchQuery.trim().length > 0,
-      selectedScale !== 'all',
-      selectedMaterial !== 'all',
-      onlyInStock,
-      minPrice !== '',
-      maxPrice !== '',
-      minPriceUsd !== '',
-      maxPriceUsd !== ''
-    ].filter(Boolean).length;
-  }, [activeCategorySlug, searchQuery, selectedScale, selectedMaterial, onlyInStock, minPrice, maxPrice, minPriceUsd, maxPriceUsd]);
+  const activeFilters = useMemo(() => {
+    const chips: { id: string; label: string; onRemove: () => void }[] = [];
+
+    if (activeCategorySlug !== 'all') {
+      const catName = categories.find((c) => c.slug === activeCategorySlug)?.name || activeCategorySlug;
+      chips.push({
+        id: 'category',
+        label: `Categoría: ${catName}`,
+        onRemove: () => setActiveCategorySlug('all')
+      });
+    }
+
+    if (searchQuery.trim().length > 0) {
+      chips.push({
+        id: 'search',
+        label: `Buscar: "${searchQuery.trim()}"`,
+        onRemove: () => setSearchQuery('')
+      });
+    }
+
+    if (selectedScale !== 'all') {
+      chips.push({
+        id: 'scale',
+        label: `Escala: ${selectedScale}`,
+        onRemove: () => setSelectedScale('all')
+      });
+    }
+
+    if (selectedMaterial !== 'all') {
+      chips.push({
+        id: 'material',
+        label: `Material: ${selectedMaterial}`,
+        onRemove: () => setSelectedMaterial('all')
+      });
+    }
+
+    if (onlyInStock) {
+      chips.push({
+        id: 'stock',
+        label: 'Solo en Stock',
+        onRemove: () => setOnlyInStock(false)
+      });
+    }
+
+    if (minPriceUsd || maxPriceUsd) {
+      let priceLabel = 'Precio USD';
+      if (minPriceUsd && maxPriceUsd) {
+        priceLabel = `Precio: $${minPriceUsd} - $${maxPriceUsd} USD`;
+      } else if (minPriceUsd) {
+        priceLabel = `Precio: Desde $${minPriceUsd} USD`;
+      } else {
+        priceLabel = `Precio: Hasta $${maxPriceUsd} USD`;
+      }
+      chips.push({
+        id: 'price-usd',
+        label: priceLabel,
+        onRemove: () => {
+          setMinPriceUsd('');
+          setMaxPriceUsd('');
+        }
+      });
+    }
+
+    if (minPrice || maxPrice) {
+      let priceLabel = 'Precio Bs.';
+      if (minPrice && maxPrice) {
+        priceLabel = `Precio: ${minPrice} - ${maxPrice} Bs.`;
+      } else if (minPrice) {
+        priceLabel = `Precio: Desde ${minPrice} Bs.`;
+      } else {
+        priceLabel = `Precio: Hasta ${maxPrice} Bs.`;
+      }
+      chips.push({
+        id: 'price-bob',
+        label: priceLabel,
+        onRemove: () => {
+          setMinPrice('');
+          setMaxPrice('');
+        }
+      });
+    }
+
+    return chips;
+  }, [
+    activeCategorySlug,
+    categories,
+    searchQuery,
+    selectedScale,
+    selectedMaterial,
+    onlyInStock,
+    minPriceUsd,
+    maxPriceUsd,
+    minPrice,
+    maxPrice
+  ]);
+
+  const activeFiltersCount = activeFilters.length;
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -687,19 +771,60 @@ export function CatalogView({
             {/* Product Grid */}
             <div className="lg:col-span-3">
 
-              {/* Results status bar */}
-              <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#E2DCD3] text-xs text-[#5C5650]">
-                <div className="flex items-center gap-2 flex-wrap">
+              {/* Results status bar & Active Filter Chips */}
+              <div className="pb-4 mb-5 border-b border-[#E2DCD3] space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-[#5C5650] flex-wrap gap-2">
                   <span>
                     Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} productos disponibles
                   </span>
-                  {activeCategorySlug !== 'all' && (
-                    <span className="bg-[#FAF8F5] border border-[#D4A359]/40 text-[#1A1817] px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
-                      {categories.find(c => c.slug === activeCategorySlug)?.name}
-                    </span>
+
+                  {activeFilters.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="text-xs font-semibold text-amber-800 hover:text-red-600 transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Limpiar todos los filtros</span>
+                    </button>
                   )}
                 </div>
+
+                {/* Sección de Filtros Activos (Chips / Tags Removibles) */}
+                {activeFilters.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap pt-1 animate-in fade-in duration-200">
+                    <span className="text-[11px] font-bold text-[#8C827A] uppercase tracking-wider">
+                      Filtros activos:
+                    </span>
+                    {activeFilters.map((filter) => (
+                      <span
+                        key={filter.id}
+                        className="bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs group"
+                      >
+                        <span>{filter.label}</span>
+                        <button
+                          type="button"
+                          onClick={filter.onRemove}
+                          title={`Remover filtro: ${filter.label}`}
+                          className="w-4 h-4 rounded-full flex items-center justify-center text-amber-800 hover:bg-amber-200 hover:text-red-600 transition-colors cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+
+                    {activeFilters.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        title="Limpiar todos los filtros activos"
+                        className="text-xs font-semibold text-[#8C827A] hover:text-red-600 underline decoration-dotted transition-colors ml-1 cursor-pointer"
+                      >
+                        [ Limpiar todos ]
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {filteredProducts.length === 0 ? (
