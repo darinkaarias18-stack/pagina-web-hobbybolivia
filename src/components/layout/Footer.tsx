@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Plane, Phone, Mail, MapPin, ArrowRight, ArrowUp } from 'lucide-react';
 import type { SiteConfig, Product } from '@/lib/types';
@@ -12,55 +12,11 @@ interface FooterProps {
   onSelectBrand?: (brand: string) => void;
 }
 
-const DEFAULT_POPULAR_PRODUCTS = [
-  'Conectores E/Z Dubro (12)',
-  'Bisagras de Nylon c/Pin Acero (15)',
-  'Hélice APC 11x5.5E Thin Electric',
-  'ESC Brushless 40A 2-4S c/BEC',
-  'Micro Servo MG90S Piñonería Metálica',
-  'Tren de Aterrizaje Fibra de Carbono'
-];
-
-const DEFAULT_BRANDS = [
-  'Dubro',
-  'Great Planes',
-  'APC Propellers',
-  'Hobbywing Tech',
-  'TowerPro',
-  'Tattu Gens Ace'
-];
-
 export function Footer({
-  config,
-  products = [],
-  onSelectProduct,
-  onSelectBrand
+  config
 }: FooterProps) {
   const whatsapp = config?.whatsappNumber || "+591 77293446";
   const email = config?.contactEmail || "contacto@hobbybolivia.com";
-
-  // Lista de los más vendidos / Populares
-  const popularItems = useMemo(() => {
-    const active = products.filter((p) => p.is_active !== false && p.isActive !== false);
-    const tagged = active.filter(
-      (p) => p.badge === 'Popular' || p.badge === 'Best Seller'
-    );
-    const list = tagged.length > 0 ? tagged : active;
-    return list.slice(0, 6);
-  }, [products]);
-
-  // Listado de marcas disponibles en el catálogo
-  const brandList = useMemo(() => {
-    const active = products.filter((p) => p.is_active !== false && p.isActive !== false);
-    const uniqueBrands = Array.from(
-      new Set(
-        active
-          .map((p) => (p.brand || '').trim())
-          .filter(Boolean)
-      )
-    );
-    return uniqueBrands.length > 0 ? uniqueBrands.slice(0, 6) : DEFAULT_BRANDS;
-  }, [products]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -108,10 +64,10 @@ export function Footer({
 
       {/* 2. Main Footer Links */}
       <div className="w-full max-w-[1320px] mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
 
           {/* Brand Info */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="md:col-span-7 space-y-4">
             <div className="flex items-center gap-2.5">
               {config?.logoUrl && config.logoUrl !== 'https://hobbybolivia.com/icon.svg' && config.logoUrl !== '/icon.svg' ? (
                 <div className="w-8 h-8 rounded-lg bg-[#211E1C] p-0.5 flex items-center justify-center overflow-hidden border border-[#D4A359]/50 shrink-0">
@@ -132,7 +88,7 @@ export function Footer({
               </span>
             </div>
 
-            <p className="text-[#A89F91] text-xs leading-relaxed max-w-sm">
+            <p className="text-[#A89F91] text-xs leading-relaxed max-w-md">
               Plataforma especializada en la distribución de repuestos, componentes mecánicos, electrónica y accesorios para aviones a escala y aeromodelismo en toda Bolivia.
             </p>
 
@@ -152,72 +108,8 @@ export function Footer({
             </div>
           </div>
 
-          {/* Populares (Los más vendidos) */}
-          <div>
-            <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
-              Populares
-            </h5>
-            <ul className="space-y-2.5 text-[#A89F91]">
-              {popularItems.length > 0
-                ? popularItems.map((item) => {
-                  const itemName = item.name || item.title || 'Repuesto Popular';
-                  return (
-                    <li key={item.id}>
-                      <a
-                        href="#catalogo"
-                        onClick={(e) => {
-                          if (onSelectProduct) {
-                            e.preventDefault();
-                            onSelectProduct(item);
-                          }
-                        }}
-                        className="hover:text-[#D4A359] transition-colors line-clamp-1 block"
-                        title={itemName}
-                      >
-                        {itemName}
-                      </a>
-                    </li>
-                  );
-                })
-                : DEFAULT_POPULAR_PRODUCTS.map((label) => (
-                  <li key={label}>
-                    <a href="#catalogo" className="hover:text-[#D4A359] transition-colors line-clamp-1 block">
-                      {label}
-                    </a>
-                  </li>
-                ))}
-            </ul>
-          </div>
-
-          {/* Marcas */}
-          <div>
-            <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
-              Marcas
-            </h5>
-            <ul className="space-y-2.5 text-[#A89F91]">
-              {brandList.map((brand) => (
-                <li key={brand}>
-                  <a
-                    href="#catalogo"
-                    onClick={(e) => {
-                      if (onSelectBrand) {
-                        e.preventDefault();
-                        onSelectBrand(brand);
-                        const el = document.getElementById('catalogo');
-                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
-                    className="hover:text-[#D4A359] transition-colors block"
-                  >
-                    {brand}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
           {/* Medios de Pago & Enlace Admin */}
-          <div>
+          <div className="md:col-span-5 md:pl-8 space-y-4">
             <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
               Pagos en Bolivia
             </h5>
