@@ -248,6 +248,47 @@ export async function main() {
         }
       }
       console.log(`🛠️ ${Object.keys(BATCH_3_IMAGE_MAPPINGS).length} repuestos adicionales actualizados con prisma.product.update (precios y stock intactos).`);
+
+      // 9. Mapeo de 21 repuestos (Categorías SPINNERS y CONSTRUCCION) mediante prisma.product.update
+      const SPINNERS_CONSTRUCCION_IMAGE_MAPPINGS: Record<string, string> = {
+        // Categoría SPINNERS:
+        'DUBQ3694': '/products/DUBQ3694.jpg',
+        'DUBQ3730': '/products/DUBQ3730.jpg',
+        'DUBQ3731': '/products/DUBQ3731.jpg',
+        'SP2751': '/products/Spinner_Blanco.jpg',
+        'SP2752': '/products/Spinner_Negro.jpg',
+        'SP2753': '/products/Spinner_Rojo.jpg',
+        'SP2754': '/products/Spinner_Azul.jpg',
+        'SP2755': '/products/Spinner_Amarillo.jpg',
+        'SP305': '/products/Spinner_Amarillo.jpg',
+
+        // Categoría CONSTRUCCION:
+        'AIB1011425': '/products/AIB1011425.jpg',
+        'AIB8424': '/products/AIB8424.jpg',
+        'DUBQ0916': '/products/DUBQ0916.jpg',
+        'DUBQ0937': '/products/DUBQ0937.jpg',
+        'DUBQ2025': '/products/DUBQ2025.jpg',
+        'DUBQ2035': '/products/DUBQ2035.jpg',
+        'DUBQ2040': '/products/DUBQ2040.jpg',
+        'AIB1980': '/products/AIB1980.jpg',
+        'DUBQ1980': '/products/DUBQ1980.jpg',
+        'DUBQ8484': '/products/DUBQ8484.jpg',
+        'DUBQ1575': '/products/DUBQ1575.jpg',
+        'DUBQ1580': '/products/DUBQ1580.jpg',
+      };
+
+      for (const [sku, imageUrl] of Object.entries(SPINNERS_CONSTRUCCION_IMAGE_MAPPINGS)) {
+        try {
+          await prisma.product.update({
+            where: { sku },
+            data: { imageUrl }
+          });
+          console.log(`📸 [Prisma Update] Imagen asignada a SKU ${sku} -> ${imageUrl}`);
+        } catch (updateErr: any) {
+          console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
+        }
+      }
+      console.log(`🎯 ${Object.keys(SPINNERS_CONSTRUCCION_IMAGE_MAPPINGS).length} repuestos de Spinners y Construcción actualizados con prisma.product.update (precios y stock intactos).`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {

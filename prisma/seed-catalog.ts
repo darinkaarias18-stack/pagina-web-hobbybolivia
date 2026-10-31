@@ -2079,8 +2079,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ3694.jpg',
+    imageUrl: '/products/DUBQ3694.jpg',
     is_active: true
   },
   {
@@ -2167,8 +2167,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: 'Tuerca Cono CNC',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ3730.jpg',
+    imageUrl: '/products/DUBQ3730.jpg',
     is_active: true
   },
   {
@@ -2189,8 +2189,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Tuerca Cono CNC',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ3731.jpg',
+    imageUrl: '/products/DUBQ3731.jpg',
     is_active: true
   },
   {
@@ -2211,8 +2211,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Sig Clásico',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/Spinner_Blanco.jpg',
+    imageUrl: '/products/Spinner_Blanco.jpg',
     is_active: true
   },
   {
@@ -2233,8 +2233,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/Spinner_Negro.jpg',
+    imageUrl: '/products/Spinner_Negro.jpg',
     is_active: true
   },
   {
@@ -2255,8 +2255,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 6,
     stockQuantity: 6,
     badge: 'Popular',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/Spinner_Rojo.jpg',
+    imageUrl: '/products/Spinner_Rojo.jpg',
     is_active: true
   },
   {
@@ -2277,8 +2277,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 7,
     stockQuantity: 7,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/Spinner_Azul.jpg',
+    imageUrl: '/products/Spinner_Azul.jpg',
     is_active: true
   },
   {
@@ -2299,8 +2299,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/Spinner_Amarillo.jpg',
+    imageUrl: '/products/Spinner_Amarillo.jpg',
     is_active: true
   },
   {
@@ -2321,8 +2321,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Gran Escala Sig',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/Spinner_Amarillo.jpg',
+    imageUrl: '/products/Spinner_Amarillo.jpg',
     is_active: true
   },
   // =========================================================================
@@ -2346,8 +2346,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Cierre Rápido',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB1011425.jpg',
+    imageUrl: '/products/AIB1011425.jpg',
     is_active: true
   },
   {
@@ -2368,8 +2368,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Pack 10 pcs',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB8424.jpg',
+    imageUrl: '/products/AIB8424.jpg',
     is_active: true
   },
   {
@@ -2390,8 +2390,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Dubro Original',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ0916.jpg',
+    imageUrl: '/products/DUBQ0916.jpg',
     is_active: true
   },
   {
@@ -2412,8 +2412,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 6,
     stockQuantity: 6,
     badge: 'Micro Indoor',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ0937.jpg',
+    imageUrl: '/products/DUBQ0937.jpg',
     is_active: true
   },
   {
@@ -2434,8 +2434,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Dubro Standard',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ2025.jpg',
+    imageUrl: '/products/DUBQ2025.jpg',
     is_active: true
   },
   {
@@ -2456,8 +2456,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Dubro #119',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ2035.jpg',
+    imageUrl: '/products/DUBQ2035.jpg',
     is_active: true
   },
   {
@@ -2478,8 +2478,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 9,
     stockQuantity: 9,
     badge: 'Escala 1/4 Heavy',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ2040.jpg',
+    imageUrl: '/products/DUBQ2040.jpg',
     is_active: true
   },
   {
@@ -2522,8 +2522,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 17,
     stockQuantity: 17,
     badge: 'Tipo T Standard',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB1980.jpg',
+    imageUrl: '/products/AIB1980.jpg',
     is_active: true
   },
   {
@@ -2544,8 +2544,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 10,
     stockQuantity: 10,
     badge: 'Dubro Original (2)',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ1980.jpg',
+    imageUrl: '/products/DUBQ1980.jpg',
     is_active: true
   },
   {
@@ -2588,8 +2588,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Micro Razor 3D',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ8484.jpg',
+    imageUrl: '/products/DUBQ8484.jpg',
     is_active: true
   },
   {
@@ -2610,8 +2610,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Nylon Dubro (2)',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ1575.jpg',
+    imageUrl: '/products/DUBQ1575.jpg',
     is_active: true
   },
   {
@@ -2632,8 +2632,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'Pack 12 pcs',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ1580.jpg',
+    imageUrl: '/products/DUBQ1580.jpg',
     is_active: true
   },
   {
