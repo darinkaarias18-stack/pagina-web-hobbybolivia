@@ -24,6 +24,7 @@ export function ProductCard({
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const [justAdded, setJustAdded] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const product = productProp || itemProp;
 
   if (!product) return null;
@@ -42,7 +43,8 @@ export function ProductCard({
 
   const rawImage = product.image_url || (product.images && product.images[0]) || product.imageUrl;
   const isInvalidImage = !rawImage || rawImage.trim() === '' || rawImage.includes('d0721149ad-dubq3570tn-t');
-  const imageSource = isInvalidImage ? '/placeholder.webp' : rawImage.trim();
+  const isPlaceholder = isInvalidImage || imgFailed;
+  const imageSource = isPlaceholder ? '/placeholder.webp' : rawImage.trim();
   const name = product.name || product.title || "Producto Hobby Bolivia";
   // Mostrar fielmente el SKU/Código oficial del producto (coincidente con Admin Products)
   const systemSku = product.sku || (product.id ? `HB-${product.id.toString().padStart(4, '0')}` : '');
@@ -70,8 +72,8 @@ export function ProductCard({
       className="group relative rounded-2xl bg-white border border-neutral-100 shadow-sm hover:border-[#D4A359] hover:shadow-2xl hover:scale-[1.15] hover:z-30 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
       title="Clic para ver detalles y cotizar"
     >
-      {/* 1. Fondo de la Imagen y Contenedor Superior con aspect ratio constante y fondo neutro suave */}
-      <div className="w-full aspect-[4/3] relative bg-neutral-50 overflow-hidden flex items-center justify-center border-b border-neutral-100">
+      {/* 1. Fondo de la Imagen y Contenedor Superior con aspect ratio constante y sin huecos blancos */}
+      <div className={`w-full aspect-[4/3] relative overflow-hidden flex items-center justify-center border-b border-neutral-100 ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-neutral-50'}`}>
         {/* Distintivo / Badge en esquina superior derecha con diseño pulido */}
         {validBadge && (
           <span
@@ -88,13 +90,12 @@ export function ProductCard({
         <img
           src={imageSource}
           alt={name}
-          className="w-full h-full object-contain mx-auto select-none"
+          className={`w-full h-full mx-auto select-none ${isPlaceholder ? 'object-cover' : 'object-contain'}`}
           loading="lazy"
           decoding="async"
-          onError={(e) => {
-            const target = e.currentTarget as HTMLImageElement;
-            if (!target.src.includes('placeholder.webp')) {
-              target.src = '/placeholder.webp';
+          onError={() => {
+            if (!imgFailed) {
+              setImgFailed(true);
             }
           }}
         />

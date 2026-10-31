@@ -161,7 +161,7 @@ export function ProductDetailClient({
 
           {/* ================= COLUMNA IZQUIERDA: GALERÍA DE IMÁGENES ================= */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E2DCD3] shadow-sm relative overflow-hidden flex items-center justify-center min-h-[380px] sm:min-h-[460px]">
+            <div className={`rounded-3xl p-6 sm:p-8 border border-[#E2DCD3] shadow-sm relative overflow-hidden flex items-center justify-center min-h-[380px] sm:min-h-[460px] ${selectedImage.includes('placeholder.webp') ? 'bg-[#FAF8F5]' : 'bg-white'}`}>
               {/* Badges de Estado */}
               <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
                 {product.badge && (
@@ -188,7 +188,7 @@ export function ProductDetailClient({
               <img
                 src={selectedImage}
                 alt={product.name || product.title}
-                className="max-h-[360px] sm:max-h-[420px] w-auto max-w-full object-contain mx-auto transition-transform duration-300 hover:scale-105 select-none"
+                className={`max-h-[360px] sm:max-h-[420px] w-auto max-w-full mx-auto transition-transform duration-300 hover:scale-105 select-none ${selectedImage.includes('placeholder.webp') ? 'object-cover rounded-2xl shadow-sm' : 'object-contain'}`}
                 onError={(e) => {
                   const target = e.currentTarget as HTMLImageElement;
                   if (!target.src.includes('placeholder.webp')) {

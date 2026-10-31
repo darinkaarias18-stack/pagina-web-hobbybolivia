@@ -33,9 +33,11 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
     }, 900);
   };
 
+  const [imgFailed, setImgFailed] = useState(false);
   const rawImg = product.image_url || (product.images && product.images[0]) || product.imageUrl;
   const isInvalidImg = !rawImg || rawImg.trim() === '' || rawImg.includes('d0721149ad-dubq3570tn-t');
-  const imgSrc = isInvalidImg ? '/placeholder.webp' : rawImg.trim();
+  const isPlaceholder = isInvalidImg || imgFailed;
+  const imgSrc = isPlaceholder ? '/placeholder.webp' : rawImg.trim();
   const name = product.name || product.title || "Producto";
 
   return (
@@ -55,19 +57,14 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
           <X className="w-5 h-5" />
         </button>
 
-        {/* Left: Product Image on Pure White */}
-        <div className="w-full md:w-1/2 bg-white p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#E2DCD3]">
-          <div className="w-full h-56 sm:h-64 flex items-center justify-center">
+        {/* Left: Product Image on Pure White or Beige for placeholder */}
+        <div className={`w-full md:w-1/2 p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#E2DCD3] ${isPlaceholder ? 'bg-[#FAF8F5]' : 'bg-white'}`}>
+          <div className="w-full h-56 sm:h-64 flex items-center justify-center overflow-hidden rounded-2xl">
             <img
               src={imgSrc}
               alt={name}
-              className="max-h-full max-w-full object-contain"
-              onError={(e) => {
-                const target = e.currentTarget as HTMLImageElement;
-                if (!target.src.includes('placeholder.webp')) {
-                  target.src = '/placeholder.webp';
-                }
-              }}
+              className={isPlaceholder ? 'w-full h-full object-cover rounded-xl' : 'max-h-full max-w-full object-contain'}
+              onError={() => setImgFailed(true)}
             />
           </div>
           <div className="mt-3 text-center">
