@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPolicies, getPolicyBySlug, updatePolicy } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { revalidateCatalog } from '@/lib/revalidate';
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,6 +40,8 @@ export async function PUT(request: NextRequest) {
       title: body.title,
       content: body.content
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       success: true,

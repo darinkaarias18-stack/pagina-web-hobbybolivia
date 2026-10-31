@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOccasions, saveOccasion, deleteOccasion } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
+import { revalidateCatalog } from '@/lib/revalidate';
 
 export async function GET() {
   try {
@@ -13,12 +15,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     if (!body.name || !body.slug) {
       return NextResponse.json({ success: false, error: "Name and slug are required" }, { status: 400 });
     }
 
     const saved = await saveOccasion(body);
+    revalidateCatalog();
     return NextResponse.json({ success: true, data: saved }, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/occasions:", error);
@@ -28,12 +34,16 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const body = await request.json();
     if (!body.id) {
       return NextResponse.json({ success: false, error: "Occasion ID is required" }, { status: 400 });
     }
 
     const updated = await saveOccasion(body);
+    revalidateCatalog();
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Error in PUT /api/occasions:", error);
@@ -43,6 +53,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -50,6 +63,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await deleteOccasion(parseInt(id, 10));
+    revalidateCatalog();
     return NextResponse.json({ success: true, message: "Occasion deleted" });
   } catch (error) {
     console.error("Error in DELETE /api/occasions:", error);

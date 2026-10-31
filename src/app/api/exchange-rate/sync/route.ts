@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExchangeRateConfig } from '@/lib/exchange-rate';
+import { requireAdmin } from '@/lib/auth';
+import { revalidateCatalog } from '@/lib/revalidate';
 
 export async function POST(request: NextRequest) {
   try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const config = await getExchangeRateConfig(true);
+    revalidateCatalog();
     return NextResponse.json({
       success: true,
       message: 'Tipo de cambio sincronizado exitosamente',
