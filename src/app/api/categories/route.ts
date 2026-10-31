@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCategories, saveCategory, deleteCategory } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { revalidateCatalog } from '@/lib/revalidate';
 
 export async function GET() {
   try {
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const saved = await saveCategory(body);
+    revalidateCatalog();
     return NextResponse.json({ success: true, data: saved }, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/categories:", error);
@@ -41,6 +43,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const updated = await saveCategory(body);
+    revalidateCatalog();
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Error in PUT /api/categories:", error);
@@ -60,6 +63,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await deleteCategory(parseInt(id, 10));
+    revalidateCatalog();
     return NextResponse.json({ success: true, message: "Category deleted" });
   } catch (error) {
     console.error("Error in DELETE /api/categories:", error);

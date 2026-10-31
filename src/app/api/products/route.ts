@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProducts, getAllProductsAdmin, createProduct } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { revalidateCatalog } from '@/lib/revalidate';
 
 
 export async function GET(request: NextRequest) {
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newProduct = await createProduct(body);
+    revalidateCatalog();
 
     return NextResponse.json(
       {
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error("Error in POST /api/products:", error);
-    const isSizeError = error?.message?.includes('1 MB');
+    const isSizeError = error?.message?.includes('250 KB') || error?.message?.includes('1 MB');
     return NextResponse.json(
       { success: false, error: error?.message || "Error al registrar el producto en el catálogo" },
       { status: isSizeError ? 400 : 500 }

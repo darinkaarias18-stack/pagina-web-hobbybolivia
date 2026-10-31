@@ -7,6 +7,7 @@ import {
   CACHE_DURATION_MS
 } from '@/lib/exchange-rate';
 import { requireSuperAdmin } from '@/lib/auth';
+import { revalidateCatalog } from '@/lib/revalidate';
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,6 +62,8 @@ export async function PUT(request: NextRequest) {
       autoUpdate: autoUpdate !== undefined ? Boolean(autoUpdate) : undefined,
       source: source || (autoUpdate ? 'API Oficial' : 'Manual (Administrador)')
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       success: true,

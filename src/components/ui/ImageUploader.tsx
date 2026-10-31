@@ -17,7 +17,7 @@ export function ImageUploader({
   onChange,
   onUploadSuccess,
   label = 'Fotografía del Producto',
-  recommendedSize = 'Compresión automática a WebP · Peso máximo en catálogo: 1 MB',
+  recommendedSize = 'Compresión automática a WebP · Peso máx. 250 KB · Máx. 1000px',
   className = ''
 }: ImageUploaderProps) {
   const [mode, setMode] = useState<'upload' | 'url'>('upload');
@@ -32,8 +32,8 @@ export function ImageUploader({
     setUrlInput(value || '');
   }, [value]);
 
-  const MAX_DB_SIZE = 1 * 1024 * 1024; // 1MB máximo en base de datos
-  const RESTRICTION_ERROR = 'Solo se permiten imágenes en formato PNG, JPG, WebP o SVG (máx. 1 MB tras compresión)';
+  const MAX_DB_SIZE = 250 * 1024; // Límite estricto de 250 KB (256,000 bytes)
+  const RESTRICTION_ERROR = 'Solo se permiten imágenes en formato PNG, JPG, WebP o SVG (máx. 250 KB tras compresión)';
   const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
   const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.svg'];
 
@@ -51,7 +51,7 @@ export function ImageUploader({
         URL.revokeObjectURL(objectUrl);
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        const maxDim = 1400;
+        const maxDim = 1000; // Máximo 1000px manteniendo proporción
 
         if (width > maxDim || height > maxDim) {
           if (width > height) {

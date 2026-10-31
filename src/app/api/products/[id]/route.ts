@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
 import { getProductById, updateProduct, deleteProduct } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { revalidateCatalog } from '@/lib/revalidate';
 
 export async function GET(
   _request: NextRequest,
@@ -47,12 +47,7 @@ export async function PUT(
       return NextResponse.json({ success: false, error: "Producto no encontrado para actualizar" }, { status: 404 });
     }
 
-    try {
-      revalidatePath('/');
-      revalidatePath('/admin');
-    } catch {
-      // non-fatal
-    }
+    revalidateCatalog();
 
     return NextResponse.json({
       success: true,
@@ -61,7 +56,7 @@ export async function PUT(
     });
   } catch (error: any) {
     console.error("Error in PUT /api/products/[id]:", error);
-    const isSizeError = error?.message?.includes('1 MB');
+    const isSizeError = error?.message?.includes('250 KB') || error?.message?.includes('1 MB');
     return NextResponse.json(
       { success: false, error: error?.message || "Error al actualizar el producto" },
       { status: isSizeError ? 400 : 500 }
@@ -87,6 +82,8 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ success: false, error: "Producto no encontrado" }, { status: 404 });
     }
+
+    revalidateCatalog();
 
     return NextResponse.json({
       success: true,
