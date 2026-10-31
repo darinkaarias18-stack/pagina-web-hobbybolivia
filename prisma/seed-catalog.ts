@@ -1451,8 +1451,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: '3-Blade Pro',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1906.jpg',
+    imageUrl: '/products/MASQ1906.jpg',
     is_active: true
   },
   {
@@ -1473,8 +1473,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: '3-Blade Twin',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1906.jpg',
+    imageUrl: '/products/MASQ1906.jpg',
     is_active: true
   },
   {
@@ -1495,8 +1495,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Herramienta Clave',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB14927.jpg',
+    imageUrl: '/products/AIB14927.jpg',
     is_active: true
   },
 
@@ -1521,8 +1521,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'E-Series',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1543,8 +1543,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'E-Series',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1565,8 +1565,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1587,8 +1587,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Popular',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1609,8 +1609,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1631,8 +1631,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: '3D E-Power',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1653,8 +1653,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1675,8 +1675,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Folding Prop',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIBFP.jpg',
+    imageUrl: '/products/AIBFP.jpg',
     is_active: true
   },
 

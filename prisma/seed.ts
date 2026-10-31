@@ -213,6 +213,41 @@ export async function main() {
         }
       }
       console.log(`✈️ ${Object.keys(PROPELLER_IMAGE_MAPPINGS).length} hélices actualizadas con prisma.product.update (precios y stock intactos).`);
+
+      // 8. Mapeo de 11 repuestos (Tripalas, Balanceador, Eléctricas y Palas Plegables) mediante prisma.product.update
+      const BATCH_3_IMAGE_MAPPINGS: Record<string, string> = {
+        // Hélices Tripala asignadas a 'MASQ1906.jpg'
+        'MASQ1908': '/products/MASQ1906.jpg',
+        'MASQ1966': '/products/MASQ1906.jpg',
+
+        // Balanceador asignado a 'AIB14927.jpg'
+        'AIB14927': '/products/AIB14927.jpg',
+
+        // Hélices Eléctricas asignadas a 'MASQ1337.jpg'
+        'MASQ0705E': '/products/MASQ1337.jpg',
+        'MASQ0805E': '/products/MASQ1337.jpg',
+        'MASQ0603E': '/products/MASQ1337.jpg',
+        'MASQ1260E': '/products/MASQ1337.jpg',
+        'MASQ1270E': '/products/MASQ1337.jpg',
+        'MASQ1360E': '/products/MASQ1337.jpg',
+        'MASQ1385E': '/products/MASQ1337.jpg',
+
+        // Palas de Hélice Plegable asignadas a 'AIBFP.jpg'
+        'AIBFP12-6,5': '/products/AIBFP.jpg',
+      };
+
+      for (const [sku, imageUrl] of Object.entries(BATCH_3_IMAGE_MAPPINGS)) {
+        try {
+          await prisma.product.update({
+            where: { sku },
+            data: { imageUrl }
+          });
+          console.log(`📸 [Prisma Update] Imagen asignada a SKU ${sku} -> ${imageUrl}`);
+        } catch (updateErr: any) {
+          console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
+        }
+      }
+      console.log(`🛠️ ${Object.keys(BATCH_3_IMAGE_MAPPINGS).length} repuestos adicionales actualizados con prisma.product.update (precios y stock intactos).`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {

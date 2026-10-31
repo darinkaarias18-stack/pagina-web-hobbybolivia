@@ -75,3 +75,4 @@ for (const [sku, imageUrl] of Object.entries(PROPELLER_IMAGE_MAPPINGS)) {
 fs.writeFileSync(initialDataPath, initialDataContent, 'utf8');
 
 console.log('✨ Mapeo de 21 hélices aplicado con éxito a seed-catalog.ts e initial-data.ts');
+
