@@ -71,7 +71,7 @@ export function ProductCard({
       title="Clic para ver detalles y cotizar"
     >
       {/* 1. Contenedor de Imagen con Aspect Ratio uniforme, sin padding restrictivo y fondo neutro */}
-      <div className="w-full aspect-[4/3] relative bg-neutral-100 overflow-hidden flex items-center justify-center border-b border-[#EBE5DB]">
+      <div className="w-full aspect-[4/3] relative bg-neutral-100 overflow-hidden group flex items-center justify-center border-b border-[#EBE5DB]">
         {/* Etiqueta / Badge en esquina superior derecha */}
         {validBadge && (
           <span
@@ -88,7 +88,7 @@ export function ProductCard({
         <img
           src={imageSource}
           alt={name}
-          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ease-in-out mx-auto"
+          className="w-full h-full object-contain transform transition-transform duration-300 ease-in-out group-hover:scale-110 hover:scale-110 mx-auto select-none"
           loading="lazy"
           decoding="async"
           onError={(e) => {
