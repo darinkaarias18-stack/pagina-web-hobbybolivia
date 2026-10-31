@@ -953,26 +953,114 @@ export function AdminProductsClient() {
     return Array.from(set).sort();
   }, [products]);
 
-  // Filtered Products
+  // Filtered Products (Búsqueda multi-criterio: Código/SKU, Nombre, Precio USD/Bs., Stock, Marca y Categoría)
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesSearch =
-        (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.title && p.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.brand && p.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+    const rawSearch = searchTerm.trim().toLowerCase();
 
+    // Función auxiliar para normalizar texto removiendo tildes/acentos
+    const normalizeText = (text: string) =>
+      text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    const normSearch = normalizeText(rawSearch);
+
+    // Preparar búsqueda numérica limpia (soporta $8, 8 USD, Bs. 96, 8,00, etc.)
+    const cleanNumeric = rawSearch
+      .replace(/[$]|usd|bob|bs\.?|\s/gi, '')
+      .replace(',', '.');
+    const isNumericSearch = cleanNumeric.length > 0 && !isNaN(Number(cleanNumeric));
+    const searchNumber = isNumericSearch ? Number(cleanNumeric) : null;
+
+    // Detectar comandos rápidos de stock (ej. "stock: 5", "stock 5", "sin stock", "bajo stock")
+    const isSinStock = normSearch === 'sin stock' || normSearch === 'agotado';
+    const isConStock = normSearch === 'con stock' || normSearch === 'disponible';
+    const isBajoStock = normSearch === 'bajo stock' || normSearch === 'stock bajo';
+
+    let explicitStockFilter: number | null = null;
+    const stockPrefixMatch = rawSearch.match(/^stock\s*[:=]?\s*(\d+)$/i);
+    if (stockPrefixMatch) {
+      explicitStockFilter = parseInt(stockPrefixMatch[1], 10);
+    }
+
+    return products.filter((p) => {
+      // 1. Filtro de Categoría
       const matchesCat =
         categoryFilter === 'all' ||
         String(p.category_id || p.categoryId) === String(categoryFilter);
 
+      // 2. Filtro de Marca
       const matchesBrand =
         brandFilter === 'all' ||
         p.brand?.toLowerCase() === brandFilter.toLowerCase();
 
-      return matchesSearch && matchesCat && matchesBrand;
+      if (!matchesCat || !matchesBrand) return false;
+      if (!rawSearch) return true;
+
+      // 3. Extracción de valores del producto
+      const sku = (p.sku || '').toLowerCase();
+      const name = normalizeText(p.name || p.title || '');
+      const brand = (p.brand || '').toLowerCase();
+
+      const catId = p.category_id || p.categoryId || 1;
+      const categoryName = normalizeText(p.category?.name || categories.find(c => c.id === catId)?.name || '');
+
+      const stockQty = p.stock !== undefined ? p.stock : (p.stockQuantity !== undefined ? p.stockQuantity : 0);
+      const stockStr = String(stockQty);
+
+      const priceBob = Number(p.price) || 0;
+      const priceUsd = p.priceUsd !== undefined && p.priceUsd !== null
+        ? Number(p.priceUsd)
+        : (p.price_usd !== undefined && p.price_usd !== null
+          ? Number(p.price_usd)
+          : (exchangeRate > 0 ? priceBob / exchangeRate : 0));
+
+      const priceBobStr = priceBob.toFixed(2);
+      const priceBobRound = priceBob.toString();
+      const priceUsdStr = priceUsd.toFixed(2);
+      const priceUsdRound = priceUsd.toString();
+
+      // a) Comandos explícitos de stock
+      if (explicitStockFilter !== null) {
+        return stockQty === explicitStockFilter;
+      }
+      if (isSinStock) return stockQty === 0;
+      if (isConStock) return stockQty > 0;
+      if (isBajoStock) return stockQty > 0 && stockQty < 5;
+
+      // b) Búsqueda por Código (SKU)
+      const matchesSku =
+        sku.includes(rawSearch) ||
+        sku.replace(/[^a-z0-9]/g, '').includes(rawSearch.replace(/[^a-z0-9]/g, ''));
+
+      // c) Búsqueda por Nombre
+      const matchesName = name.includes(normSearch);
+
+      // d) Búsqueda por Marca o Categoría
+      const matchesBrandOrCat = brand.includes(rawSearch) || categoryName.includes(normSearch);
+
+      // e) Búsqueda por Precio (USD o Bs.)
+      let matchesPrice = false;
+      if (isNumericSearch && cleanNumeric) {
+        matchesPrice =
+          priceUsdStr.includes(cleanNumeric) ||
+          priceUsdRound.includes(cleanNumeric) ||
+          priceBobStr.includes(cleanNumeric) ||
+          priceBobRound.includes(cleanNumeric) ||
+          (searchNumber !== null && Math.abs(priceUsd - searchNumber) < 0.01) ||
+          (searchNumber !== null && Math.abs(priceBob - searchNumber) < 0.01);
+      }
+
+      // f) Búsqueda por Stock
+      let matchesStock = false;
+      if (stockStr === rawSearch || stockStr.includes(rawSearch)) {
+        matchesStock = true;
+      }
+      if (isNumericSearch && searchNumber !== null && stockQty === searchNumber) {
+        matchesStock = true;
+      }
+
+      return matchesSku || matchesName || matchesPrice || matchesStock || matchesBrandOrCat;
     });
-  }, [products, searchTerm, categoryFilter, brandFilter]);
+  }, [products, searchTerm, categoryFilter, brandFilter, categories, exchangeRate]);
 
   // Computed Metrics
   const totalProducts = products.length;
@@ -1174,10 +1262,10 @@ export function AdminProductsClient() {
       <div className="space-y-4">
         {/* Controls: Search, Category & Brand filter (Estático, sin movimiento al deslizar barra vertical) */}
         <div className="bg-[#FAF8F5] p-3.5 sm:p-4 rounded-2xl border border-[#E2DCD3] flex flex-col lg:flex-row items-center justify-between gap-3 shadow-2xs">
-          <div className="relative w-full lg:w-96">
+          <div className="relative w-full lg:w-[420px]">
             <input
               type="text"
-              placeholder="Buscar por SKU, Nombre o Marca..."
+              placeholder="Buscar por código, nombre, precio (USD/Bs.) o stock..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs pl-9 pr-8 py-2.5 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none shadow-2xs font-medium"
