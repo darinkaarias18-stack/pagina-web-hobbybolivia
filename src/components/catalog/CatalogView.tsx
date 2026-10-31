@@ -26,6 +26,7 @@ import { ProductCard } from './ProductCard';
 import { QuickSpecsModal } from './QuickSpecsModal';
 import { TrustRibbon } from './TrustRibbon';
 import { Testimonials } from './Testimonials';
+import { ContactSection } from './ContactSection';
 
 import type {
   SiteConfig,
@@ -887,6 +888,9 @@ export function CatalogView({
 
       {/* 10. Customer Testimonials */}
       <Testimonials />
+
+      {/* 11. Interactive Contact Section (#contacto) */}
+      <ContactSection config={siteConfig} />
 
       {/* 12. Footer with CTA, Popular Products & Brands */}
       <Footer

@@ -23,7 +23,7 @@ export function Footer({
   };
 
   return (
-    <footer id="contacto" className="bg-[#161311] text-[#A89F91] text-xs border-t border-[#2D2622]">
+    <footer className="bg-[#161311] text-[#A89F91] text-xs border-t border-[#2D2622]">
 
       {/* 1. Barra CTA Superior (Carbón #1E1916 con Botón Dorado Arena) */}
       <div className="bg-[#1E1916] py-6 border-b border-[#2D2622]">
