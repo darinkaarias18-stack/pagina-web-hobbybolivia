@@ -332,6 +332,69 @@ export async function main() {
         }
       }
       console.log(`🎯 ${Object.keys(BATCH_5_CONSTRUCCION_RUEDAS_MONOKOTE_IMAGE_MAPPINGS).length} productos de Construcción, Ruedas y Monokote actualizados con prisma.product.update (precios y stock intactos).`);
+
+      // 11. Registro y Upsert garantizado de Categoría 'OTROS PRODUCTOS' y sus 23 productos asociados
+      const otrosCategory = await prisma.category.upsert({
+        where: { slug: 'otros-productos' },
+        update: {
+          name: 'OTROS PRODUCTOS',
+          description: 'Accesorios eléctricos, conectores, receptores de radiofrecuencia, baterías, trenes de aterrizaje y componentes diversos de aeromodelismo.',
+          order: 11,
+          isActive: true
+        },
+        create: {
+          name: 'OTROS PRODUCTOS',
+          slug: 'otros-productos',
+          description: 'Accesorios eléctricos, conectores, receptores de radiofrecuencia, baterías, trenes de aterrizaje y componentes diversos de aeromodelismo.',
+          order: 11,
+          isActive: true
+        }
+      });
+
+      const OTROS_PRODUCTOS_ITEMS = OFFICIAL_PRODUCTS.filter(p => p.categoryId === 19);
+      for (const prod of OTROS_PRODUCTOS_ITEMS) {
+        try {
+          const priceBob = Number((prod.priceUsd * exchangeRate).toFixed(2));
+          await prisma.product.upsert({
+            where: { sku: prod.sku },
+            update: {
+              name: prod.name,
+              slug: prod.slug,
+              categoryId: otrosCategory.id,
+              scale: prod.scale,
+              material: prod.material,
+              specsLine: prod.specs_line,
+              compatibleModels: prod.compatible_models,
+              imageUrl: prod.image_url || prod.imageUrl || null,
+              isActive: prod.is_active ?? true,
+              brand: prod.brand,
+              description: prod.description
+            },
+            create: {
+              sku: prod.sku,
+              name: prod.name,
+              slug: prod.slug,
+              categoryId: otrosCategory.id,
+              scale: prod.scale,
+              material: prod.material,
+              specsLine: prod.specs_line,
+              compatibleModels: prod.compatible_models,
+              price: priceBob,
+              priceUsd: prod.priceUsd,
+              stock: prod.stock,
+              badge: prod.badge,
+              imageUrl: prod.image_url || prod.imageUrl || null,
+              isActive: prod.is_active ?? true,
+              brand: prod.brand,
+              description: prod.description
+            }
+          });
+          console.log(`📦 [Prisma Upsert] Producto agregado/asegurado: SKU ${prod.sku} - ${prod.name}`);
+        } catch (upsertErr: any) {
+          console.warn(`⚠️ [Prisma Upsert] Error en SKU ${prod.sku}:`, upsertErr.message);
+        }
+      }
+      console.log(`✨ Categoría 'OTROS PRODUCTOS' y sus ${OTROS_PRODUCTOS_ITEMS.length} productos registrados exitosamente con prisma.category.upsert y prisma.product.upsert.`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {
