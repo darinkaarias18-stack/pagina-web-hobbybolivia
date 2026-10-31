@@ -547,8 +547,8 @@ export default function AdminQuotesPage() {
                   setDraggedOrderCode(null);
                 }}
                 className={`bg-[#FAF8F5] rounded-3xl p-3 sm:p-3.5 border transition-all duration-200 flex flex-col shadow-xs min-h-[580px] max-h-[82vh] ${isDropTarget
-                    ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 bg-[#FDF9F2] scale-[1.01]'
-                    : 'border-[#E2DCD3]'
+                  ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 bg-[#FDF9F2] scale-[1.01]'
+                  : 'border-[#E2DCD3]'
                   }`}
               >
                 {/* Cabecera de Columna Kanban */}
