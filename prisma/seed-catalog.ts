@@ -321,8 +321,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: 'Gran Escala',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ0290.jpg',
+    imageUrl: '/products/DUBQ0290.jpg',
     is_active: true
   },
   {
@@ -365,8 +365,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Herramienta Pro',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DAVP2500.jpg',
+    imageUrl: '/products/DAVP2500.jpg',
     is_active: true
   },
   {
@@ -387,8 +387,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 100,
     stockQuantity: 100,
     badge: 'Original Dubro',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ0197.jpg',
+    imageUrl: '/products/DUBQ0197.jpg',
     is_active: true
   },
   {
@@ -409,8 +409,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ9617.jpg',
+    imageUrl: '/products/DUBQ9617.jpg',
     is_active: true
   },
   {
@@ -431,8 +431,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Flextank',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/SULQ4290.jpg',
+    imageUrl: '/products/SULQ4290.jpg',
     is_active: true
   },
 
@@ -479,8 +479,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'High Torque',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB0002.jpg',
+    imageUrl: '/products/AIB0002.jpg',
     is_active: true
   },
   {
@@ -501,8 +501,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Repuesto Original',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB11271.jpg',
+    imageUrl: '/products/AIB11271.jpg',
     is_active: true
   },
   {
@@ -523,8 +523,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 20,
     stockQuantity: 20,
     badge: 'Ultra Ligero',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB14458.jpg',
+    imageUrl: '/products/AIB14458.jpg',
     is_active: true
   },
   {
@@ -545,8 +545,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 9,
     stockQuantity: 9,
     badge: 'Popular',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB14459.jpg',
+    imageUrl: '/products/AIB14459.jpg',
     is_active: true
   },
   {
@@ -589,8 +589,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: 'Twin Bearing',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB3743.jpg',
+    imageUrl: '/products/AIB3743.jpg',
     is_active: true
   },
   {
@@ -633,8 +633,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 14,
     stockQuantity: 14,
     badge: 'Slim Wing',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB23330.jpg',
+    imageUrl: '/products/AIB23330.jpg',
     is_active: true
   },
   {
@@ -677,8 +677,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 32,
     stockQuantity: 32,
     badge: '3D Long Arm',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB6222-5.jpg',
+    imageUrl: '/products/AIB6222-5.jpg',
     is_active: true
   },
   {
@@ -699,8 +699,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 6,
     stockQuantity: 6,
     badge: 'Original Futaba',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/FUTM0031.jpg',
+    imageUrl: '/products/FUTM0031.jpg',
     is_active: true
   },
 

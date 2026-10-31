@@ -140,6 +140,36 @@ export async function main() {
         });
       }
       console.log(`🖼️ Imagen compartida /products/MASQ1337.jpg asegurada en los ${Object.keys(MASTER_AIRSCREW_IMAGE_MAPPING).length} SKU de hélices Master Airscrew en MariaDB.`);
+
+      // 6. Actualización conservadora de imageUrl para repuestos registrados vía prisma.product.update
+      const TARGET_PRODUCT_IMAGE_MAPPING: Record<string, string> = {
+        'DUBQ0290': '/products/DUBQ0290.jpg',
+        'DAVP2500': '/products/DAVP2500.jpg',
+        'DUBQ0197': '/products/DUBQ0197.jpg',
+        'DUBQ9617': '/products/DUBQ9617.jpg',
+        'SULQ4290': '/products/SULQ4290.jpg',
+        'AIB0002': '/products/AIB0002.jpg',
+        'AIB11271': '/products/AIB11271.jpg',
+        'AIB14458': '/products/AIB14458.jpg',
+        'AIB14459': '/products/AIB14459.jpg',
+        'AIB3743': '/products/AIB3743.jpg',
+        'AIB23330': '/products/AIB23330.jpg',
+        'AIB6222-5': '/products/AIB6222-5.jpg',
+        'FUTM0031': '/products/FUTM0031.jpg',
+      };
+
+      for (const [sku, imageUrl] of Object.entries(TARGET_PRODUCT_IMAGE_MAPPING)) {
+        try {
+          await prisma.product.update({
+            where: { sku },
+            data: { imageUrl }
+          });
+          console.log(`📸 [Prisma Update] Imagen asignada a SKU ${sku} -> ${imageUrl}`);
+        } catch (updateErr: any) {
+          console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
+        }
+      }
+      console.log(`🖼️ Rutas de imagen asignadas mediante prisma.product.update para ${Object.keys(TARGET_PRODUCT_IMAGE_MAPPING).length} repuestos oficiales (precios y stock intactos).`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {
