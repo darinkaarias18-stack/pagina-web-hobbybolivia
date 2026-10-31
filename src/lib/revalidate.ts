@@ -18,3 +18,4 @@ export function revalidateCatalog(): void {
     console.warn('[Cache Revalidation Info]:', error instanceof Error ? error.message : error);
   }
 }
+

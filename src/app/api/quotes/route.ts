@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getQuoteOrders, createQuoteOrder, updateQuoteOrderStatus } from '@/lib/db';
 import type { OrderStatus } from '@/lib/types';
 import { requireAdmin } from '@/lib/auth';
+import { sanitizeText } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +34,10 @@ export async function POST(request: NextRequest) {
       total
     } = body;
 
-    if (!customerName || !customerPhone || !items || items.length === 0) {
+    const cleanCustomerName = sanitizeText(customerName, 150);
+    const cleanCustomerPhone = sanitizeText(customerPhone, 50);
+
+    if (!cleanCustomerName || !cleanCustomerPhone || !items || items.length === 0) {
       return NextResponse.json(
         { success: false, error: "Faltan datos obligatorios del pedido (cliente, teléfono o productos)." },
         { status: 400 }
@@ -41,15 +45,15 @@ export async function POST(request: NextRequest) {
     }
 
     const order = await createQuoteOrder({
-      customerName,
-      customerPhone,
-      recipientName: recipientName || customerName,
-      deliveryCity: deliveryCity || "La Paz",
-      deliveryDate: deliveryDate || new Date().toLocaleDateString('es-BO'),
-      deliveryTimeSlot: deliveryTimeSlot || "Horario a coordinar",
-      deliveryAddress: deliveryAddress || "A coordinar por WhatsApp",
-      cardMessage: cardMessage || "",
-      customerNotes: customerNotes || cardMessage || "",
+      customerName: cleanCustomerName,
+      customerPhone: cleanCustomerPhone,
+      recipientName: sanitizeText(recipientName || cleanCustomerName, 150),
+      deliveryCity: sanitizeText(deliveryCity || "La Paz", 100),
+      deliveryDate: sanitizeText(deliveryDate || new Date().toLocaleDateString('es-BO'), 50),
+      deliveryTimeSlot: sanitizeText(deliveryTimeSlot || "Horario a coordinar", 100),
+      deliveryAddress: sanitizeText(deliveryAddress || "A coordinar por WhatsApp", 300),
+      cardMessage: sanitizeText(cardMessage || "", 1000),
+      customerNotes: sanitizeText(customerNotes || cardMessage || "", 1000),
       items,
       total: Number(total) || 0,
       status: "PEDIDO"

@@ -116,3 +116,4 @@ const passed = audit.filter(a => a.status === 'PASS').length;
 const total = audit.length;
 console.log(`📊 TOTAL EVALUADO: ${passed}/${total} endpoints con conformidad estricta.`);
 console.log('========================================================================================');
+

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getClaimRecords, getClaimRecordByCode, createClaimRecord, updateClaimStatus } from '@/lib/db';
 import type { ClaimStatus } from '@/lib/types';
 import { requireAdmin, getSessionUser } from '@/lib/auth';
+import { sanitizeText } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +66,15 @@ export async function POST(request: NextRequest) {
       customerRequest
     } = body;
 
-    if (!fullName || !documentId || !phone || !email || !contractedItem || !detail || !customerRequest) {
+    const cleanFullName = sanitizeText(fullName, 150);
+    const cleanDocumentId = sanitizeText(documentId, 50);
+    const cleanPhone = sanitizeText(phone, 50);
+    const cleanEmail = sanitizeText(email, 120);
+    const cleanContractedItem = sanitizeText(contractedItem, 255);
+    const cleanDetail = sanitizeText(detail, 2500);
+    const cleanCustomerRequest = sanitizeText(customerRequest, 2500);
+
+    if (!cleanFullName || !cleanDocumentId || !cleanPhone || !cleanEmail || !cleanContractedItem || !cleanDetail || !cleanCustomerRequest) {
       return NextResponse.json(
         { success: false, error: "Todos los campos obligatorios deben ser completados" },
         { status: 400 }
@@ -73,16 +82,16 @@ export async function POST(request: NextRequest) {
     }
 
     const claim = await createClaimRecord({
-      fullName,
-      documentId,
-      phone,
-      email,
-      contractedItem,
-      orderCode: orderCode || null,
+      fullName: cleanFullName,
+      documentId: cleanDocumentId,
+      phone: cleanPhone,
+      email: cleanEmail,
+      contractedItem: cleanContractedItem,
+      orderCode: orderCode ? sanitizeText(orderCode, 50) : null,
       amount: amount ? parseFloat(amount) : null,
       type: type === 'QUEJA' ? 'QUEJA' : 'RECLAMO',
-      detail,
-      customerRequest,
+      detail: cleanDetail,
+      customerRequest: cleanCustomerRequest,
       adminNotes: null
     });
 

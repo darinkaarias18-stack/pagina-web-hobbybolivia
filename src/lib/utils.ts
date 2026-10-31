@@ -11,3 +11,17 @@ export function formatPrice(amount: number | string | null | undefined, currency
   return `${currency} ${num.toFixed(2)}`;
 }
 
+/**
+ * Sanitiza texto de entrada del usuario contra ataques Stored XSS e inyecciones de código.
+ * Remueve etiquetas HTML, scripts, manejadores de eventos (onload/onerror) y recorta al tamaño máximo.
+ */
+export function sanitizeText(text: unknown, maxLength: number = 2000): string {
+  if (typeof text !== 'string') return '';
+  return text
+    .replace(/<[^>]*>?/gm, '') // Remueve tags HTML
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '') // Remueve atributos on* (ej. onclick=, onerror=)
+    .trim()
+    .slice(0, maxLength);
+}
+
