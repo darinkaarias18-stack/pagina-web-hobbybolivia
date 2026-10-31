@@ -127,7 +127,7 @@ export function CatalogBackupExportModule() {
     if (p.category && p.category.name) return p.category.name;
     const catId = p.category_id || p.categoryId;
     const found = categories.find(c => c.id === catId);
-    return found ? found.name : 'General / Repuestos';
+    return found ? found.name : 'General / Productos';
   };
 
   // =========================================================================
@@ -154,7 +154,7 @@ export function CatalogBackupExportModule() {
         return {
           'N°': index + 1,
           'SKU / CÓDIGO': p.sku || `HB-${String(p.id).padStart(4, '0')}`,
-          'NOMBRE DEL REPUESTO': p.name || p.title || 'Sin nombre',
+          'NOMBRE DEL PRODUCTO': p.name || p.title || 'Sin nombre',
           'CATEGORÍA': getProductCategory(p),
           'MARCA': p.brand || 'Hobby Bolivia',
           'PRECIO USD ($)': usdPrice,
@@ -201,8 +201,8 @@ export function CatalogBackupExportModule() {
         { 'PARÁMETRO': 'EMPRESA', 'VALOR': 'Hobby Bolivia' },
         { 'PARÁMETRO': 'DOMINIO OFICIAL', 'VALOR': 'https://hobbybolivia.com' },
         { 'PARÁMETRO': 'FECHA DE RESPALDO', 'VALOR': new Date().toLocaleString('es-BO') },
-        { 'PARÁMETRO': 'TOTAL DE REPUESTOS REGISTRADOS', 'VALOR': totalItems },
-        { 'PARÁMETRO': 'REPUESTOS CON STOCK ACTIVO', 'VALOR': inStockItems },
+        { 'PARÁMETRO': 'TOTAL DE PRODUCTOS REGISTRADOS', 'VALOR': totalItems },
+        { 'PARÁMETRO': 'PRODUCTOS CON STOCK ACTIVO', 'VALOR': inStockItems },
         { 'PARÁMETRO': 'TOTAL UNIDADES EN STOCK FÍSICO', 'VALOR': totalStockUnits },
         { 'PARÁMETRO': 'TIPO DE CAMBIO UTILIZADO', 'VALOR': `1 USD = Bs. ${exchangeRate.toFixed(4)}` },
         { 'PARÁMETRO': 'VALOR TOTAL INVENTARIO ESTIMADO (USD)', 'VALOR': `$ ${totalValueUsd.toFixed(2)} USD` },
@@ -260,7 +260,7 @@ export function CatalogBackupExportModule() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(250, 248, 245);
-      doc.text('Catálogo Oficial de Repuestos y Componentes de Aeromodelismo', 35, 42);
+      doc.text('Catálogo Oficial de Productos y Componentes de Aeromodelismo', 35, 42);
 
       const dateStr = `Fecha: ${new Date().toLocaleDateString('es-BO')} | T.C.: Bs. ${exchangeRate.toFixed(2)}`;
       doc.setFontSize(9);
@@ -269,7 +269,7 @@ export function CatalogBackupExportModule() {
 
       // Preparar filas para autoTable
       const tableHead = [
-        ['N°', 'SKU', 'Nombre del Repuesto', 'Categoría', 'Marca', 'Precio USD', 'Precio Bs.', 'Stock', 'Ruta Imagen']
+        ['N°', 'SKU', 'Nombre del Producto', 'Categoría', 'Marca', 'Precio USD', 'Precio Bs.', 'Stock', 'Ruta Imagen']
       ];
 
       const tableBody = products.map((p, index) => {
@@ -458,7 +458,7 @@ export function CatalogBackupExportModule() {
           <div className="p-3 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#8C827A] mb-1">
               <Package className="w-3.5 h-3.5 text-[#D4A359]" />
-              <span>Total Repuestos</span>
+              <span>Total Productos</span>
             </div>
             <div className="text-lg font-black text-[#1A1817]">
               {loading ? '...' : totalItems}
@@ -642,7 +642,7 @@ export function CatalogBackupExportModule() {
                 </div>
                 <div>
                   <h3 className="font-black text-sm text-white">
-                    Vista Imprimible del Catálogo con Fotos ({filteredPrintProducts.length} repuestos)
+                    Vista Imprimible del Catálogo con Fotos ({filteredPrintProducts.length} productos)
                   </h3>
                   <p className="text-[11px] text-[#E2DCD3]/70">
                     Diseñado para imprimir en tamaño carta / A4 o guardar como PDF con imágenes en alta calidad.
@@ -697,7 +697,7 @@ export function CatalogBackupExportModule() {
                     HOBBY BOLIVIA
                   </h1>
                   <p className="text-xs font-semibold text-[#5C5650]">
-                    Catálogo Oficial de Repuestos y Componentes para Aeromodelismo
+                    Catálogo Oficial de Productos y Componentes para Aeromodelismo
                   </p>
                   <p className="text-[10px] text-[#8C827A] mt-0.5">
                     Sitio Oficial: https://hobbybolivia.com · WhatsApp: +591 77293446
@@ -706,7 +706,7 @@ export function CatalogBackupExportModule() {
                 <div className="text-right text-[11px] font-mono text-[#5C5650]">
                   <div><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')}</div>
                   <div><strong>Tipo de Cambio:</strong> 1 USD = Bs. {exchangeRate.toFixed(2)}</div>
-                  <div><strong>Total Repuestos:</strong> {filteredPrintProducts.length}</div>
+                  <div><strong>Total Productos:</strong> {filteredPrintProducts.length}</div>
                 </div>
               </div>
 
@@ -717,7 +717,7 @@ export function CatalogBackupExportModule() {
                     <th className="py-2.5 px-2 w-[4%] text-center">N°</th>
                     <th className="py-2.5 px-2.5 w-[11%]">SKU / Código</th>
                     <th className="py-2.5 px-2 w-[9%] text-center">Foto</th>
-                    <th className="py-2.5 px-3 w-[26%]">Nombre del Repuesto</th>
+                    <th className="py-2.5 px-3 w-[26%]">Nombre del Producto</th>
                     <th className="py-2.5 px-2.5 w-[18%]">Categoría & Marca</th>
                     <th className="py-2.5 px-2.5 w-[11%] text-right">Precio USD</th>
                     <th className="py-2.5 px-2.5 w-[11%] text-right">Precio Bs.</th>
@@ -801,7 +801,7 @@ export function CatalogBackupExportModule() {
 
               {/* Document Footer (Visible en Impresión) */}
               <div className="mt-6 pt-4 border-t border-[#E2DCD3] text-center text-[10px] text-[#8C827A] flex justify-between items-center">
-                <span>Hobby Bolivia · Repuestos Oficiales para Aviones RC</span>
+                <span>Hobby Bolivia · Productos Oficiales para Aviones RC</span>
                 <span>Documento confidencial generado por la administración</span>
               </div>
             </div>

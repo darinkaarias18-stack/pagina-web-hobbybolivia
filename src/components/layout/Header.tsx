@@ -24,7 +24,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
 
   const navLinks = [
     { label: "Inicio", href: "#" },
-    { label: "Catálogo de Repuestos", href: "#catalogo" },
+    { label: "Catálogo de Productos", href: "#catalogo" },
     { label: "Categorías", href: "#categorias" },
     { label: "Ofertas", href: "#ofertas" },
     { label: "Contacto", href: "#contacto" },
@@ -56,7 +56,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
                 HOBBY <span className="text-[#FAF8F5]">BOLIVIA</span>
               </span>
               <span className="text-[8.5px] sm:text-[10px] font-bold tracking-wider uppercase text-[#A89F91] mt-0.5 truncate">
-                Repuestos & Aeromodelismo a Escala
+                Productos & Aeromodelismo a Escala
               </span>
             </div>
           </Link>

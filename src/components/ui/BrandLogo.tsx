@@ -35,19 +35,17 @@ export function BrandLogo({ logoUrl, className = "h-11", variant = 'light' }: Br
 
       <div className="flex flex-col leading-none">
         <span
-          className={`tracking-tight font-black text-xl sm:text-2xl transition-colors ${
-            variant === 'dark' ? 'text-[#FAF8F5]' : 'text-[#161311]'
-          }`}
+          className={`tracking-tight font-black text-xl sm:text-2xl transition-colors ${variant === 'dark' ? 'text-[#FAF8F5]' : 'text-[#161311]'
+            }`}
         >
           <span className="text-[#D4A359]">HOBBY</span>{' '}
           <span>BOLIVIA</span>
         </span>
         <span
-          className={`text-[9.5px] tracking-wider uppercase font-bold mt-0.5 ${
-            variant === 'dark' ? 'text-[#A89F91]' : 'text-[#5C5650]'
-          }`}
+          className={`text-[9.5px] tracking-wider uppercase font-bold mt-0.5 ${variant === 'dark' ? 'text-[#A89F91]' : 'text-[#5C5650]'
+            }`}
         >
-          Repuestos & Aeromodelismo a Escala
+          Productos & Aeromodelismo a Escala
         </span>
       </div>
     </Link>

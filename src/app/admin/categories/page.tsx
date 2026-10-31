@@ -238,7 +238,7 @@ export default function AdminCategoriesPage() {
             Gestión de Categorías
           </h1>
           <p className="text-xs text-[#8C827A] mt-0.5">
-            Organiza las líneas de repuestos, mandos, alambres y partes técnicas para la tienda.
+            Organiza las líneas de productos, mandos, alambres y partes técnicas para la tienda.
           </p>
         </div>
 
@@ -298,7 +298,7 @@ export default function AdminCategoriesPage() {
         <div className="bg-[#FAF8F5] rounded-3xl p-5 border border-[#E2DCD3] shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A] block">
-              Repuestos Clasificados
+              Productos Clasificados
             </span>
             <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono mt-1">
               {stats.totalItems}
@@ -361,7 +361,7 @@ export default function AdminCategoriesPage() {
       {loading ? (
         <div className="p-16 text-center text-xs text-[#8C827A] bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] flex items-center justify-center gap-2.5">
           <Loader2 className="w-5 h-5 animate-spin text-[#D4A359]" />
-          <span className="font-bold">Cargando catálogo de categorías y repuestos...</span>
+          <span className="font-bold">Cargando catálogo de categorías y productos...</span>
         </div>
       ) : filteredCategories.length === 0 ? (
         <div className="p-16 text-center text-xs text-[#8C827A] bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3]">
@@ -421,12 +421,12 @@ export default function AdminCategoriesPage() {
                     </p>
                   )}
 
-                  {/* Lista de Repuestos Asignados a esta Categoría */}
+                  {/* Lista de Productos Asignados a esta Categoría */}
                   <div className="bg-white rounded-2xl p-3.5 border border-[#E2DCD3] space-y-2.5 shadow-2xs">
                     <div className="flex items-center justify-between pb-1.5 border-b border-[#E2DCD3]/60">
                       <span className="text-[10px] font-black uppercase tracking-wider text-[#1A1817] flex items-center gap-1.5">
                         <Boxes className="w-3.5 h-3.5 text-[#D4A359]" />
-                        <span>Repuestos Oficiales ({catProducts.length})</span>
+                        <span>Productos Oficiales ({catProducts.length})</span>
                       </span>
                       <button
                         type="button"
@@ -440,7 +440,7 @@ export default function AdminCategoriesPage() {
 
                     {catProducts.length === 0 ? (
                       <p className="text-xs text-[#8C827A] italic py-2 text-center">
-                        Sin repuestos vinculados aún
+                        Sin productos vinculados aún
                       </p>
                     ) : (
                       <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
@@ -487,10 +487,10 @@ export default function AdminCategoriesPage() {
                     type="button"
                     onClick={() => setViewingCategoryProducts(c)}
                     className="inline-flex items-center gap-1.5 text-xs font-black text-[#1A1817] bg-white hover:bg-[#211E1C] hover:text-[#D4A359] px-3.5 py-2 rounded-xl border border-[#E2DCD3] hover:border-[#211E1C] font-mono shadow-2xs transition-all cursor-pointer group/btn"
-                    title="Ver todos los repuestos asignados en detalle"
+                    title="Ver todos los productos asignados en detalle"
                   >
                     <Package className="w-3.5 h-3.5 text-[#D4A359]" />
-                    <span>{catProducts.length} repuestos</span>
+                    <span>{catProducts.length} productos</span>
                     <Eye className="w-3.5 h-3.5 text-[#8C827A] group-hover/btn:text-[#D4A359]" />
                   </button>
 
@@ -576,7 +576,7 @@ export default function AdminCategoriesPage() {
                           type="button"
                           onClick={() => setViewingCategoryProducts(c)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-black bg-[#FAF8F5] hover:bg-[#211E1C] text-[#1A1817] hover:text-[#D4A359] border border-[#E2DCD3] hover:border-[#211E1C] shadow-2xs transition-all cursor-pointer"
-                          title="Clic para ver los repuestos asignados a esta categoría"
+                          title="Clic para ver los productos asignados a esta categoría"
                         >
                           <Package className="w-3.5 h-3.5 text-[#D4A359]" />
                           <span>{catProducts.length} productos 👁️</span>
@@ -635,7 +635,7 @@ export default function AdminCategoriesPage() {
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-black text-[#1A1817]">
-              Repuestos Oficiales Asignados por Grupo
+              Productos Oficiales Asignados por Grupo
             </h2>
           </div>
 
@@ -778,7 +778,7 @@ export default function AdminCategoriesPage() {
                 </div>
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A] block">
-                    Repuestos Asignados
+                    Productos Asignados
                   </span>
                   <h3 className="font-black text-base sm:text-lg text-[#1A1817]">
                     {viewingCategoryProducts.name}
@@ -848,7 +848,7 @@ export default function AdminCategoriesPage() {
 
             <div className="flex items-center justify-between pt-3 border-t border-[#E2DCD3]">
               <span className="text-xs text-[#5C5650] font-bold">
-                Total: {getCategoryProducts(viewingCategoryProducts.id).length} repuestos asignados
+                Total: {getCategoryProducts(viewingCategoryProducts.id).length} productos asignados
               </span>
               <div className="flex items-center gap-2">
                 <button

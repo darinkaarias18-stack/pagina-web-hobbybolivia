@@ -34,7 +34,7 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
   };
 
   const imgSrc = product.image_url || (product.images && product.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
-  const name = product.name || product.title || "Repuesto";
+  const name = product.name || product.title || "Producto";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/70 backdrop-blur-xs animate-in fade-in duration-200">

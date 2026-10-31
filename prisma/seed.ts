@@ -115,7 +115,7 @@ export async function main() {
           });
         }
       }
-      console.log(`✈️ ${OFFICIAL_PRODUCTS.length} repuestos oficiales sincronizados con prisma.product.upsert en MariaDB.`);
+      console.log(`✈️ ${OFFICIAL_PRODUCTS.length} productos oficiales sincronizados con prisma.product.upsert en MariaDB.`);
 
       // 5. Mapeo explícito de imagen compartida para Hélices Master Airscrew (sin alterar precios ni stock)
       const MASTER_AIRSCREW_IMAGE_MAPPING: Record<string, string> = {
@@ -141,7 +141,7 @@ export async function main() {
       }
       console.log(`🖼️ Imagen compartida /products/MASQ1337.jpg asegurada en los ${Object.keys(MASTER_AIRSCREW_IMAGE_MAPPING).length} SKU de hélices Master Airscrew en MariaDB.`);
 
-      // 6. Actualización conservadora de imageUrl para repuestos registrados vía prisma.product.update
+      // 6. Actualización conservadora de imageUrl para productos registrados vía prisma.product.update
       const TARGET_PRODUCT_IMAGE_MAPPING: Record<string, string> = {
         'DUBQ0290': '/products/DUBQ0290.jpg',
         'DAVP2500': '/products/DAVP2500.jpg',
@@ -169,7 +169,7 @@ export async function main() {
           console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
         }
       }
-      console.log(`🖼️ Rutas de imagen asignadas mediante prisma.product.update para ${Object.keys(TARGET_PRODUCT_IMAGE_MAPPING).length} repuestos oficiales (precios y stock intactos).`);
+      console.log(`🖼️ Rutas de imagen asignadas mediante prisma.product.update para ${Object.keys(TARGET_PRODUCT_IMAGE_MAPPING).length} productos oficiales (precios y stock intactos).`);
 
       // 7. Mapeo específico de 21 hélices (Master Airscrew, APC y Tripala) mediante prisma.product.update
       const PROPELLER_IMAGE_MAPPINGS: Record<string, string> = {
@@ -214,7 +214,7 @@ export async function main() {
       }
       console.log(`✈️ ${Object.keys(PROPELLER_IMAGE_MAPPINGS).length} hélices actualizadas con prisma.product.update (precios y stock intactos).`);
 
-      // 8. Mapeo de 11 repuestos (Tripalas, Balanceador, Eléctricas y Palas Plegables) mediante prisma.product.update
+      // 8. Mapeo de 11 productos (Tripalas, Balanceador, Eléctricas y Palas Plegables) mediante prisma.product.update
       const BATCH_3_IMAGE_MAPPINGS: Record<string, string> = {
         // Hélices Tripala asignadas a 'MASQ1906.jpg'
         'MASQ1908': '/products/MASQ1906.jpg',
@@ -247,9 +247,9 @@ export async function main() {
           console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
         }
       }
-      console.log(`🛠️ ${Object.keys(BATCH_3_IMAGE_MAPPINGS).length} repuestos adicionales actualizados con prisma.product.update (precios y stock intactos).`);
+      console.log(`🛠️ ${Object.keys(BATCH_3_IMAGE_MAPPINGS).length} productos adicionales actualizados con prisma.product.update (precios y stock intactos).`);
 
-      // 9. Mapeo de 21 repuestos (Categorías SPINNERS y CONSTRUCCION) mediante prisma.product.update
+      // 9. Mapeo de 21 productos (Categorías SPINNERS y CONSTRUCCION) mediante prisma.product.update
       const SPINNERS_CONSTRUCCION_IMAGE_MAPPINGS: Record<string, string> = {
         // Categoría SPINNERS:
         'DUBQ3694': '/products/DUBQ3694.jpg',
@@ -288,7 +288,7 @@ export async function main() {
           console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
         }
       }
-      console.log(`🎯 ${Object.keys(SPINNERS_CONSTRUCCION_IMAGE_MAPPINGS).length} repuestos de Spinners y Construcción actualizados con prisma.product.update (precios y stock intactos).`);
+      console.log(`🎯 ${Object.keys(SPINNERS_CONSTRUCCION_IMAGE_MAPPINGS).length} productos de Spinners y Construcción actualizados con prisma.product.update (precios y stock intactos).`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {

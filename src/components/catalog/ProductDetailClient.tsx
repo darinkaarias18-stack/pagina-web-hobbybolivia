@@ -45,8 +45,8 @@ export function ProductDetailClient({
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string>(
     product.image_url ||
-      (product.images && product.images[0]) ||
-      'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp'
+    (product.images && product.images[0]) ||
+    'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp'
   );
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'shipping'>('desc');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -92,7 +92,7 @@ export function ProductDetailClient({
   // Enlace preformateado de WhatsApp
   const whatsappNumber = (config?.whatsappNumber || '+591 77293446').replace(/[^\d]/g, '');
   const whatsappMessage = encodeURIComponent(
-    `Hola Hobby Bolivia, tengo interés en adquirir el repuesto:\n\n*${product.name || product.title}*\n• SKU: ${systemSku}\n• Precio: ${formatBs(priceBob)} (${formatUsd(priceUsd)})\n• Cantidad: ${quantity} unidad(es)\n\n¿Tienen disponibilidad y costos de envío a mi ciudad? Gracias.`
+    `Hola Hobby Bolivia, tengo interés en adquirir el producto:\n\n*${product.name || product.title}*\n• SKU: ${systemSku}\n• Precio: ${formatBs(priceBob)} (${formatUsd(priceUsd)})\n• Cantidad: ${quantity} unidad(es)\n\n¿Tienen disponibilidad y costos de envío a mi ciudad? Gracias.`
   );
   const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${whatsappMessage}`;
 
@@ -125,7 +125,7 @@ export function ProductDetailClient({
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-[#C4BCB3]" />
             <Link href="/#catalogo" className="hover:text-[#D4A359] transition-colors font-semibold">
-              Catálogo de Repuestos
+              Catálogo de Productos
             </Link>
             {product.category && (
               <>
@@ -154,7 +154,7 @@ export function ProductDetailClient({
       {/* 3. Contenedor Principal del Detalle de Producto */}
       <main className="w-full max-w-[1320px] mx-auto px-4 py-4 sm:py-6 flex-1 space-y-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          
+
           {/* ================= COLUMNA IZQUIERDA: GALERÍA DE IMÁGENES ================= */}
           <div className="lg:col-span-6 space-y-4">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E2DCD3] shadow-sm relative overflow-hidden flex items-center justify-center min-h-[380px] sm:min-h-[460px]">
@@ -196,11 +196,10 @@ export function ProductDetailClient({
                     key={idx}
                     type="button"
                     onClick={() => setSelectedImage(img)}
-                    className={`w-20 h-20 rounded-2xl bg-white p-2 border transition-all cursor-pointer shrink-0 overflow-hidden ${
-                      selectedImage === img
+                    className={`w-20 h-20 rounded-2xl bg-white p-2 border transition-all cursor-pointer shrink-0 overflow-hidden ${selectedImage === img
                         ? 'border-[#D4A359] ring-2 ring-[#D4A359]/40 shadow-xs'
                         : 'border-[#E2DCD3] hover:border-[#D4A359]/60 opacity-80 hover:opacity-100'
-                    }`}
+                      }`}
                   >
                     <img
                       src={img}
@@ -241,7 +240,7 @@ export function ProductDetailClient({
                   {product.brand || 'Dubro Products'}
                 </span>
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FAF8F5] text-[#5C5650] border border-[#E2DCD3]">
-                  {product.category?.name || 'Repuestos y Accesorios'}
+                  {product.category?.name || 'Productos y Accesorios'}
                 </span>
                 <span className="font-mono text-xs font-bold text-[#8C827A] ml-auto">
                   SKU: <strong className="text-[#1A1817]">{systemSku}</strong>
@@ -369,33 +368,30 @@ export function ProductDetailClient({
             <button
               type="button"
               onClick={() => setActiveTab('desc')}
-              className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === 'desc'
+              className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'desc'
                   ? 'border-[#D4A359] text-[#1A1817] bg-white'
                   : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
-              }`}
+                }`}
             >
               Descripción General
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('specs')}
-              className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === 'specs'
+              className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'specs'
                   ? 'border-[#D4A359] text-[#1A1817] bg-white'
                   : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
-              }`}
+                }`}
             >
               Ficha Técnica
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('shipping')}
-              className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === 'shipping'
+              className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'shipping'
                   ? 'border-[#D4A359] text-[#1A1817] bg-white'
                   : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
-              }`}
+                }`}
             >
               Envíos & Políticas de Compra
             </button>
@@ -409,7 +405,7 @@ export function ProductDetailClient({
                 </h3>
                 <p className="text-sm text-[#5C5650] leading-relaxed whitespace-pre-line">
                   {product.description ||
-                    'Este repuesto original está fabricado con los más altos estándares de resistencia y precisión para modelos a radiocontrol (aviones, planeadores, helicópteros y drones). Diseñado para soportar vibraciones intensas, alto torque y condiciones extremas de vuelo.'}
+                    'Este producto original está fabricado con los más altos estándares de resistencia y precisión para modelos a radiocontrol (aviones, planeadores, helicópteros y drones). Diseñado para soportar vibraciones intensas, alto torque y condiciones extremas de vuelo.'}
                 </p>
                 <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] space-y-1">
@@ -445,7 +441,7 @@ export function ProductDetailClient({
                     </tr>
                     <tr className="bg-[#FAF8F5]">
                       <td className="py-3 px-4 font-bold text-[#1A1817]">Categoría</td>
-                      <td className="py-3 px-4 font-medium text-[#1A1817]">{product.category?.name || 'Repuestos y Accesorios'}</td>
+                      <td className="py-3 px-4 font-medium text-[#1A1817]">{product.category?.name || 'Productos y Accesorios'}</td>
                     </tr>
                     <tr>
                       <td className="py-3 px-4 font-bold text-[#1A1817]">Condición</td>
@@ -466,7 +462,7 @@ export function ProductDetailClient({
                   Envíos y Garantía en Territorio Boliviano
                 </h3>
                 <p>
-                  En <strong>Hobby Bolivia</strong> cuidamos cada envío con embalaje reforzado para asegurar que tus repuestos y componentes lleguen en perfecto estado:
+                  En <strong>Hobby Bolivia</strong> cuidamos cada envío con embalaje reforzado para asegurar que tus productos y componentes lleguen en perfecto estado:
                 </p>
                 <ul className="list-disc pl-5 space-y-2 text-xs">
                   <li><strong>Entregas en La Paz:</strong> Entrega el mismo día o al día siguiente en almacén central o por motomensajería coordinada.</li>
@@ -487,7 +483,7 @@ export function ProductDetailClient({
                   Catálogo Complementario
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black text-[#1A1817]">
-                  Repuestos y Accesorios Relacionados
+                  Productos y Accesorios Relacionados
                 </h2>
               </div>
               <Link

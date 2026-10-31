@@ -55,7 +55,7 @@ export function Footer({
             style={{ color: '#161311' }}
           >
             <span className="font-black !text-[#161311]" style={{ color: '#161311' }}>
-              Explorar Catálogo de Repuestos
+              Explorar Catálogo de Productos
             </span>
             <ArrowRight className="w-4 h-4 !text-[#161311]" style={{ color: '#161311' }} />
           </Link>
@@ -89,7 +89,7 @@ export function Footer({
             </div>
 
             <p className="text-[#A89F91] text-xs leading-relaxed max-w-md">
-              Plataforma especializada en la distribución de repuestos, componentes mecánicos, electrónica y accesorios para aviones a escala y aeromodelismo en toda Bolivia.
+              Plataforma especializada en la distribución de productos, componentes mecánicos, electrónica y accesorios para aviones a escala y aeromodelismo en toda Bolivia.
             </p>
 
             <div className="space-y-2 text-[#A89F91] text-xs pt-1">
@@ -141,7 +141,7 @@ export function Footer({
       <div className="bg-[#100D0B] py-3 px-4 border-t border-[#241F1C]">
         <div className="w-full max-w-[1320px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[#8C827A] text-[11px]">
           <div>
-            © 2026 <strong className="text-[#FAF8F5]">Hobby Bolivia</strong>. Todos los derechos reservados. Repuestos de precisión para aeromodelismo.
+            © 2026 <strong className="text-[#FAF8F5]">Hobby Bolivia</strong>. Todos los derechos reservados. Productos de precisión para aeromodelismo.
           </div>
 
           <div className="flex items-center gap-4">

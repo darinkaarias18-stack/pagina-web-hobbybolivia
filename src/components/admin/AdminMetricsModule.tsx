@@ -367,7 +367,7 @@ export function AdminMetricsModule({
             prod.imageUrl ||
             'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
           brand: prod.brand || 'Dubro',
-          categoryName: prod.category?.name || 'Repuestos y Accesorios',
+          categoryName: prod.category?.name || 'Productos y Accesorios',
           totalUnitsSold: unitsSold,
           totalRevenueBob: sales?.totalRevenueBob || 0,
           currentStock: stockNow
@@ -414,7 +414,7 @@ export function AdminMetricsModule({
             prod.imageUrl ||
             'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
           brand: prod.brand || 'Dubro',
-          categoryName: prod.category?.name || 'Repuestos y Accesorios',
+          categoryName: prod.category?.name || 'Productos y Accesorios',
           totalUnitsSold: unitsSold,
           currentStock: stockNow,
           price: priceNow,
@@ -487,7 +487,7 @@ export function AdminMetricsModule({
           customerName: ord.customerName || 'Cliente Hobby Bolivia',
           customerPhone: ord.customerPhone || 'Sin teléfono',
           deliveryCity: ord.deliveryCity || 'Bolivia',
-          productName: prod?.name || prod?.title || 'Repuesto Hobby Bolivia',
+          productName: prod?.name || prod?.title || 'Producto Hobby Bolivia',
           productSku: prod?.sku || 'N/A',
           productImage:
             prod?.image_url ||
@@ -971,8 +971,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setPeriodTab('OVERVIEW')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'OVERVIEW'
-                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                 >
                   Comparativa
@@ -981,8 +981,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setPeriodTab('WEEK')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'WEEK'
-                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                 >
                   Por Semana
@@ -991,8 +991,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setPeriodTab('MONTH')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'MONTH'
-                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                 >
                   Por Mes
@@ -1001,8 +1001,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setPeriodTab('DAY')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'DAY'
-                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                 >
                   Por Día
@@ -1011,8 +1011,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setPeriodTab('YEAR')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'YEAR'
-                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                 >
                   Por Año
@@ -1025,8 +1025,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setChartViewMode('HORIZONTAL')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${chartViewMode === 'HORIZONTAL'
-                      ? 'bg-[#D4A359] text-[#161311] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#D4A359] text-[#161311] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                   title="Ver Gráfico de Barras Horizontales con Colores"
                 >
@@ -1037,8 +1037,8 @@ export function AdminMetricsModule({
                   type="button"
                   onClick={() => setChartViewMode('VERTICAL')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${chartViewMode === 'VERTICAL'
-                      ? 'bg-[#D4A359] text-[#161311] shadow-xs'
-                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                    ? 'bg-[#D4A359] text-[#161311] shadow-xs'
+                    : 'text-[#8C827A] hover:text-[#1A1817]'
                     }`}
                   title="Ver Gráfico de Barras Verticales con Colores"
                 >
@@ -1318,7 +1318,7 @@ export function AdminMetricsModule({
                 {performanceMetrics.activeProductsCount} / {performanceMetrics.totalProductsCount}
               </p>
               <div className="flex items-center justify-between gap-1 pt-1">
-                <span className="text-xs text-[#8C827A]">Repuestos en catálogo</span>
+                <span className="text-xs text-[#8C827A]">Productos en catálogo</span>
                 {stagnantProducts.length > 0 && (
                   <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
                     ⚠️ {stagnantProducts.length} estancados
@@ -1361,7 +1361,7 @@ export function AdminMetricsModule({
               </div>
             </div>
 
-            {/* Repuesto Adquirido */}
+            {/* Producto Adquirido */}
             <div className="bg-[#161311] p-4 rounded-2xl border border-[#D4A359]/30 flex items-center gap-4 shrink-0 max-w-md w-full">
               <div className="w-16 h-16 rounded-xl bg-white p-1.5 border border-[#D4A359]/40 flex items-center justify-center shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1523,7 +1523,7 @@ export function AdminMetricsModule({
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
                   <p className="font-bold">
-                    Alerta de Baja Rotación: {stagnantProducts.length} repuestos sin ventas o con rotación mínima.
+                    Alerta de Baja Rotación: {stagnantProducts.length} productos sin ventas o con rotación mínima.
                   </p>
                   <p className="text-[11px] text-amber-800">
                     Capital inmovilizado en almacén: <strong className="font-mono font-black">{formatBs(totalImmobilizedCapitalBob)}</strong>. Considera aplicar promociones o liquidaciones para liberar inventario.
@@ -1540,7 +1540,7 @@ export function AdminMetricsModule({
                 placeholder={
                   productTab === 'BEST_SELLERS'
                     ? "Buscar por nombre, SKU o marca..."
-                    : "Buscar repuesto con stock estancado..."
+                    : "Buscar producto con stock estancado..."
                 }
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}

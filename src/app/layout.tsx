@@ -15,14 +15,14 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: 'Hobby Bolivia · Aeromodelismo y radio control',
-  description: 'Repuestos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.',
-  keywords: 'aeromodelismo bolivia, radio control, rc bolivia, hobby bolivia, dubro bolivia, great planes, conectores ez, bellcrank, repuestos rc santa cruz',
+  description: 'Productos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.',
+  keywords: 'aeromodelismo bolivia, radio control, rc bolivia, hobby bolivia, dubro bolivia, great planes, conectores ez, bellcrank, productos rc santa cruz',
   icons: {
     icon: '/icon.svg',
   },
   openGraph: {
     title: 'Hobby Bolivia · Aeromodelismo y radio control',
-    description: 'Repuestos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.',
+    description: 'Productos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.',
     url: 'https://hobbybolivia.com',
     siteName: 'Hobby Bolivia',
     locale: 'es_BO',

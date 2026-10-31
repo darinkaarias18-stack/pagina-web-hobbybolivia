@@ -64,14 +64,14 @@ export function CategoryTilesGrid({
                     <span className="text-[#FAF8F5]/80 text-xs font-semibold">Descubre. Arma. Vuela.</span>
                   </div>
                   <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white uppercase tracking-tight leading-[1.05] drop-shadow-xl">
-                    REPUESTOS <span className="text-white">A ESCALA</span>
+                    PRODUCTOS <span className="text-white">A ESCALA</span>
                     <span className="block text-[#D4A359] mt-1">PRECISIÓN EN VUELO</span>
                   </h2>
                 </div>
 
                 {/* Subtitle */}
                 <p className="text-xs sm:text-sm md:text-base text-[#FAF8F5]/90 font-medium leading-relaxed drop-shadow max-w-lg">
-                  La mayor variedad de repuestos mecánicos, varillajes templados, hélices balanceadas y componentes electrónicos para aeronaves a radio control en Bolivia.
+                  La mayor variedad de productos mecánicos, varillajes templados, hélices balanceadas y componentes electrónicos para aeronaves a radio control en Bolivia.
                 </p>
 
                 {/* Call to action buttons */}

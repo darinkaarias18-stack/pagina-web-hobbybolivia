@@ -115,11 +115,11 @@ export default function AdminSettingsPage() {
         if (data.success && data.data) {
           const c: SiteConfig = data.data;
           setCompanyName(c.companyName || 'Hobby Bolivia');
-          setSubtitle(c.subtitle || 'Repuestos y componentes de precisión para aeromodelismo & R/C');
+          setSubtitle(c.subtitle || 'Productos y componentes de precisión para aeromodelismo & R/C');
           setCurrency(c.currency || 'Bs.');
           setWhatsappNumber(c.whatsappNumber || '+591 77293446');
           setContactEmail(c.contactEmail || 'contacto@hobbybolivia.com');
-          setTopBarText(c.topBarText || 'Hobby Bolivia: Repuestos y componentes de precisión para aeromodelismo | Envíos a todo el país');
+          setTopBarText(c.topBarText || 'Hobby Bolivia: Productos y componentes de precisión para aeromodelismo | Envíos a todo el país');
           setDomain(c.domain || 'https://hobbybolivia.com');
 
           setLogoUrl(c.logoUrl || '');
@@ -367,7 +367,7 @@ export default function AdminSettingsPage() {
                 required
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                placeholder="Ej. Repuestos de precisión, drones & aeromodelismo"
+                placeholder="Ej. Productos de precisión, drones & aeromodelismo"
                 className="w-full px-3.5 py-2.5 text-xs font-semibold bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl outline-none text-[#1A1817] placeholder:text-[#A89F91] focus:border-[#D4A359] focus:bg-white focus:ring-2 focus:ring-[#D4A359]/20 transition-all"
               />
             </div>
@@ -651,7 +651,7 @@ export default function AdminSettingsPage() {
                   Moneda del Catálogo Público:
                 </label>
                 <p className="text-[11px] text-[#8C827A]">
-                  Define si el catálogo respeta la moneda individual de cada repuesto o fuerza una moneda global:
+                  Define si el catálogo respeta la moneda individual de cada producto o fuerza una moneda global:
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {[

@@ -684,7 +684,7 @@ export function AdminProductsClient() {
         }
 
         const msg = field === 'currency'
-          ? `Repuesto configurado para mostrarse en ${value === 'USD' ? 'Dólares ($ USD)' : 'Bolivianos (Bs.)'}`
+          ? `Producto configurado para mostrarse en ${value === 'USD' ? 'Dólares ($ USD)' : 'Bolivianos (Bs.)'}`
           : field === 'is_active'
             ? (value ? 'Producto marcado como VISIBLE en el catálogo público' : 'Producto marcado como NO VISIBLE (oculto en la tienda)')
             : `${field === 'price' ? 'Precio' : 'Stock'} actualizado`;
@@ -1226,7 +1226,7 @@ export function AdminProductsClient() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2DCD3] pb-3 pt-2">
         <div className="flex items-center gap-2 font-black text-xs uppercase tracking-wider text-[#1A1817]">
           <Package className="w-4 h-4 text-[#D4A359]" />
-          <span>Catálogo de Repuestos & Edición en Línea ({products.length})</span>
+          <span>Catálogo de Productos & Edición en Línea ({products.length})</span>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -1459,7 +1459,7 @@ export function AdminProductsClient() {
                           )}
                         </td>
 
-                        {/* INMOVILIZADO 3: NOMBRE DEL REPUESTO (solo nombre, visible completo sin truncar) */}
+                        {/* INMOVILIZADO 3: NOMBRE DEL PRODUCTO (solo nombre, visible completo sin truncar) */}
                         <td className={`sticky left-[255px] z-20 w-[350px] min-w-[320px] max-w-[420px] py-4 px-4 border-b border-[#E2DCD3]/60 border-r border-[#E2DCD3] shadow-[6px_0_15px_-4px_rgba(0,0,0,0.08)] transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
                           }`}>
                           <span
@@ -1546,7 +1546,7 @@ export function AdminProductsClient() {
                               type="button"
                               onClick={() => openEditModal(p)}
                               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-[#1A1817] text-[#1A1817] hover:text-[#D4A359] border border-[#E2DCD3] hover:border-[#1A1817] shadow-2xs hover:shadow-sm transition-all font-black text-xs cursor-pointer group/btn"
-                              title="Editar datos completos del repuesto"
+                              title="Editar datos completos del producto"
                             >
                               <Edit2 className="w-3.5 h-3.5 text-[#D4A359] group-hover/btn:text-[#D4A359]" />
                               <span>Editar</span>
@@ -1555,7 +1555,7 @@ export function AdminProductsClient() {
                               type="button"
                               onClick={() => setProductToDelete(p)}
                               className="p-2 rounded-xl bg-white hover:bg-rose-600 text-[#8C827A] hover:text-white border border-[#E2DCD3] hover:border-rose-600 shadow-2xs hover:shadow-sm transition-all cursor-pointer"
-                              title="Eliminar repuesto"
+                              title="Eliminar producto"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1593,7 +1593,7 @@ export function AdminProductsClient() {
                     Catálogo Oficial Hobby Bolivia
                   </span>
                   <h3 className="font-black text-base sm:text-lg text-[#1A1817] uppercase tracking-tight leading-tight">
-                    {editingProduct ? 'Editar Repuesto Aeronáutico' : 'Agregar Nuevo Repuesto'}
+                    {editingProduct ? 'Editar Producto Aeronáutico' : 'Agregar Nuevo Producto'}
                   </h3>
                 </div>
               </div>
@@ -1622,13 +1622,13 @@ export function AdminProductsClient() {
                 }}
               />
 
-              {/* Layout Principal en 2 Columnas: Izquierda Imagen Grande | Derecha Datos del Repuesto */}
+              {/* Layout Principal en 2 Columnas: Izquierda Imagen Grande | Derecha Datos del Producto */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* COLUMNA IZQUIERDA (5/12): FOTO DEL REPUESTO EN FORMATO GRANDE */}
+                {/* COLUMNA IZQUIERDA (5/12): FOTO DEL PRODUCTO EN FORMATO GRANDE */}
                 <div className="lg:col-span-5 flex flex-col space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="font-black text-[#1A1817] text-xs uppercase tracking-wider">
-                      Foto del Repuesto / Producto *
+                      Foto del Producto *
                     </label>
                     <span className="text-[10px] font-bold text-[#8C827A]">
                       Vista Previa Oficial
@@ -1662,7 +1662,7 @@ export function AdminProductsClient() {
                       >
                         <img
                           src={formData.image_url}
-                          alt={formData.name || 'Vista previa del repuesto'}
+                          alt={formData.name || 'Vista previa del producto'}
                           className="max-h-full max-w-full w-full h-full object-contain p-3 transition-transform duration-300 group-hover:scale-105"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = '/images/placeholder.webp';
@@ -1783,7 +1783,7 @@ export function AdminProductsClient() {
                           SKU / Código Oficial *
                         </label>
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] uppercase font-mono">
-                          Repuesto
+                          Producto
                         </span>
                       </div>
                       <input
@@ -1793,7 +1793,7 @@ export function AdminProductsClient() {
                         value={formData.sku}
                         onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase().trim() })}
                         className="w-full px-3.5 py-2.5 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] font-mono font-black uppercase tracking-wider focus:border-[#D4A359] outline-none shadow-2xs"
-                        title="Código oficial o SKU del repuesto (ej. DUBQ0206, F-OM10, PM2018, etc.)."
+                        title="Código oficial o SKU del producto (ej. DUBQ0206, F-OM10, PM2018, etc.)."
                       />
                     </div>
                   </div>
@@ -1984,7 +1984,7 @@ export function AdminProductsClient() {
                   type="submit"
                   className="px-7 py-2.5 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] font-black uppercase tracking-wider shadow-md transition-all cursor-pointer"
                 >
-                  {editingProduct ? 'Guardar Cambios' : 'Crear Repuesto'}
+                  {editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
                 </button>
               </div>
             </form>
@@ -2000,7 +2000,7 @@ export function AdminProductsClient() {
               <Trash2 className="w-6 h-6" />
             </div>
             <div className="text-center">
-              <h3 className="font-black text-base text-[#1A1817]">¿Eliminar repuesto?</h3>
+              <h3 className="font-black text-base text-[#1A1817]">¿Eliminar producto?</h3>
               <p className="text-xs text-[#5C5650] mt-1">
                 Se eliminará permanentemente &quot;{productToDelete.name || productToDelete.title}&quot; (SKU: {productToDelete.sku}) de la base de datos.
               </p>

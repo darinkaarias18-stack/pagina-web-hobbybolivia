@@ -24,14 +24,14 @@ export function NewsletterStrip() {
 
       <div className="w-full max-w-[1320px] mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          
+
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#211E1C] border border-[#D4A359]/30 text-[#D4A359] text-xs font-black uppercase tracking-wider mb-4 shadow-sm">
             <Bell className="w-3.5 h-3.5 text-[#F85606]" />
             <span>Alertas de Stock & Novedades Técnicas</span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white leading-tight uppercase">
-            Sé el primero en enterarte de la llegada de repuestos
+            Sé el primero en enterarte de la llegada de productos
           </h2>
 
           <p className="mt-3 text-xs sm:text-sm text-[#A89F91] max-w-xl mx-auto leading-relaxed">

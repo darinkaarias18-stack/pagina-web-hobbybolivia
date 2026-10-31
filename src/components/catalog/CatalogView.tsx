@@ -375,7 +375,7 @@ export function CatalogView({
       {/* 4. Brands / Systems Ribbon */}
       <BrandsStrip />
 
-      {/* 5. "Encuentra el Repuesto Perfecto" Category Cards */}
+      {/* 5. "Encuentra el Producto Perfecto" Category Cards */}
       <CategoryTilesGrid
         categories={categories}
         onSelectCategory={(slug) => setActiveCategorySlug(slug)}
@@ -394,7 +394,7 @@ export function CatalogView({
               <span className="h-px bg-gradient-to-r from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-24"></span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
               <h2 className="text-xl sm:text-3xl font-black text-[#1A1817] uppercase tracking-wider">
-                CATÁLOGO DE REPUESTOS DE AVIONES A ESCALA
+                CATÁLOGO DE PRODUCTOS DE AVIONES A ESCALA
               </h2>
               <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
               <span className="h-px bg-gradient-to-l from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-24"></span>
@@ -412,7 +412,7 @@ export function CatalogView({
               </div>
               <input
                 type="text"
-                placeholder="Buscar por repuesto, SKU, marca (Dubro, Great Planes)..."
+                placeholder="Buscar por producto, SKU, marca (Dubro, Great Planes)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-12 py-3.5 bg-white text-[#1A1817] placeholder-[#8C827A] text-xs sm:text-sm font-medium rounded-full border border-[#E2DCD3] shadow-xs hover:border-[#D4A359] focus:border-[#D4A359] focus:ring-4 focus:ring-[#D4A359]/15 outline-none transition-all"
@@ -678,7 +678,7 @@ export function CatalogView({
                   className="w-full py-3 px-4 rounded-xl bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
                 >
                   <Check className="w-4 h-4 text-[#D4A359]" />
-                  <span>Ver {filteredProducts.length} Repuestos</span>
+                  <span>Ver {filteredProducts.length} Productos</span>
                 </button>
               </div>
 
@@ -691,7 +691,7 @@ export function CatalogView({
               <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#E2DCD3] text-xs text-[#5C5650]">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span>
-                    Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} repuestos disponibles
+                    Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} productos disponibles
                   </span>
                   {activeCategorySlug !== 'all' && (
                     <span className="bg-[#FAF8F5] border border-[#D4A359]/40 text-[#1A1817] px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1.5">
@@ -705,7 +705,7 @@ export function CatalogView({
               {filteredProducts.length === 0 ? (
                 <div className="py-16 text-center bg-[#FAF8F5] rounded-2xl border border-dashed border-[#D4A359]/40 p-8 space-y-3">
                   <SlidersHorizontal className="w-8 h-8 text-[#D4A359] mx-auto" />
-                  <h4 className="font-extrabold text-base text-[#1A1817]">No se encontraron repuestos</h4>
+                  <h4 className="font-extrabold text-base text-[#1A1817]">No se encontraron productos</h4>
                   <p className="text-xs text-[#5C5650] max-w-sm mx-auto">
                     Intenta cambiar o limpiar los filtros seleccionados para ver más componentes de aeromodelismo.
                   </p>
@@ -812,7 +812,7 @@ export function CatalogView({
         </button>
 
         <a
-          href="https://wa.me/59177293446?text=Hola%20Hobby%20Bolivia,%20deseo%20consultar%20sobre%20repuestos%20de%20aviones%20a%20escala."
+          href="https://wa.me/59177293446?text=Hola%20Hobby%20Bolivia,%20deseo%20consultar%20sobre%20productos%20de%20aviones%20a%20escala."
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white px-3.5 py-1.5 rounded-full font-black text-xs shadow-md transition-all active:scale-95"

@@ -41,7 +41,7 @@ export function ProductCard({
   };
 
   const imageSource = product.image_url || (product.images && product.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
-  const name = product.name || product.title || "Repuesto Hobby Bolivia";
+  const name = product.name || product.title || "Producto Hobby Bolivia";
   // Mostrar fielmente el SKU/Código oficial del producto (coincidente con Admin Products)
   const systemSku = product.sku || (product.id ? `HB-${product.id.toString().padStart(4, '0')}` : '');
 
@@ -77,7 +77,7 @@ export function ProductCard({
               ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]/60'
               : 'bg-[#D4A359] text-[#161311] border-[#D4A359]'
               }`}
-            title={validBadge === 'Popular' ? 'Repuesto Popular · El más pedido' : 'Nuevo Repuesto'}
+            title={validBadge === 'Popular' ? 'Producto Popular · El más pedido' : 'Nuevo Producto'}
           >
             {validBadge}
           </span>
@@ -127,7 +127,7 @@ export function ProductCard({
             <button
               onClick={handleQuickView}
               type="button"
-              title="Vista rápida del repuesto"
+              title="Vista rápida del producto"
               className="p-1.5 rounded-lg bg-white hover:bg-[#EBE5DB] text-[#5C5650] hover:text-[#1A1817] border border-[#E2DCD3] transition-colors cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5" />

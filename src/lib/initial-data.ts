@@ -3,7 +3,7 @@ import { Product, Category, Policy, Banner, SiteConfig } from './types';
 export const initialSiteConfig: SiteConfig = {
   id: 1,
   companyName: "Hobby Bolivia",
-  subtitle: "Repuestos y componentes de precisión para aviones a escala & aeromodelismo",
+  subtitle: "Productos y componentes de precisión para aviones a escala & aeromodelismo",
   domain: "https://hobbybolivia.com",
   logoUrl: null,
   heroBannerUrl: "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
@@ -12,14 +12,14 @@ export const initialSiteConfig: SiteConfig = {
   accentColor: "#211E1C",
   currency: "Bs.",
   whatsappNumber: "+591 77293446",
-  topBarText: "Hobby Bolivia: Repuestos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia",
+  topBarText: "Hobby Bolivia: Productos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia",
   contactEmail: "contacto@hobbybolivia.com",
   themePreset: "technest",
   cardStyle: "with_button",
   desktopColumns: 4,
   showTopBar: true,
   termsPolicy: `TÉRMINOS Y CONDICIONES - HOBBY BOLIVIA
-1. GENERAL: Hobby Bolivia es la tienda especializada en repuestos, componentes mecánicos, electrónica y accesorios para aeromodelismo y aviones a escala en el territorio boliviano.
+1. GENERAL: Hobby Bolivia es la tienda especializada en productos, componentes mecánicos, electrónica y accesorios para aeromodelismo y aviones a escala en el territorio boliviano.
 2. PRECIOS: Todos los precios están expresados en Bolivianos (Bs.) con impuestos y opciones de pago vía QR Simple, transferencia interbancaria o contra entrega coordinada.
 3. COMPATIBILIDAD TÉCNICA: Verifique el paso de rosca (métrica o imperial 2-56 / 4-40), diámetro de varillas y compatibilidad de voltaje antes de su instalación definitiva.
 4. ASISTENCIA: Nuestro equipo técnico brinda soporte preventa para validar medidas y montajes en sus proyectos de vuelo.`,
@@ -30,7 +30,7 @@ En Hobby Bolivia protegemos sus datos personales. La información de contacto, n
 - Envíos Nacionales: Despachos diarios a Santa Cruz, Cochabamba, Sucre, Tarija, Oruro, Potosí, Beni y Pando mediante flotas de encomienda o courier aéreo expreso.
 - Embalaje Blindado: Varillas de push-rod, alambres templados y componentes de fibra de carbono se envían protegidos en tubos rígidos de PVC o cartón de alta densidad para evitar dobladuras accidentales.`,
   returnsPolicy: `POLÍTICA DE GARANTÍA Y CONFORMIDAD TÉCNICA
-- Repuestos mecánicos 100% nuevos, genuinos y sin uso (Dubro, Great Planes, APC, E-flite).
+- Productos mecánicos 100% nuevos, genuinos y sin uso (Dubro, Great Planes, APC, E-flite).
 - Garantía de 30 días contra defectos de fabricación en componentes mecánicos y estructurales.
 - Componentes electrónicos cuentan con verificación previa de polaridad y continuidad antes de despacho.`,
   paymentQrUrl: "/images/payment/qr_simple_hobbybolivia.svg",
@@ -244,7 +244,7 @@ export const initialPolicies: Policy[] = [
     id: 1,
     slug: "envios",
     title: "Política de Envíos y Embalaje Frágil",
-    content: `En Hobby Bolivia garantizamos que cada repuesto y componente llegue en perfectas condiciones a cualquier rincón de Bolivia:
+    content: `En Hobby Bolivia garantizamos que cada producto y componente llegue en perfectas condiciones a cualquier rincón de Bolivia:
 - **La Paz y El Alto:** Entregas en el día o en un lapso máximo de 24 horas a través de mensajería express o entrega en nuestro punto céntrico.
 - **Envíos Nacionales:** Despachos de lunes a sábado a Santa Cruz, Cochabamba, Sucre, Tarija, Oruro, Potosí, Beni y Pando mediante empresas de transporte interdepartamental y courier aéreo.
 - **Embalaje Especial Anti-Dobladuras:** Las varillas de alambre templado (push-rods), tubos de fibra de carbono y hélices se empacan en fundas rígidas de PVC o perfiles de cartón reforzado con relleno amortiguante para evitar deflexión durante el traslado.
@@ -266,7 +266,7 @@ export const initialPolicies: Policy[] = [
     slug: "garantias",
     title: "Garantía de Componentes Electrónicos y Mecánicos",
     content: `Calidad internacional respaldada por Hobby Bolivia:
-- **Marcas Oficiales:** Distribuimos repuestos originales de fabricantes líderes como Dubro Products, Great Planes, APC Propellers, E-flite y Sunnysky.
+- **Marcas Oficiales:** Distribuimos productos originales de fabricantes líderes como Dubro Products, Great Planes, APC Propellers, E-flite y Sunnysky.
 - **Control de Calidad Previo:** Todos los servos, motores y variadores pasan por una inspección ocular de cableado, terminales y prueba de continuidad antes del despacho.
 - **Cobertura de Defectos:** Cobertura de 30 días calendario por fallas atribuibles a manufactura. No aplica por sobrevoltaje, inversión de polaridad en soldadura o impactos por aterrizajes forzosos.`,
     updatedAt: "2026-10-25T12:00:00Z"
@@ -285,7 +285,7 @@ export const initialPolicies: Policy[] = [
 export const initialBanners: Banner[] = [
   {
     id: 1,
-    title: "Repuestos de Precisión para tus Aviones a Escala en Hobby Bolivia",
+    title: "Productos de Precisión para tus Aviones a Escala en Hobby Bolivia",
     subtitle: "Conectores E/Z, varillajes templados, trenes de aterrizaje y electrónica de alta gama con envíos seguros a toda Bolivia.",
     imageUrl: "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
     buttonText: "Explorar Catálogo →",
@@ -1396,7 +1396,7 @@ export const initialProducts: Product[] = [
     brand: "Blue Bird / BMS",
     category_id: 11,
     categoryId: 11,
-    scale: "Micro Repuestos",
+    scale: "Micro Productos",
     material: "Aleación Metálica Mecanizada",
     specs_line: "Set completo de piñones internos + retenes para servo Blue Bird BMS-206",
     compatible_models: "Servo digital / análogo micro Blue Bird BMS-206",
@@ -1405,7 +1405,7 @@ export const initialProducts: Product[] = [
     price_usd: 8.80,
     stock: 2,
     stockQuantity: 2,
-    badge: "Repuesto Original",
+    badge: "Producto Original",
     image_url: "/products/AIB11271.jpg",
     images: ["/products/AIB11271.jpg"],
     is_active: true,

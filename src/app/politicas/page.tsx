@@ -50,7 +50,7 @@ export default async function PoliticasPage() {
           </div>
         </section>
 
-        {/* 2. Garantía de Repuestos */}
+        {/* 2. Garantía de Productos */}
         <section id="garantia" className="bg-[#FAF8F5] rounded-3xl p-6 sm:p-8 border border-[#E2DCD3] shadow-xs space-y-4 scroll-mt-20">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#211E1C] border border-[#D4A359]/40 text-[#D4A359] flex items-center justify-center">

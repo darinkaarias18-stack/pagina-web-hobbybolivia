@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'repuesto';
+      .replace(/^-+|-+$/g, '') || 'producto';
 
     // Si es SVG, validar que no supere 250 KB
     if (fileExt === '.svg' || file.type === 'image/svg+xml') {

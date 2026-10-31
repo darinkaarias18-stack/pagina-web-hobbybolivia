@@ -491,7 +491,7 @@ export const OFFICIAL_PRODUCTS = [
     categoryId: 11,
     category_id: 11,
     brand: 'Blue Bird / BMS',
-    scale: 'Micro Repuestos',
+    scale: 'Micro Productos',
     material: 'Aleación Metálica Mecanizada',
     specs_line: 'Set completo de piñones internos + retenes para servo Blue Bird BMS-206',
     compatible_models: 'Servo digital / análogo micro Blue Bird BMS-206',
@@ -500,7 +500,7 @@ export const OFFICIAL_PRODUCTS = [
     price_usd: 8.80,
     stock: 2,
     stockQuantity: 2,
-    badge: 'Repuesto Original',
+    badge: 'Producto Original',
     image_url: '/products/AIB11271.jpg',
     imageUrl: '/products/AIB11271.jpg',
     is_active: true

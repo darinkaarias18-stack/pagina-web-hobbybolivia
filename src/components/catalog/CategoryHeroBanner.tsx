@@ -34,7 +34,7 @@ export function CategoryHeroBanner({
           </h1>
 
           <p className="text-base sm:text-lg text-[#6b7480] max-w-xl">
-            Repuestos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.
+            Productos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2">
@@ -77,9 +77,8 @@ export function CategoryHeroBanner({
                 <button
                   type="button"
                   onClick={() => onSelectCategory && onSelectCategory(c.slug)}
-                  className={`w-full py-4 text-left flex items-baseline gap-4 group transition-all ${
-                    selectedCategory === c.slug ? 'text-[#8a6a00] pl-3' : 'text-[#10202f] hover:text-[#8a6a00] hover:pl-3'
-                  }`}
+                  className={`w-full py-4 text-left flex items-baseline gap-4 group transition-all ${selectedCategory === c.slug ? 'text-[#8a6a00] pl-3' : 'text-[#10202f] hover:text-[#8a6a00] hover:pl-3'
+                    }`}
                 >
                   <span className="font-mono text-xs font-bold tracking-widest text-[#6b7480]">
                     {String(idx + 1).padStart(2, '0')}

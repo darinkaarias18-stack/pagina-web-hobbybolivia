@@ -1039,8 +1039,8 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
   const newProduct: Product = {
     id: newId,
     sku,
-    name: data.name || "Nuevo Repuesto",
-    title: data.name || "Nuevo Repuesto",
+    name: data.name || "Nuevo Producto",
+    title: data.name || "Nuevo Producto",
     slug,
     category_id: data.category_id || data.categoryId || 1,
     categoryId: data.category_id || data.categoryId || 1,
@@ -1807,7 +1807,7 @@ export async function updateQuoteOrderStatus(idOrCode: number | string, status: 
     const rawProd = it.item || (it as any);
     const prodId = rawProd?.id ? Number(rawProd.id) : undefined;
     const prodSku = rawProd?.sku ? String(rawProd.sku).trim() : undefined;
-    const prodName = rawProd?.name || rawProd?.title || 'Repuesto Hobby Bolivia';
+    const prodName = rawProd?.name || rawProd?.title || 'Producto Hobby Bolivia';
     const qty = Math.max(1, Number(it.quantity) || 1);
 
     const pIndex = store.items.findIndex(p =>

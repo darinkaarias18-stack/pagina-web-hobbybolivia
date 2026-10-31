@@ -18,13 +18,13 @@ export function CustomArrangementModal() {
   const handleSendCustomQuote = (e: React.FormEvent) => {
     e.preventDefault();
     const msg = `*CONSULTA TÉCNICA / PEDIDO ESPECIAL HOBBY BOLIVIA*
-Hola Hobby Bolivia, deseo cotizar repuestos o asesoría para mi modelo:
+Hola Hobby Bolivia, deseo cotizar productos o asesoría para mi modelo:
 
 • *Nombre:* ${clientName || 'Cliente'}
 • *Teléfono:* ${clientPhone || 'No especificado'}
-• *Categoría del repuesto:* ${partCategory}
+• *Categoría del producto:* ${partCategory}
 • *Tipo de modelo RC:* ${modelType}
-• *Descripción del repuesto o consulta:* ${notes || 'Quisiera saber disponibilidad'}
+• *Descripción del producto o consulta:* ${notes || 'Quisiera saber disponibilidad'}
 
 ¿Podrían indicarme si tienen stock o fecha de llegada? Muchas gracias.`;
 
@@ -47,10 +47,10 @@ Hola Hobby Bolivia, deseo cotizar repuestos o asesoría para mi modelo:
           <div className="space-y-1">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8a6a00] uppercase tracking-wider">
               <Wrench className="w-3.5 h-3.5" />
-              Asesoría Técnica y Repuestos a Pedido
+              Asesoría Técnica y Productos a Pedido
             </span>
             <h3 className="font-serif text-2xl font-bold text-[#10202f]">
-              ¿Buscas un repuesto específico?
+              ¿Buscas un producto específico?
             </h3>
             <p className="text-xs text-[#6b7480]">
               Indícanos la parte, medida o modelo de avión que necesitas y te ayudamos a encontrarla de inmediato.
@@ -126,7 +126,7 @@ Hola Hobby Bolivia, deseo cotizar repuestos o asesoría para mi modelo:
 
             <div>
               <label className="text-xs font-bold text-[#10202f] block mb-1">
-                Detalles del Repuesto o Medida
+                Detalles del Producto o Medida
               </label>
               <textarea
                 rows={3}

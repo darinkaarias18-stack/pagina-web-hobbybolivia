@@ -19,7 +19,7 @@ export function Testimonials() {
       name: "Ing. Rodrigo Calvimontes",
       city: "Cochabamba",
       club: "Aeromodelistas del Valle",
-      comment: "Hobby Bolivia es la única tienda en el país que maneja stock real de repuestos y roscas métricas/imperiales. Pagué por QR y al día siguiente recogí la encomienda en flota.",
+      comment: "Hobby Bolivia es la única tienda en el país que maneja stock real de productos y roscas métricas/imperiales. Pagué por QR y al día siguiente recogí la encomienda en flota.",
       rating: 5,
       date: "Hace 1 semana"
     },

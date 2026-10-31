@@ -23,7 +23,7 @@ export function TopBar({ config }: TopBarProps) {
             <span className="text-[#FAF8F5]">{config.topBarText}</span>
           ) : (
             <span className="text-[#FAF8F5]">
-              <strong className="text-[#D4A359]">Hobby Bolivia:</strong> Repuestos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia
+              <strong className="text-[#D4A359]">Hobby Bolivia:</strong> Productos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia
             </span>
           )}
         </div>
@@ -44,7 +44,7 @@ export function TopBar({ config }: TopBarProps) {
           </a>
 
           <a
-            href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}?text=Hola%20Hobby%20Bolivia,%20necesito%20ayuda%20técnica%20con%20un%20repuesto.`}
+            href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}?text=Hola%20Hobby%20Bolivia,%20necesito%20ayuda%20técnica%20con%20un%20producto.`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:text-[#D4A359] transition-colors"

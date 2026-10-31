@@ -157,7 +157,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
       const orderCode = orderData?.data?.orderCode || `HB-${Date.now().toString().slice(-6)}`;
 
       // 2. Generate WhatsApp formatted message
-      let message = `*NUEVO PEDIDO DE REPUESTOS - HOBBY BOLIVIA*\n`;
+      let message = `*NUEVO PEDIDO DE PRODUCTOS - HOBBY BOLIVIA*\n`;
       message += `*Código de Orden:* ${orderCode}\n`;
       message += `------------------------------------\n`;
       message += `*Cliente:* ${customerName}\n`;
@@ -168,7 +168,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
         message += `*Notas:* ${customerNotes}\n`;
       }
       message += `------------------------------------\n`;
-      message += `*REPUESTOS SELECCIONADOS (${totalCount} piezas):*\n`;
+      message += `*PRODUCTOS SELECCIONADOS (${totalCount} piezas):*\n`;
 
       cartItems.forEach((ci, idx) => {
         const item = ci.item;
@@ -197,7 +197,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
       console.error("Error creating quote order:", err);
       alert("Hubo un problema al procesar el pedido. Abriremos WhatsApp de todas formas.");
       const targetPhone = (siteConfig?.whatsappNumber || config?.whatsappNumber || whatsapp || "+591 77293446").replace(/[^0-9]/g, '');
-      const waUrl = `https://wa.me/${targetPhone}?text=Hola%20Hobby%20Bolivia,%20quisiera%20hacer%20un%20pedido%20de%20repuestos.`;
+      const waUrl = `https://wa.me/${targetPhone}?text=Hola%20Hobby%20Bolivia,%20quisiera%20hacer%20un%20pedido%20de%20productos.`;
       window.open(waUrl, '_blank');
     } finally {
       setIsSubmitting(false);
@@ -311,7 +311,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                     onClick={handleGoToCatalog}
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#D4A359]/25 hover:scale-105 cursor-pointer"
                   >
-                    <span>Ir al Catálogo de Repuestos</span>
+                    <span>Ir al Catálogo de Productos</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -329,7 +329,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
             ) : (
               /* Sidebar Content: 1. Items + 2. Delivery Form + 3. Optional QR */
               <div className="space-y-5">
-                {/* 1. LISTA DE REPUESTOS SELECCIONADOS */}
+                {/* 1. LISTA DE PRODUCTOS SELECCIONADOS */}
                 <section className="p-4 sm:p-5 bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-xs space-y-3.5">
                   <div className="flex items-center justify-between pb-2.5 border-b border-[#E2DCD3]">
                     <div className="flex items-center gap-2">
@@ -337,7 +337,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                         <ShoppingCart className="w-3.5 h-3.5" />
                       </div>
                       <h3 className="text-xs font-black uppercase tracking-wider text-[#1A1817]">
-                        Repuestos Seleccionados ({cartItems.length})
+                        Productos Seleccionados ({cartItems.length})
                       </h3>
                     </div>
                     <span className="text-[10px] font-bold text-[#D4A359] bg-[#211E1C] px-2.5 py-0.5 rounded-full border border-[#D4A359]/30">
@@ -387,7 +387,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                                 type="button"
                                 onClick={() => removeFromCart(index)}
                                 className="text-[#8C827A] hover:text-red-600 bg-white hover:bg-red-50 border border-[#E2DCD3] rounded-lg p-1 transition-colors cursor-pointer shrink-0"
-                                title="Quitar repuesto"
+                                title="Quitar producto"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>

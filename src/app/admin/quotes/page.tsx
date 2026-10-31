@@ -674,10 +674,10 @@ export default function AdminQuotesPage() {
                             </div>
                           </div>
 
-                          {/* Fila 3: Detalle de Repuestos */}
+                          {/* Fila 3: Detalle de Productos */}
                           <div className="bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E2DCD3] space-y-1">
                             <div className="flex items-center justify-between text-[10px] font-bold text-[#5C5650]">
-                              <span>{ord.items?.length || 0} repuesto(s)</span>
+                              <span>{ord.items?.length || 0} producto(s)</span>
                               <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-[#E2DCD3]">
                                 {itemsCount} unid.
                               </span>
@@ -726,7 +726,7 @@ export default function AdminQuotesPage() {
                                   type="button"
                                   onClick={() => setDetailOrder(ord)}
                                   className="p-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#211E1C] text-[#5C5650] hover:text-[#D4A359] border border-[#E2DCD3] transition-colors cursor-pointer"
-                                  title="Ver repuestos solicitados"
+                                  title="Ver productos solicitados"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                 </button>
@@ -926,7 +926,7 @@ export default function AdminQuotesPage() {
                             type="button"
                             onClick={() => setDetailOrder(ord)}
                             className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#211E1C] text-[#5C5650] hover:text-[#D4A359] border border-[#E2DCD3] transition-colors cursor-pointer shadow-2xs"
-                            title="Ver detalle de repuestos"
+                            title="Ver detalle de productos"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -949,7 +949,7 @@ export default function AdminQuotesPage() {
         </div>
       )}
 
-      {/* MODAL DETALLE DE REPUESTOS SOLICITADOS */}
+      {/* MODAL DETALLE DE PRODUCTOS SOLICITADOS */}
       {detailOrder && (
         <div
           onClick={() => setDetailOrder(null)}
@@ -973,7 +973,7 @@ export default function AdminQuotesPage() {
                     {renderStatusBadge(detailOrder.status)}
                   </div>
                   <p className="text-xs text-[#8C827A]">
-                    Detalle de repuestos y destino de despacho
+                    Detalle de productos y destino de despacho
                   </p>
                 </div>
               </div>
@@ -1007,16 +1007,16 @@ export default function AdminQuotesPage() {
                 </div>
               </div>
 
-              {/* Lista de Repuestos */}
+              {/* Lista de Productos */}
               <div className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-wider text-[#1A1817] block">
-                  Repuestos Solicitados ({(detailOrder.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 1), 0)} unidades):
+                  Productos Solicitados ({(detailOrder.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 1), 0)} unidades):
                 </span>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                   {(detailOrder.items || []).map((it, idx) => {
                     const prod = it.item || (it as any);
-                    const prodName = prod?.name || prod?.title || 'Repuesto Hobby Bolivia';
+                    const prodName = prod?.name || prod?.title || 'Producto Hobby Bolivia';
                     const prodSku = prod?.sku || `HB-${idx + 1}`;
                     const prodImg =
                       prod?.image_url ||
@@ -1171,7 +1171,7 @@ export default function AdminQuotesPage() {
                       </div>
                     </div>
                     <p className="text-[11px] text-[#5C5650] leading-relaxed pt-1">
-                      Repuestos, motores y componentes certificados para aeromodelos.
+                      Productos, motores y componentes certificados para aeromodelos.
                       <br />
                       La Paz, Bolivia · Soporte WhatsApp: (+591) 70123456
                     </p>
@@ -1244,11 +1244,11 @@ export default function AdminQuotesPage() {
                   </div>
                 </div>
 
-                {/* Tabla de Repuestos Solicitados */}
+                {/* Tabla de Productos Solicitados */}
                 <div className="bg-white rounded-2xl border border-[#E2DCD3] overflow-hidden shadow-2xs">
                   <div className="px-4 py-2.5 bg-[#211E1C] flex items-center justify-between text-[#FAF8F5]">
                     <span className="font-black text-[10px] uppercase tracking-wider text-[#D4A359]">
-                      Detalle de Repuestos y Componentes
+                      Detalle de Productos y Componentes
                     </span>
                     <span className="font-mono text-[10px] text-[#FAF8F5]/80">
                       Total Unidades: {(printOrder.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 1), 0)}
@@ -1259,7 +1259,7 @@ export default function AdminQuotesPage() {
                     <thead>
                       <tr className="bg-[#FAF8F5] text-[#5C5650] text-[9.5px] font-black uppercase border-b border-[#E2DCD3]">
                         <th className="py-2.5 px-4 w-28">SKU</th>
-                        <th className="py-2.5 px-3">Repuesto</th>
+                        <th className="py-2.5 px-3">Producto</th>
                         <th className="py-2.5 px-3 text-center w-20">Cant.</th>
                         <th className="py-2.5 px-3 text-right w-28">Precio Unit.</th>
                         <th className="py-2.5 px-4 text-right w-32">Subtotal</th>
@@ -1268,7 +1268,7 @@ export default function AdminQuotesPage() {
                     <tbody className="divide-y divide-[#E2DCD3]">
                       {(printOrder.items || []).map((it, i) => {
                         const prod = it.item || (it as any);
-                        const prodName = prod?.name || prod?.title || 'Repuesto de precisión';
+                        const prodName = prod?.name || prod?.title || 'Producto de precisión';
                         const prodSku =
                           prod?.sku ||
                           (prod?.id ? `HB-${String(prod.id).padStart(4, '0')}` : `HB-${String(i + 1).padStart(4, '0')}`);
@@ -1322,7 +1322,7 @@ export default function AdminQuotesPage() {
                   <div className="space-y-1 text-[#5C5650] text-[11px] text-center sm:text-left">
                     <div className="flex items-center gap-1.5 justify-center sm:justify-start font-bold text-[#1A1817]">
                       <ShieldCheck className="w-4 h-4 text-[#3E7B44]" />
-                      <span>Garantía de Repuestos Hobby Bolivia</span>
+                      <span>Garantía de Productos Hobby Bolivia</span>
                     </div>
                     <p>Comprobante de retiro de almacén oficial. Precios expresados en Bolivianos (Bs.).</p>
                   </div>

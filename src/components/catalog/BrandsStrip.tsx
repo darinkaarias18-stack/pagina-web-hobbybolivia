@@ -42,7 +42,7 @@ export function BrandsStrip() {
                 key={`${brand.name}-${idx}`}
                 href="#catalogo"
                 className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-105 shrink-0 px-2"
-                title={`Ver repuestos de ${brand.name}`}
+                title={`Ver productos de ${brand.name}`}
               >
                 <span className="text-xs sm:text-sm font-black text-[#FAF8F5] tracking-tight group-hover:text-[#D4A359] transition-colors whitespace-nowrap">
                   {brand.name}

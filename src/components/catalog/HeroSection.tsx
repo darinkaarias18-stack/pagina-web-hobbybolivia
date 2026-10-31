@@ -14,7 +14,7 @@ export function HeroSection() {
         <div className="flex justify-center mb-5">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#211E1C] border border-[#D4A359]/40 text-[#D4A359] text-xs font-black uppercase tracking-wider shadow-sm">
             <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-pulse"></span>
-            <span>REPUESTOS DE PRECISIÓN. INVERSIÓN INTELIGENTE.</span>
+            <span>PRODUCTOS DE PRECISIÓN. INVERSIÓN INTELIGENTE.</span>
           </div>
         </div>
 
@@ -22,7 +22,7 @@ export function HeroSection() {
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.1] uppercase">
             <span className="text-white block">
-              REPUESTOS DE PRECISIÓN
+              PRODUCTOS DE PRECISIÓN
             </span>
             <span className="text-[#D4A359] block mt-1">
               AEROMODELISMO A ESCALA
