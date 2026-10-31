@@ -207,8 +207,8 @@ export function ProductDetailClient({
                     type="button"
                     onClick={() => setSelectedImage(img)}
                     className={`w-20 h-20 rounded-2xl bg-white p-2 border transition-all cursor-pointer shrink-0 overflow-hidden ${selectedImage === img
-                        ? 'border-[#D4A359] ring-2 ring-[#D4A359]/40 shadow-xs'
-                        : 'border-[#E2DCD3] hover:border-[#D4A359]/60 opacity-80 hover:opacity-100'
+                      ? 'border-[#D4A359] ring-2 ring-[#D4A359]/40 shadow-xs'
+                      : 'border-[#E2DCD3] hover:border-[#D4A359]/60 opacity-80 hover:opacity-100'
                       }`}
                   >
                     <img
@@ -379,8 +379,8 @@ export function ProductDetailClient({
               type="button"
               onClick={() => setActiveTab('desc')}
               className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'desc'
-                  ? 'border-[#D4A359] text-[#1A1817] bg-white'
-                  : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
+                ? 'border-[#D4A359] text-[#1A1817] bg-white'
+                : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
                 }`}
             >
               Descripción General
@@ -389,8 +389,8 @@ export function ProductDetailClient({
               type="button"
               onClick={() => setActiveTab('specs')}
               className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'specs'
-                  ? 'border-[#D4A359] text-[#1A1817] bg-white'
-                  : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
+                ? 'border-[#D4A359] text-[#1A1817] bg-white'
+                : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
                 }`}
             >
               Ficha Técnica
@@ -399,8 +399,8 @@ export function ProductDetailClient({
               type="button"
               onClick={() => setActiveTab('shipping')}
               className={`px-6 py-4 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'shipping'
-                  ? 'border-[#D4A359] text-[#1A1817] bg-white'
-                  : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
+                ? 'border-[#D4A359] text-[#1A1817] bg-white'
+                : 'border-transparent text-[#8C827A] hover:text-[#1A1817]'
                 }`}
             >
               Envíos & Políticas de Compra

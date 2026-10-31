@@ -94,11 +94,10 @@ export function ProductOptionsModal() {
                         <button
                           key={opt}
                           onClick={() => handleSelectOption(v.name, opt)}
-                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border transition-all ${
-                            isSelected
+                          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border transition-all ${isSelected
                               ? 'border-[#10202f] bg-[#10202f] text-[#f5f1e8] shadow-xs'
                               : 'border-[#10202f] hover:bg-[#ebe4d3] bg-white text-[#10202f]'
-                          }`}
+                            }`}
                         >
                           {isSelected && <Check className="w-3.5 h-3.5 text-[#f2b705]" />}
                           <span>{opt}</span>

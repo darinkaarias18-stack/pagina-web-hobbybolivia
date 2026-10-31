@@ -67,15 +67,15 @@ export function ProductCard({
   return (
     <div
       onClick={() => handleQuickView()}
-      className="group relative hover:z-50 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] p-3 hover:scale-135 hover:shadow-2xl transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer"
+      className="group relative rounded-2xl bg-white border border-[#E2DCD3] hover:border-[#D4A359] hover:shadow-xl transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
       title="Clic para ver detalles y cotizar"
     >
-      {/* 1. Caja de Imagen (crece junto con toda la tarjeta como un solo bloque) */}
-      <div className="w-full h-36 bg-white rounded-xl p-2 flex items-center justify-center relative border border-[#EBE5DB] group-hover:border-[#D4A359]/60 overflow-hidden transition-colors duration-300">
+      {/* 1. Contenedor de Imagen con Aspect Ratio uniforme, sin padding restrictivo y fondo neutro */}
+      <div className="w-full aspect-[4/3] relative bg-neutral-100 overflow-hidden flex items-center justify-center border-b border-[#EBE5DB]">
         {/* Etiqueta / Badge en esquina superior derecha */}
         {validBadge && (
           <span
-            className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-xs border select-none pointer-events-none ${validBadge === 'Popular'
+            className={`absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-xs border select-none pointer-events-none ${validBadge === 'Popular'
               ? 'bg-[#211E1C] text-[#D4A359] border-[#D4A359]/60'
               : 'bg-[#D4A359] text-[#161311] border-[#D4A359]'
               }`}
@@ -88,7 +88,7 @@ export function ProductCard({
         <img
           src={imageSource}
           alt={name}
-          className="max-h-full max-w-full w-full h-full object-contain mx-auto"
+          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ease-in-out mx-auto"
           loading="lazy"
           decoding="async"
           onError={(e) => {
@@ -101,7 +101,7 @@ export function ProductCard({
       </div>
 
       {/* 2. Textos: SKU y Nombre */}
-      <div className="pt-2 flex-1 flex flex-col justify-between">
+      <div className="p-3 sm:p-3.5 flex-1 flex flex-col justify-between">
         <div>
           <span className="inline-block text-[10px] font-mono font-bold text-[#D4A359] tracking-wider uppercase">
             {systemSku}
