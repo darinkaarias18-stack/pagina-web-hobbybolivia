@@ -42,7 +42,8 @@ export function ProductCard({
 
   const imageSource = product.image_url || (product.images && product.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
   const name = product.name || product.title || "Repuesto Hobby Bolivia";
-  const systemSku = (product.sku && product.sku.startsWith('HB-')) ? product.sku : `HB-${product.id.toString().padStart(4, '0')}`;
+  // Mostrar fielmente el SKU/Código oficial del producto (coincidente con Admin Products)
+  const systemSku = product.sku || (product.id ? `HB-${product.id.toString().padStart(4, '0')}` : '');
 
   // Determinación de precio en USD o Bs. según selección "Mostrar en" o moneda global del catálogo
   const isUsd =

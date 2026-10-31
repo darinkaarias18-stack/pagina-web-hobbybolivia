@@ -72,10 +72,8 @@ export function ProductDetailClient({
       maximumFractionDigits: 2
     })} USD`;
 
-  const systemSku =
-    product.sku && product.sku.startsWith('HB-')
-      ? product.sku
-      : `HB-${product.id.toString().padStart(4, '0')}`;
+  // Mostrar fielmente el SKU/Código oficial del producto (coincidente con Admin Products)
+  const systemSku = product.sku || (product.id ? `HB-${product.id.toString().padStart(4, '0')}` : '');
 
   const handleAddToCart = () => {
     addToCart(product, quantity);

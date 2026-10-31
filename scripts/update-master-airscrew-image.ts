@@ -62,3 +62,4 @@ for (const sku of TARGET_SKUS) {
 fs.writeFileSync(initialDataPath, initialDataContent, 'utf8');
 
 console.log('✨ Mapeo de imagen compartida aplicado a seed-catalog.ts e initial-data.ts');
+
