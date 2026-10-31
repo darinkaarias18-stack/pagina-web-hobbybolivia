@@ -725,8 +725,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -747,8 +747,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -769,8 +769,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -791,8 +791,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -813,8 +813,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 8,
     stockQuantity: 8,
     badge: 'Popular',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -835,8 +835,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 14,
     stockQuantity: 14,
     badge: 'Best Seller',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -857,8 +857,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 8,
     stockQuantity: 8,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -879,8 +879,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: '3D Thrust',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -901,8 +901,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 12,
     stockQuantity: 12,
     badge: 'Best Seller',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -923,8 +923,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 9,
     stockQuantity: 9,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -945,8 +945,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -967,8 +967,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -3352,16 +3352,30 @@ export async function seedCatalog() {
         }
       }
 
-      // 1.2 Limpiar e Insertar Productos Oficiales con precios USD y cálculo en Bs.
+      // 1.2 Limpiar e Insertar Productos Oficiales con precios USD y cálculo en Bs. (preservando precios y stock existentes)
       const cleanedItems: any[] = OFFICIAL_PRODUCTS.map((prod, index) => {
-        const priceBob = Number((prod.priceUsd * exchangeRate).toFixed(2));
+        const existing = db.items?.find((i: any) => i.sku === prod.sku);
+        const priceBob = existing && existing.price !== undefined ? existing.price : Number((prod.priceUsd * exchangeRate).toFixed(2));
+        const priceUsd = existing && (existing.priceUsd !== undefined || existing.price_usd !== undefined)
+          ? (existing.priceUsd ?? existing.price_usd)
+          : prod.priceUsd;
+        const stock = existing && (existing.stock !== undefined || existing.stockQuantity !== undefined)
+          ? (existing.stock ?? existing.stockQuantity)
+          : prod.stock;
+
+        const resolvedImageUrl = prod.image_url || prod.imageUrl || null;
+
         return {
           id: index + 1,
           ...prod,
           price: priceBob,
-          priceUsd: prod.priceUsd,
-          price_usd: prod.priceUsd,
-          images: prod.image_url ? [prod.image_url] : [],
+          priceUsd: priceUsd,
+          price_usd: priceUsd,
+          stock: stock,
+          stockQuantity: stock,
+          imageUrl: resolvedImageUrl,
+          image_url: resolvedImageUrl,
+          images: resolvedImageUrl ? [resolvedImageUrl] : [],
           currency: 'USD',
           display_currency: 'USD',
           updated_at: new Date().toISOString()
@@ -3433,10 +3447,7 @@ export async function seedCatalog() {
               material: prod.material,
               specsLine: prod.specs_line,
               compatibleModels: prod.compatible_models,
-              price: priceBob,
-              priceUsd: prod.priceUsd,
-              stock: prod.stock,
-              badge: prod.badge,
+              // Precios y stock preservados en update para no sobreescribir datos existentes en MariaDB
               imageUrl: prod.image_url || prod.imageUrl || null,
               isActive: prod.is_active ?? true,
               brand: prod.brand,

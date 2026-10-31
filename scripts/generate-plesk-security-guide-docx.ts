@@ -76,10 +76,10 @@ async function generateDocx() {
           default: new Footer({
             children: [
               new Paragraph({
-                alignment: AlignmentType.SPACE_BETWEEN,
+                alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
-                    text: 'Confidencial - Para uso exclusivo de Administración Hobby Bolivia',
+                    text: 'Hobby Bolivia | Confidencial - ',
                     size: 16,
                     color: '94A3B8',
                   }),
@@ -741,3 +741,4 @@ generateDocx().catch((err) => {
   console.error('❌ Error generando docx:', err);
   process.exit(1);
 });
+

@@ -88,10 +88,7 @@ export async function main() {
               material: prod.material,
               specsLine: prod.specs_line,
               compatibleModels: prod.compatible_models,
-              price: priceBob,
-              priceUsd: prod.priceUsd,
-              stock: prod.stock,
-              badge: prod.badge,
+              // Precios y stock preservados en update para no sobreescribir datos existentes en MariaDB
               imageUrl: prod.image_url || prod.imageUrl || null,
               isActive: prod.is_active ?? true,
               brand: prod.brand,
@@ -119,6 +116,30 @@ export async function main() {
         }
       }
       console.log(`✈️ ${OFFICIAL_PRODUCTS.length} repuestos oficiales sincronizados con prisma.product.upsert en MariaDB.`);
+
+      // 5. Mapeo explícito de imagen compartida para Hélices Master Airscrew (sin alterar precios ni stock)
+      const MASTER_AIRSCREW_IMAGE_MAPPING: Record<string, string> = {
+        'MASQ1210': '/products/MASQ1337.jpg',
+        'MASQ1220': '/products/MASQ1337.jpg',
+        'MASQ1240': '/products/MASQ1337.jpg',
+        'MASQ1280': '/products/MASQ1337.jpg',
+        'MASQ1300': '/products/MASQ1337.jpg',
+        'MASQ1320': '/products/MASQ1337.jpg',
+        'MASQ1330': '/products/MASQ1337.jpg',
+        'MASQ1336': '/products/MASQ1337.jpg',
+        'MASQ1337': '/products/MASQ1337.jpg',
+        'MASQ1340': '/products/MASQ1337.jpg',
+        'MASQ1350': '/products/MASQ1337.jpg',
+        'MASQ1353': '/products/MASQ1337.jpg',
+      };
+
+      for (const [sku, imageUrl] of Object.entries(MASTER_AIRSCREW_IMAGE_MAPPING)) {
+        await prisma.product.updateMany({
+          where: { sku },
+          data: { imageUrl }
+        });
+      }
+      console.log(`🖼️ Imagen compartida /products/MASQ1337.jpg asegurada en los ${Object.keys(MASTER_AIRSCREW_IMAGE_MAPPING).length} SKU de hélices Master Airscrew en MariaDB.`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {
