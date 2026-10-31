@@ -62,3 +62,4 @@ for (const [sku, imageUrl] of Object.entries(TARGET_PRODUCT_IMAGE_MAPPING)) {
 fs.writeFileSync(initialDataPath, initialDataContent, 'utf8');
 
 console.log('✨ Mapeo de 13 repuestos aplicado con éxito a seed-catalog.ts e initial-data.ts');
+

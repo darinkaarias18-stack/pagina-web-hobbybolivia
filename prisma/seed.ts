@@ -170,6 +170,49 @@ export async function main() {
         }
       }
       console.log(`🖼️ Rutas de imagen asignadas mediante prisma.product.update para ${Object.keys(TARGET_PRODUCT_IMAGE_MAPPING).length} repuestos oficiales (precios y stock intactos).`);
+
+      // 7. Mapeo específico de 21 hélices (Master Airscrew, APC y Tripala) mediante prisma.product.update
+      const PROPELLER_IMAGE_MAPPINGS: Record<string, string> = {
+        // Hélices asignadas a 'MASQ1337.jpg'
+        'MASQ1355': '/products/MASQ1337.jpg',
+        'MASQ1359': '/products/MASQ1337.jpg',
+        'MASQ1360': '/products/MASQ1337.jpg',
+        'MASQ1362': '/products/MASQ1337.jpg',
+        'MASQ1370': '/products/MASQ1337.jpg',
+        'MASQ1373': '/products/MASQ1337.jpg',
+        'MASQ1380': '/products/MASQ1337.jpg',
+        'MASQ1390': '/products/MASQ1337.jpg',
+        'MASQ1395': '/products/MASQ1337.jpg',
+        'MASQ1400': '/products/MASQ1337.jpg',
+        'MASQ1410': '/products/MASQ1337.jpg',
+        'MASQ1519': '/products/MASQ1337.jpg',
+        'MASQ1756': '/products/MASQ1337.jpg',
+
+        // Hélices APC asignadas a 'APCQ1238.jpg'
+        'APCQ0116': '/products/APCQ1238.jpg',
+        'APCQ1109': '/products/APCQ1238.jpg',
+        'APCQ1212': '/products/APCQ1238.jpg',
+        'APCQ1413': '/products/APCQ1238.jpg',
+        'APCQ1610': '/products/APCQ1238.jpg',
+
+        // Hélices Tripala asignadas a 'MASQ1906.jpg'
+        'MASQ0640': '/products/MASQ1906.jpg',
+        'MASQ1905': '/products/MASQ1906.jpg',
+        'MASQ1907': '/products/MASQ1906.jpg',
+      };
+
+      for (const [sku, imageUrl] of Object.entries(PROPELLER_IMAGE_MAPPINGS)) {
+        try {
+          await prisma.product.update({
+            where: { sku },
+            data: { imageUrl }
+          });
+          console.log(`📸 [Prisma Update] Imagen asignada a SKU ${sku} -> ${imageUrl}`);
+        } catch (updateErr: any) {
+          console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
+        }
+      }
+      console.log(`✈️ ${Object.keys(PROPELLER_IMAGE_MAPPINGS).length} hélices actualizadas con prisma.product.update (precios y stock intactos).`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {

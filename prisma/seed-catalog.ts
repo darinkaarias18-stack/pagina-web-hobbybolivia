@@ -989,8 +989,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1011,8 +1011,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: '3D Pro',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1033,8 +1033,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 14,
     stockQuantity: 14,
     badge: 'Popular',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1055,8 +1055,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1077,8 +1077,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1099,8 +1099,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1121,8 +1121,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 6,
     stockQuantity: 6,
     badge: 'Gran Diámetro',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1143,8 +1143,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1165,8 +1165,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Giant Scale',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1187,8 +1187,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1209,8 +1209,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 7,
     stockQuantity: 7,
     badge: 'Giant Scale',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1231,8 +1231,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 10,
     stockQuantity: 10,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1253,8 +1253,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: 'Scimitar R',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1337.jpg',
+    imageUrl: '/products/MASQ1337.jpg',
     is_active: true
   },
   {
@@ -1275,8 +1275,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Pusher',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/APCQ1238.jpg',
+    imageUrl: '/products/APCQ1238.jpg',
     is_active: true
   },
   {
@@ -1297,8 +1297,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'Speed APC',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/APCQ1238.jpg',
+    imageUrl: '/products/APCQ1238.jpg',
     is_active: true
   },
   {
@@ -1319,8 +1319,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Square Pitch',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/APCQ1238.jpg',
+    imageUrl: '/products/APCQ1238.jpg',
     is_active: true
   },
   {
@@ -1341,8 +1341,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'F3A Pro',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/APCQ1238.jpg',
+    imageUrl: '/products/APCQ1238.jpg',
     is_active: true
   },
   {
@@ -1363,8 +1363,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: null,
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/APCQ1238.jpg',
+    imageUrl: '/products/APCQ1238.jpg',
     is_active: true
   },
   {
@@ -1385,8 +1385,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: '3-Blade Micro',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1906.jpg',
+    imageUrl: '/products/MASQ1906.jpg',
     is_active: true
   },
   {
@@ -1407,8 +1407,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: '3-Blade Escala',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1906.jpg',
+    imageUrl: '/products/MASQ1906.jpg',
     is_active: true
   },
   {
@@ -1429,8 +1429,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: '3-Blade Popular',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/MASQ1906.jpg',
+    imageUrl: '/products/MASQ1906.jpg',
     is_active: true
   },
   {
