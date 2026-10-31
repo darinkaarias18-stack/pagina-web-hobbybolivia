@@ -40,7 +40,9 @@ export function ProductCard({
     setTimeout(() => setJustAdded(false), 1500);
   };
 
-  const imageSource = product.image_url || (product.images && product.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
+  const rawImage = product.image_url || (product.images && product.images[0]) || product.imageUrl;
+  const isInvalidImage = !rawImage || rawImage.trim() === '' || rawImage.includes('d0721149ad-dubq3570tn-t');
+  const imageSource = isInvalidImage ? '/placeholder.webp' : rawImage.trim();
   const name = product.name || product.title || "Producto Hobby Bolivia";
   // Mostrar fielmente el SKU/Código oficial del producto (coincidente con Admin Products)
   const systemSku = product.sku || (product.id ? `HB-${product.id.toString().padStart(4, '0')}` : '');
@@ -89,6 +91,12 @@ export function ProductCard({
           className="max-h-full max-w-full w-full h-full object-contain mx-auto"
           loading="lazy"
           decoding="async"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement;
+            if (!target.src.includes('placeholder.webp')) {
+              target.src = '/placeholder.webp';
+            }
+          }}
         />
       </div>
 

@@ -1031,7 +1031,7 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
   const newId = store.items.length > 0 ? Math.max(...store.items.map(p => p.id)) + 1 : 1;
   const sku = data.sku || `HB-${newId.toString().padStart(4, '0')}`;
   const slug = data.slug || (data.name || `producto-${newId}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  const imageUrl = data.image_url || (data.images && data.images[0]) || data.imageUrl || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
+  const imageUrl = data.image_url || (data.images && data.images[0]) || data.imageUrl || "/placeholder.webp";
 
   // Validar que la imagen no supere 1 MB en la base de datos
   assertCatalogImageUnder1MB(imageUrl);
@@ -1290,8 +1290,8 @@ export async function saveCategory(data: Partial<Category>): Promise<Category> {
     id: newId,
     name: data.name || "Nueva Categoría",
     slug,
-    imageUrl: data.imageUrl || data.image_url || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
-    image_url: data.image_url || data.imageUrl || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
+    imageUrl: data.imageUrl || data.image_url || "/placeholder.webp",
+    image_url: data.image_url || data.imageUrl || "/placeholder.webp",
     description: data.description || "",
     isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
     order: data.order !== undefined ? Number(data.order) : newId,
@@ -1995,7 +1995,7 @@ export async function saveBanner(data: Partial<Banner>): Promise<Banner> {
     id: newId,
     title: data.title || "Banner",
     subtitle: data.subtitle,
-    imageUrl: data.imageUrl || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp",
+    imageUrl: data.imageUrl || "/placeholder.webp",
     buttonText: data.buttonText,
     buttonUrl: data.buttonUrl,
     placement: data.placement || "HERO",

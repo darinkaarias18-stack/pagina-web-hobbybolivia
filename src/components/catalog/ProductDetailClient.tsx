@@ -43,10 +43,10 @@ export function ProductDetailClient({
 }: ProductDetailClientProps) {
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const rawInitialImage = product.image_url || (product.images && product.images[0]) || product.imageUrl;
+  const isInvalidInitialImage = !rawInitialImage || rawInitialImage.trim() === '' || rawInitialImage.includes('d0721149ad-dubq3570tn-t');
   const [selectedImage, setSelectedImage] = useState<string>(
-    product.image_url ||
-    (product.images && product.images[0]) ||
-    'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp'
+    isInvalidInitialImage ? '/placeholder.webp' : rawInitialImage.trim()
   );
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'shipping'>('desc');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -98,14 +98,18 @@ export function ProductDetailClient({
 
   const allImages = React.useMemo(() => {
     const list: string[] = [];
-    if (product.image_url) list.push(product.image_url);
+    if (product.image_url && !product.image_url.includes('d0721149ad-dubq3570tn-t')) {
+      list.push(product.image_url);
+    }
     if (product.images && Array.isArray(product.images)) {
       for (const img of product.images) {
-        if (img && !list.includes(img)) list.push(img);
+        if (img && !img.includes('d0721149ad-dubq3570tn-t') && !list.includes(img)) {
+          list.push(img);
+        }
       }
     }
     if (list.length === 0) {
-      list.push('https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp');
+      list.push('/placeholder.webp');
     }
     return list;
   }, [product]);
@@ -185,6 +189,12 @@ export function ProductDetailClient({
                 src={selectedImage}
                 alt={product.name || product.title}
                 className="max-h-[360px] sm:max-h-[420px] w-auto max-w-full object-contain mx-auto transition-transform duration-300 hover:scale-105 select-none"
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  if (!target.src.includes('placeholder.webp')) {
+                    target.src = '/placeholder.webp';
+                  }
+                }}
               />
             </div>
 

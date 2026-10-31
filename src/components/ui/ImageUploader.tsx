@@ -279,7 +279,7 @@ export function ImageUploader({
                 className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
-                    'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp';
+                    '/placeholder.webp';
                 }}
               />
             )}

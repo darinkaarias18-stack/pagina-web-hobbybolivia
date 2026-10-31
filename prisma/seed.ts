@@ -458,6 +458,25 @@ export async function main() {
         }
       }
       console.log(`🎯 ${Object.keys(OTROS_PRODUCTOS_BATCH_2_IMAGE_MAPPINGS).length} productos adicionales de 'OTROS PRODUCTOS' actualizados con prisma.product.update (precios y stock intactos).`);
+
+      // 14. Limpieza estricta de imágenes en MariaDB: establecer imageUrl = null para productos sin foto real asignada
+      // o que contengan la imagen errónea por defecto
+      try {
+        await prisma.product.updateMany({
+          where: {
+            OR: [
+              { imageUrl: { contains: 'd0721149ad' } },
+              { imageUrl: { contains: 'dubq3570tn' } }
+            ]
+          },
+          data: {
+            imageUrl: null
+          }
+        });
+        console.log('🧹 Limpieza de imágenes erróneas ejecutada en MariaDB (imageUrl: null).');
+      } catch (cleanErr: any) {
+        console.warn('⚠️ [Prisma Cleanup Warning]:', cleanErr.message);
+      }
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {

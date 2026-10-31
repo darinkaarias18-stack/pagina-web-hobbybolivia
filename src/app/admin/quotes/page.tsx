@@ -1021,7 +1021,7 @@ export default function AdminQuotesPage() {
                     const prodImg =
                       prod?.image_url ||
                       prod?.imageUrl ||
-                      'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp';
+                      '/placeholder.webp';
                     const unitPrice = Number(prod?.price) || 0;
                     const qty = Number(it.quantity) || 1;
                     const lineTotal = unitPrice * qty;
@@ -1278,7 +1278,7 @@ export default function AdminQuotesPage() {
                         const prodImg =
                           prod?.image_url ||
                           prod?.imageUrl ||
-                          'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp';
+                          '/placeholder.webp';
 
                         return (
                           <tr key={i} className="hover:bg-[#FAF8F5]/60 transition-colors">

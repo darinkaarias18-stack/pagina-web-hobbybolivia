@@ -365,7 +365,7 @@ export function AdminMetricsModule({
           imageUrl:
             prod.image_url ||
             prod.imageUrl ||
-            'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
+            '/placeholder.webp',
           brand: prod.brand || 'Dubro',
           categoryName: prod.category?.name || 'Productos y Accesorios',
           totalUnitsSold: unitsSold,
@@ -412,7 +412,7 @@ export function AdminMetricsModule({
           imageUrl:
             prod.image_url ||
             prod.imageUrl ||
-            'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
+            '/placeholder.webp',
           brand: prod.brand || 'Dubro',
           categoryName: prod.category?.name || 'Productos y Accesorios',
           totalUnitsSold: unitsSold,
@@ -492,7 +492,7 @@ export function AdminMetricsModule({
           productImage:
             prod?.image_url ||
             prod?.imageUrl ||
-            'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp',
+            '/placeholder.webp',
           quantity: qty,
           lineTotalBob: lineTotal,
           orderCode: ord.orderCode,

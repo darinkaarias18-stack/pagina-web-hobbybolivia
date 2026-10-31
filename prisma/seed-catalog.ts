@@ -4279,7 +4279,8 @@ export async function seedCatalog() {
           ? (existing.stock ?? existing.stockQuantity)
           : prod.stock;
 
-        const resolvedImageUrl = prod.image_url || prod.imageUrl || null;
+        const rawImg = prod.image_url || prod.imageUrl || null;
+        const resolvedImageUrl = (!rawImg || rawImg.includes('d0721149ad-dubq3570tn-t')) ? null : rawImg;
 
         return {
           id: index + 1,
@@ -4291,7 +4292,7 @@ export async function seedCatalog() {
           stockQuantity: stock,
           imageUrl: resolvedImageUrl,
           image_url: resolvedImageUrl,
-          images: resolvedImageUrl ? [resolvedImageUrl] : [],
+          images: resolvedImageUrl ? [resolvedImageUrl] : ['/placeholder.webp'],
           currency: 'USD',
           display_currency: 'USD',
           updated_at: new Date().toISOString()

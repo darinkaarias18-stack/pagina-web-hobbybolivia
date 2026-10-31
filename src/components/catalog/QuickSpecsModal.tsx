@@ -33,7 +33,9 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
     }, 900);
   };
 
-  const imgSrc = product.image_url || (product.images && product.images[0]) || "https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp";
+  const rawImg = product.image_url || (product.images && product.images[0]) || product.imageUrl;
+  const isInvalidImg = !rawImg || rawImg.trim() === '' || rawImg.includes('d0721149ad-dubq3570tn-t');
+  const imgSrc = isInvalidImg ? '/placeholder.webp' : rawImg.trim();
   const name = product.name || product.title || "Producto";
 
   return (
@@ -60,6 +62,12 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
               src={imgSrc}
               alt={name}
               className="max-h-full max-w-full object-contain"
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                if (!target.src.includes('placeholder.webp')) {
+                  target.src = '/placeholder.webp';
+                }
+              }}
             />
           </div>
           <div className="mt-3 text-center">

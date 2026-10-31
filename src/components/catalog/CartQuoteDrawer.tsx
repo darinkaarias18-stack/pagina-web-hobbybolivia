@@ -348,10 +348,8 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                   <div className="space-y-2.5">
                     {cartItems.map((ci, index) => {
                       const item = ci.item;
-                      const itemImg =
-                        item.image_url ||
-                        (item.images && item.images[0]) ||
-                        'https://hobbybolivia.com/media/products/d0721149ad-dubq3570tn-t.webp';
+                      const rawItemImg = item.image_url || (item.images && item.images[0]) || item.imageUrl;
+                      const itemImg = !rawItemImg || rawItemImg.includes('d0721149ad-dubq3570tn-t') ? '/placeholder.webp' : rawItemImg;
                       const itemTotal = item.price * ci.quantity;
 
                       return (
@@ -364,6 +362,12 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                               src={itemImg}
                               alt={item.name}
                               className="max-h-full max-w-full object-contain"
+                              onError={(e) => {
+                                const target = e.currentTarget as HTMLImageElement;
+                                if (!target.src.includes('placeholder.webp')) {
+                                  target.src = '/placeholder.webp';
+                                }
+                              }}
                             />
                           </div>
 
