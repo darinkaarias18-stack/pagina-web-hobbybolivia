@@ -2654,8 +2654,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 18,
     stockQuantity: 18,
     badge: 'Acero 2-56 (2)',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ9109.jpg',
+    imageUrl: '/products/DUBQ9109.jpg',
     is_active: true
   },
   {
@@ -2698,8 +2698,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'Pack 12 Acero',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ9600.jpg',
+    imageUrl: '/products/DUBQ9600.jpg',
     is_active: true
   },
   {
@@ -2720,8 +2720,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: 'Pack 12 Heavy 4-40',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ9601.jpg',
+    imageUrl: '/products/DUBQ9601.jpg',
     is_active: true
   },
   {
@@ -2742,8 +2742,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'Kit Micro 0.85mm',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ9850.jpg',
+    imageUrl: '/products/DUBQ9850.jpg',
     is_active: true
   },
   {
@@ -2764,8 +2764,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 32,
     stockQuantity: 32,
     badge: 'Varilla 12" 2-56',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ9108.jpg',
+    imageUrl: '/products/DUBQ9108.jpg',
     is_active: true
   },
   {
@@ -2786,8 +2786,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 15,
     stockQuantity: 15,
     badge: 'Varilla Heavy 4-40',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ9306.jpg',
+    imageUrl: '/products/DUBQ9306.jpg',
     is_active: true
   },
   {
@@ -2833,8 +2833,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Goma 101mm',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/AIB15115.jpg',
+    imageUrl: '/products/AIB15115.jpg',
     is_active: true
   },
   {
@@ -2965,8 +2965,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 4,
     stockQuantity: 4,
     badge: 'Dubro Huella 2"',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ0865.jpg',
+    imageUrl: '/products/DUBQ0865.jpg',
     is_active: true
   },
   {
@@ -2987,8 +2987,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Dubro Huella 2-1/4"',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ0870.jpg',
+    imageUrl: '/products/DUBQ0870.jpg',
     is_active: true
   },
   {
@@ -3009,8 +3009,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: 'Dubro #325T',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/DUBQ0890.jpg',
+    imageUrl: '/products/DUBQ0890.jpg',
     is_active: true
   },
   {
@@ -3053,8 +3053,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Sullivan T-1 3/4"',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/SULQ2751.jpg',
+    imageUrl: '/products/SULQ2751.jpg',
     is_active: true
   },
   {
@@ -3075,8 +3075,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Sullivan S352 T-2',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/SULQ2751.jpg',
+    imageUrl: '/products/SULQ2751.jpg',
     is_active: true
   },
   // =========================================================================
@@ -3100,8 +3100,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 5,
     stockQuantity: 5,
     badge: 'Blanco 6ft',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0204.jpg',
+    imageUrl: '/products/TOPQ0204.jpg',
     is_active: true
   },
   {
@@ -3122,8 +3122,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Insignia Azul',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0207.jpg',
+    imageUrl: '/products/TOPQ0207.jpg',
     is_active: true
   },
   {
@@ -3144,8 +3144,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 3,
     stockQuantity: 3,
     badge: 'Chrome Espejo',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0209_LARGE_1.jpg',
+    imageUrl: '/products/TOPQ0209_LARGE_1.jpg',
     is_active: true
   },
   {
@@ -3166,8 +3166,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Verde Olivo',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0210.jpg',
+    imageUrl: '/products/TOPQ0210.jpg',
     is_active: true
   },
   {
@@ -3188,8 +3188,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Dove Gray',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0211.jpg',
+    imageUrl: '/products/TOPQ0211.jpg',
     is_active: true
   },
   {
@@ -3210,8 +3210,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Granate / Maroon',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0213.jpg',
+    imageUrl: '/products/TOPQ0213.jpg',
     is_active: true
   },
   {
@@ -3232,8 +3232,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 1,
     stockQuantity: 1,
     badge: 'Transparente Naranja',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0302.jpg',
+    imageUrl: '/products/TOPQ0302.jpg',
     is_active: true
   },
   {
@@ -3254,8 +3254,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 2,
     stockQuantity: 2,
     badge: 'Transparent Amarillo',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0303.jpg',
+    imageUrl: '/products/TOPQ0303.jpg',
     is_active: true
   },
   {
@@ -3276,8 +3276,8 @@ export const OFFICIAL_PRODUCTS = [
     stock: 6,
     stockQuantity: 6,
     badge: 'MATE Flat Militar',
-    image_url: null,
-    imageUrl: null,
+    image_url: '/products/TOPQ0510.jpg',
+    imageUrl: '/products/TOPQ0510.jpg',
     is_active: true
   },
   {

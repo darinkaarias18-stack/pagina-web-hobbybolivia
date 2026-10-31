@@ -289,6 +289,49 @@ export async function main() {
         }
       }
       console.log(`🎯 ${Object.keys(SPINNERS_CONSTRUCCION_IMAGE_MAPPINGS).length} productos de Spinners y Construcción actualizados con prisma.product.update (precios y stock intactos).`);
+
+      // 10. Mapeo de 21 productos (Categorías CONSTRUCCION, RUEDAS y MONOKOTE) mediante prisma.product.update
+      const BATCH_5_CONSTRUCCION_RUEDAS_MONOKOTE_IMAGE_MAPPINGS: Record<string, string> = {
+        // Categoría CONSTRUCCION:
+        'DUBQ9109': '/products/DUBQ9109.jpg',
+        'DUBQ9600': '/products/DUBQ9600.jpg',
+        'DUBQ9601': '/products/DUBQ9601.jpg',
+        'DUBQ9850': '/products/DUBQ9850.jpg',
+        'DUBQ9108': '/products/DUBQ9108.jpg',
+        'DUBQ9306': '/products/DUBQ9306.jpg',
+
+        // Categoría RUEDAS:
+        'AIB15115': '/products/AIB15115.jpg',
+        'DUBQ0865': '/products/DUBQ0865.jpg',
+        'DUBQ0870': '/products/DUBQ0870.jpg',
+        'DUBQ0890': '/products/DUBQ0890.jpg',
+        'SULQ2751': '/products/SULQ2751.jpg',
+        'SULQ2752': '/products/SULQ2751.jpg',
+
+        // Categoría MONOKOTE:
+        'TOPQ0204': '/products/TOPQ0204.jpg',
+        'TOPQ0207': '/products/TOPQ0207.jpg',
+        'TOPQ0209': '/products/TOPQ0209_LARGE_1.jpg',
+        'TOPQ0210': '/products/TOPQ0210.jpg',
+        'TOPQ0211': '/products/TOPQ0211.jpg',
+        'TOPQ0213': '/products/TOPQ0213.jpg',
+        'TOPQ0302': '/products/TOPQ0302.jpg',
+        'TOPQ0303': '/products/TOPQ0303.jpg',
+        'TOPQ0510': '/products/TOPQ0510.jpg',
+      };
+
+      for (const [sku, imageUrl] of Object.entries(BATCH_5_CONSTRUCCION_RUEDAS_MONOKOTE_IMAGE_MAPPINGS)) {
+        try {
+          await prisma.product.update({
+            where: { sku },
+            data: { imageUrl }
+          });
+          console.log(`📸 [Prisma Update] Imagen asignada a SKU ${sku} -> ${imageUrl}`);
+        } catch (updateErr: any) {
+          console.warn(`⚠️ [Prisma Update] SKU ${sku}:`, updateErr.message);
+        }
+      }
+      console.log(`🎯 ${Object.keys(BATCH_5_CONSTRUCCION_RUEDAS_MONOKOTE_IMAGE_MAPPINGS).length} productos de Construcción, Ruedas y Monokote actualizados con prisma.product.update (precios y stock intactos).`);
     } catch (err: any) {
       console.warn("⚠️ Nota sobre Prisma/MySQL (Conexión omitida en este entorno local):", err.message);
     } finally {
