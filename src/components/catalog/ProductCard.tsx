@@ -116,8 +116,8 @@ export function ProductCard({
           </h3>
         </div>
 
-        {/* 3. Zona Inferior: Separador engrosado, Precio y Botones de Acción */}
-        <div className="mt-3 pt-3 border-t-2 border-[#D4A359]/30 flex items-center justify-between gap-2">
+        {/* 3. Zona Inferior: Precio y Botones de Acción (sin línea divisoria) */}
+        <div className="mt-3.5 flex items-center justify-between gap-2">
           {/* Bloque de Precio Resaltado */}
           <div className="min-w-0 flex-1 text-left">
             {isUsd ? (
