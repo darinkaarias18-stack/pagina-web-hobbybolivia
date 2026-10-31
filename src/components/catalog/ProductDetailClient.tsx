@@ -205,9 +205,8 @@ export function ProductDetailClient({
                 style={{
                   transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
                 }}
-                className={`max-h-[360px] sm:max-h-[420px] w-auto max-w-full mx-auto transition-transform duration-200 ease-out select-none ${
-                  isHovered ? 'scale-150' : 'scale-100'
-                } ${selectedImage.includes('placeholder.webp') ? 'object-cover rounded-2xl shadow-sm' : 'object-contain'}`}
+                className={`max-h-[360px] sm:max-h-[420px] w-auto max-w-full mx-auto transition-transform duration-200 ease-out select-none ${isHovered ? 'scale-150' : 'scale-100'
+                  } ${selectedImage.includes('placeholder.webp') ? 'object-cover rounded-2xl shadow-sm' : 'object-contain'}`}
                 onError={(e) => {
                   const target = e.currentTarget as HTMLImageElement;
                   if (!target.src.includes('placeholder.webp')) {
