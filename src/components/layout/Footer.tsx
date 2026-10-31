@@ -130,16 +130,6 @@ export function Footer({
                 Efectivo Contraentrega
               </span>
             </div>
-
-            <div className="mt-5 pt-3 border-t border-[#2D2622]">
-              <Link
-                href="/login?reauth=1"
-                className="text-[11px] font-bold text-[#D4A359] hover:text-[#C69755] transition-colors flex items-center gap-1"
-              >
-                <span>Acceso al Panel Administrativo</span>
-                <span>→</span>
-              </Link>
-            </div>
           </div>
 
         </div>
