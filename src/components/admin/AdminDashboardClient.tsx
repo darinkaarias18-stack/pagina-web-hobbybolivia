@@ -8,8 +8,7 @@ import {
   RefreshCw,
   Loader2,
   CheckCircle2,
-  AlertTriangle,
-  ShoppingBag
+  AlertTriangle
 } from 'lucide-react';
 import type { Product, QuoteOrder } from '@/lib/types';
 import { AdminMetricsModule } from './AdminMetricsModule';
@@ -140,15 +139,7 @@ export function AdminDashboardClient() {
           </p>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2.5">
-          <Link
-            href="/admin/quotes"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap shrink-0"
-          >
-            <ShoppingBag className="w-4 h-4 text-[#161311]" />
-            <span>Ver Todos los Pedidos</span>
-          </Link>
-
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Quick Currency Status */}
           <button
             type="button"

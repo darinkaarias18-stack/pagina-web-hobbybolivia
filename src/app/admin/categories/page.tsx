@@ -22,7 +22,8 @@ import {
   Eye,
   ArrowUpRight,
   ChevronRight,
-  Boxes
+  Boxes,
+  Lock
 } from 'lucide-react';
 import type { Category, Product } from '@/lib/types';
 
@@ -93,7 +94,10 @@ export default function AdminCategoriesPage() {
     setEditingCategory(null);
     setName('');
     setSlug('');
-    setOrder((categories.length + 1).toString());
+    const nextOrder = categories.length > 0
+      ? Math.max(...categories.map((c) => c.order || 0)) + 1
+      : 1;
+    setOrder(nextOrder.toString());
     setImageUrl('');
     setDescription('');
     setIsActive(true);
@@ -238,14 +242,25 @@ export default function AdminCategoriesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4 text-[#161311]" />
-          <span>Nueva Categoría</span>
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4 text-[#161311]" />
+            <span>Nueva Categoría</span>
+          </button>
+
+          <Link
+            href="/"
+            target="_blank"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors shrink-0"
+          >
+            <span>Ver Tienda Pública</span>
+            <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
+          </Link>
+        </div>
       </div>
 
       {/* Resumen Superior de Métricas */}
@@ -914,16 +929,28 @@ export default function AdminCategoriesPage() {
                 </div>
 
                 <div>
-                  <label className="font-black text-[#1A1817] block mb-1">
-                    Orden de Visualización
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={order}
-                    onChange={(e) => setOrder(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2DCD3] rounded-2xl text-xs font-mono font-bold text-[#1A1817] focus:border-[#D4A359] outline-none"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-black text-[#1A1817] block">
+                      Orden de Visualización
+                    </label>
+                    <span className="text-[10px] font-bold text-[#8C827A] bg-[#FAF8F5] border border-[#E2DCD3] px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5 text-[#8C827A]" />
+                      Solo lectura
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={order}
+                      className="w-full pl-3.5 pr-9 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-2xl text-xs font-mono font-black text-[#5C5650] cursor-not-allowed select-none outline-none shadow-2xs"
+                      title="El orden de visualización es automático y no se puede editar"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <Lock className="w-3.5 h-3.5 text-[#8C827A]" />
+                    </div>
+                  </div>
                 </div>
               </div>
 

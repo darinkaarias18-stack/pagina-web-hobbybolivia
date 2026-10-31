@@ -410,7 +410,7 @@ export default function AdminQuotesPage() {
             target="_blank"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
           >
-            <span>Ver Tienda</span>
+            <span>Ver Tienda Pública</span>
             <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
           </Link>
         </div>

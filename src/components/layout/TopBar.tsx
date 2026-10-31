@@ -9,19 +9,8 @@ interface TopBarProps {
   exchangeRate?: number;
 }
 
-export function TopBar({ config, exchangeRate }: TopBarProps) {
+export function TopBar({ config }: TopBarProps) {
   const whatsapp = config?.whatsappNumber || "+591 77293446";
-  const [todayDateStr, setTodayDateStr] = React.useState<string>('');
-
-  React.useEffect(() => {
-    setTodayDateStr(
-      new Date().toLocaleDateString('es-BO', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      })
-    );
-  }, []);
 
   return (
     <div className="bg-[#161311] text-[#A89F91] text-[12px] py-2 px-4 border-b border-[#2D2622] transition-colors">
@@ -45,19 +34,6 @@ export function TopBar({ config, exchangeRate }: TopBarProps) {
             <MapPin className="w-3.5 h-3.5 text-[#D4A359]" />
             <span>La Paz, Bolivia</span>
           </span>
-
-          {exchangeRate ? (
-            <span
-              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#211E1C] border border-[#D4A359]/30 text-[#FAF8F5] font-mono text-[11px]"
-              title="Tipo de cambio oficial vigente a la fecha de hoy"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[#A89F91]">
-                TC{todayDateStr ? ` (${todayDateStr})` : ''}:
-              </span>
-              <strong className="text-[#D4A359]">1 USD = Bs. {exchangeRate.toFixed(2)}</strong>
-            </span>
-          ) : null}
 
           <a
             href="/politicas"

@@ -298,15 +298,6 @@ export default function AdminSettingsPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link
-            href="/"
-            target="_blank"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
-          >
-            <span>Ver Tienda Pública</span>
-            <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
-          </Link>
-
           <button
             type="button"
             onClick={handleSave}
@@ -316,6 +307,15 @@ export default function AdminSettingsPage() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-[#D4A359]" />}
             <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
           </button>
+
+          <Link
+            href="/"
+            target="_blank"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
+          >
+            <span>Ver Tienda Pública</span>
+            <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
+          </Link>
         </div>
       </div>
 
