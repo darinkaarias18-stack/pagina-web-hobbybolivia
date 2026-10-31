@@ -67,11 +67,11 @@ export function ProductCard({
   return (
     <div
       onClick={() => handleQuickView()}
-      className="group relative rounded-2xl bg-white border border-[#E2DCD3] hover:border-[#D4A359] hover:shadow-xl transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer overflow-hidden"
+      className="group relative rounded-2xl bg-white border border-[#E2DCD3] hover:border-[#D4A359] hover:shadow-xl hover:scale-105 hover:z-20 transition-all duration-300 ease-in-out flex flex-col justify-between cursor-pointer overflow-hidden"
       title="Clic para ver detalles y cotizar"
     >
       {/* 1. Contenedor de Imagen con Aspect Ratio uniforme, sin padding restrictivo y fondo neutro */}
-      <div className="w-full aspect-[4/3] relative bg-neutral-100 overflow-hidden group flex items-center justify-center border-b border-[#EBE5DB]">
+      <div className="w-full aspect-[4/3] relative bg-neutral-100 overflow-hidden flex items-center justify-center border-b border-[#EBE5DB]">
         {/* Etiqueta / Badge en esquina superior derecha */}
         {validBadge && (
           <span
@@ -88,7 +88,7 @@ export function ProductCard({
         <img
           src={imageSource}
           alt={name}
-          className="w-full h-full object-contain transform transition-transform duration-300 ease-in-out group-hover:scale-110 hover:scale-110 mx-auto select-none"
+          className="w-full h-full object-contain mx-auto select-none"
           loading="lazy"
           decoding="async"
           onError={(e) => {
