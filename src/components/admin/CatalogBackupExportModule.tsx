@@ -544,7 +544,7 @@ export function CatalogBackupExportModule() {
         </div>
 
         {/* Action Buttons Grid */}
-        <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Respaldo de Imágenes (.zip) */}
           <div className="p-4 rounded-2xl bg-white border-2 border-[#D4A359]/70 hover:border-[#D4A359] shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
             <div>
@@ -652,32 +652,7 @@ export function CatalogBackupExportModule() {
             </button>
           </div>
 
-          {/* Card 4: Interactive Printable Catalog with Photos */}
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] transition-all flex flex-col justify-between group">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform border border-[#D4A359]/40">
-                <Printer className="w-5 h-5 text-[#D4A359]" />
-              </div>
-              <h3 className="font-extrabold text-sm text-[#1A1817] mb-1">
-                Catálogo Imprimible con Fotos
-              </h3>
-              <p className="text-xs text-[#5C5650] leading-relaxed mb-4">
-                Abre una vista previa con todas las imágenes cargadas en miniatura para imprimir o guardar en PDF desde el navegador.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowPrintModal(true)}
-              disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#161311] hover:bg-[#211E1C] text-[#D4A359] font-bold text-xs flex items-center justify-center gap-2 shadow-sm border border-[#D4A359]/30 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Eye className="w-4 h-4 text-[#D4A359]" />
-              <span>Ver Catálogo con Fotos</span>
-            </button>
-          </div>
-
-          {/* Card 5: Full JSON Database Snapshot */}
+          {/* Card 4: Full JSON Database Snapshot */}
           <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] transition-all flex flex-col justify-between group">
             <div>
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
