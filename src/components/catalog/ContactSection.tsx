@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Clock, CheckCircle2, Plane, Sparkles } from 'lucide-react';
+import { Mail, CheckCircle2, Plane, Sparkles } from 'lucide-react';
 import type { SiteConfig } from '@/lib/types';
 
 interface ContactSectionProps {
@@ -110,18 +110,6 @@ export function ContactSection({ config }: ContactSectionProps) {
                     {email}
                   </p>
                 </div>
-              </div>
-            </div>
-
-            {/* Información Operativa & Despacho */}
-            <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-3 text-xs text-[#5C5650]">
-              <div className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4 text-[#D4A359] shrink-0" />
-                <span><strong>Ubicación:</strong> La Paz, Bolivia (Envíos a los 9 departamentos).</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Clock className="w-4 h-4 text-[#D4A359] shrink-0" />
-                <span><strong>Horario de Atención:</strong> Lunes a Sábado de 09:00 a 19:00.</span>
               </div>
             </div>
 
