@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Phone, MessageCircle, MapPin, Clock, Send, CheckCircle2, Plane, Sparkles } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, CheckCircle2, Plane, Sparkles } from 'lucide-react';
 import type { SiteConfig } from '@/lib/types';
 
 interface ContactSectionProps {
@@ -99,15 +99,6 @@ export function ContactSection({ config }: ContactSectionProps) {
                   <p className="font-mono font-bold text-sm text-[#1A1817] mt-2">
                     {whatsappNumber}
                   </p>
-                  <a
-                    href={`https://wa.me/${cleanPhone}?text=Hola%20Hobby%20Bolivia,%20deseo%20hacer%20una%20consulta.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    <span>Iniciar Chat por WhatsApp</span>
-                  </a>
                 </div>
               </div>
             </div>
@@ -131,13 +122,6 @@ export function ContactSection({ config }: ContactSectionProps) {
                   <p className="font-mono font-bold text-xs sm:text-sm text-[#1A1817] mt-2 break-all">
                     {email}
                   </p>
-                  <a
-                    href={`mailto:${email}?subject=Consulta%20desde%20Hobby%20Bolivia`}
-                    className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] font-bold text-xs uppercase tracking-wider transition-all shadow-xs"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Redactar Correo</span>
-                  </a>
                 </div>
               </div>
             </div>
@@ -282,3 +266,4 @@ export function ContactSection({ config }: ContactSectionProps) {
     </section>
   );
 }
+
