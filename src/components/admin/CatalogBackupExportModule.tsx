@@ -16,7 +16,9 @@ import {
   Eye,
   X,
   RefreshCw,
-  Search
+  Search,
+  Image as ImageIcon,
+  FolderArchive
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -60,6 +62,7 @@ export function CatalogBackupExportModule() {
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(12.01);
   const [loading, setLoading] = useState(true);
+  const [exportingImages, setExportingImages] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingJson, setExportingJson] = useState(false);
@@ -128,6 +131,36 @@ export function CatalogBackupExportModule() {
     const catId = p.category_id || p.categoryId;
     const found = categories.find(c => c.id === catId);
     return found ? found.name : 'General / Productos';
+  };
+
+  // =========================================================================
+  // EXPORTAR PAQUETE COMPLETO DE IMÁGENES (.zip)
+  // =========================================================================
+  const handleExportImages = async () => {
+    setExportingImages(true);
+    try {
+      showToast('Preparando y comprimiendo todas las imágenes del catálogo...');
+      const res = await fetch('/api/admin/backup/images');
+      if (!res.ok) {
+        throw new Error(`Error en el servidor al generar archivo ZIP (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `Hobby_Bolivia_Respaldo_Imagenes_${today}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('¡Respaldo de imágenes descargado exitosamente en archivo ZIP!');
+    } catch (err: any) {
+      console.error('Error descargando respaldo de imágenes:', err);
+      showToast(err?.message || 'Error al descargar el paquete de imágenes', 'error');
+    } finally {
+      setExportingImages(false);
+    }
   };
 
   // =========================================================================
@@ -454,7 +487,7 @@ export function CatalogBackupExportModule() {
         </div>
 
         {/* Status Metrics Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 bg-[#FAF8F5] border-b border-[#E2DCD3]">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 p-4 sm:p-5 bg-[#FAF8F5] border-b border-[#E2DCD3]">
           <div className="p-3 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#8C827A] mb-1">
               <Package className="w-3.5 h-3.5 text-[#D4A359]" />
@@ -463,6 +496,17 @@ export function CatalogBackupExportModule() {
             <div className="text-lg font-black text-[#1A1817]">
               {loading ? '...' : totalItems}
               <span className="text-[10px] text-[#8C827A] font-medium ml-1">ítems</span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#8C827A] mb-1">
+              <ImageIcon className="w-3.5 h-3.5 text-[#D4A359]" />
+              <span>Fotos en Catálogo</span>
+            </div>
+            <div className="text-lg font-black text-[#1A1817]">
+              {loading ? '...' : products.filter(p => Boolean(p.imageUrl || p.image_url)).length}
+              <span className="text-[10px] text-[#8C827A] font-medium ml-1">con foto</span>
             </div>
           </div>
 
@@ -488,7 +532,7 @@ export function CatalogBackupExportModule() {
             </div>
           </div>
 
-          <div className="p-3 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+          <div className="p-3 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#8C827A] mb-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Tipo de Cambio</span>
@@ -500,8 +544,47 @@ export function CatalogBackupExportModule() {
         </div>
 
         {/* Action Buttons Grid */}
-        <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Excel Export */}
+        <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {/* Card 1: Respaldo de Imágenes (.zip) */}
+          <div className="p-4 rounded-2xl bg-white border-2 border-[#D4A359]/70 hover:border-[#D4A359] shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#D4A359] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform border border-[#D4A359]/40">
+                <FolderArchive className="w-5 h-5 text-[#B88738]" />
+              </div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="px-2 py-0.5 rounded-md bg-[#211E1C] text-[#D4A359] text-[9px] font-black uppercase tracking-wider">
+                  NUEVO
+                </span>
+                <h3 className="font-extrabold text-sm text-[#1A1817]">
+                  Respaldo de Imágenes (.zip)
+                </h3>
+              </div>
+              <p className="text-xs text-[#5C5650] leading-relaxed mb-4">
+                Descarga un paquete ZIP con todas las fotografías de productos del catálogo, índice CSV de correspondencia y manifiesto técnico.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExportImages}
+              disabled={exportingImages || loading}
+              className="w-full py-2.5 px-4 rounded-xl bg-[#D4A359] hover:bg-[#C2934A] text-[#161311] font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-98"
+            >
+              {exportingImages ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#161311]" />
+                  <span>Empaquetando...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 text-[#161311]" />
+                  <span>Descargar Imágenes (.zip)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Card 2: Excel Export */}
           <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] transition-all flex flex-col justify-between group">
             <div>
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
@@ -535,7 +618,7 @@ export function CatalogBackupExportModule() {
             </button>
           </div>
 
-          {/* Card 2: PDF Document Export */}
+          {/* Card 3: PDF Document Export */}
           <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] transition-all flex flex-col justify-between group">
             <div>
               <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
@@ -569,7 +652,7 @@ export function CatalogBackupExportModule() {
             </button>
           </div>
 
-          {/* Card 3: Interactive Printable Catalog with Photos */}
+          {/* Card 4: Interactive Printable Catalog with Photos */}
           <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] transition-all flex flex-col justify-between group">
             <div>
               <div className="w-10 h-10 rounded-xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform border border-[#D4A359]/40">
@@ -594,7 +677,7 @@ export function CatalogBackupExportModule() {
             </button>
           </div>
 
-          {/* Card 4: Full JSON Database Snapshot */}
+          {/* Card 5: Full JSON Database Snapshot */}
           <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3] hover:border-[#D4A359] transition-all flex flex-col justify-between group">
             <div>
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
