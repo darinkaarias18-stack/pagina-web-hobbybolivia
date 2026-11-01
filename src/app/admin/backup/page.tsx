@@ -25,7 +25,12 @@ export default function AdminBackupPage() {
     // 2. Verificación autoritativa de sesión con el backend
     const verifyRole = async () => {
       try {
-        const res = await fetch('/api/auth/session');
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (!res.ok) {
+          setIsSuperadmin(false);
+          router.replace('/admin');
+          return;
+        }
         const data = await res.json();
         if (!data.authenticated || data.user?.role !== 'SUPERADMIN') {
           setIsSuperadmin(false);
