@@ -3,9 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import { zipSync } from 'fflate';
 import { getAllProductsAdmin } from '@/lib/db';
+import { requireSuperAdmin } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const authCheck = await requireSuperAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
     const today = new Date().toISOString().slice(0, 10);
     const dateFormatted = new Date().toLocaleString('es-BO', { timeZone: 'America/La_Paz' });
 

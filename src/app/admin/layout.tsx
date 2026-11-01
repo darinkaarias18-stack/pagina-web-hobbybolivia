@@ -85,8 +85,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           localStorage.setItem('hb_user_username', data.user.username);
           localStorage.setItem('hb_user_name', data.user.name);
 
-          // Regla estricta: el módulo Gestión de Usuarios (/admin/users) es exclusivo del SUPERADMIN
-          if (pathname.startsWith('/admin/users') && detectedRole !== 'SUPERADMIN') {
+          // Regla estricta: los módulos Gestión de Usuarios (/admin/users) y Respaldo (/admin/backup) son exclusivos del SUPERADMIN
+          if ((pathname.startsWith('/admin/users') || pathname.startsWith('/admin/backup')) && detectedRole !== 'SUPERADMIN') {
             router.replace('/admin');
             return;
           }
@@ -188,7 +188,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Tipo de Cambio (USD)', href: '/admin/currency', icon: Coins, superadminOnly: true },
     { label: 'Gestión de Usuarios', href: '/admin/users', icon: Users, superadminOnly: true },
     { label: 'Configuración General', href: '/admin/settings', icon: Settings, superadminOnly: false },
-    { label: 'Respaldo y Exportación', href: '/admin/backup', icon: Database, superadminOnly: false }
+    { label: 'Respaldo y Exportación', href: '/admin/backup', icon: Database, superadminOnly: true }
   ];
 
   const navItems = allNavItems.filter((item) => !item.superadminOnly || userRole === 'SUPERADMIN');
