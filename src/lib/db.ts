@@ -1675,7 +1675,7 @@ export async function getQuotes(): Promise<QuoteOrder[]> {
   if (pool) {
     try {
       const [rows]: any = await pool.query('SELECT * FROM quote_orders ORDER BY id DESC');
-      if (rows && rows.length > 0) {
+      if (Array.isArray(rows)) {
         const mapped = rows.map((r: any) => ({
           id: Number(r.id),
           orderCode: `HB-${r.id.toString().padStart(4, '0')}`,
@@ -1690,6 +1690,13 @@ export async function getQuotes(): Promise<QuoteOrder[]> {
           createdAt: new Date(r.created_at).toISOString()
         }));
         memoryCache.quotes = { data: mapped, timestamp: getNow() };
+        try {
+          const store = getLocalStore();
+          if (store.quotes.length !== mapped.length) {
+            store.quotes = mapped;
+            saveLocalStore(store);
+          }
+        } catch { }
         return mapped;
       }
     } catch (e) {
@@ -1701,6 +1708,34 @@ export async function getQuotes(): Promise<QuoteOrder[]> {
   const list = store.quotes || [];
   memoryCache.quotes = { data: list, timestamp: getNow() };
   return list;
+}
+
+export async function clearQuoteOrders(): Promise<{ success: boolean; clearedCount: number }> {
+  let clearedCount = 0;
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [res]: any = await pool.query('SELECT COUNT(*) as cnt FROM quote_orders');
+      clearedCount = Number(res[0]?.cnt || 0);
+      await pool.query('TRUNCATE TABLE quote_orders');
+    } catch {
+      try {
+        await pool.query('DELETE FROM quote_orders');
+        await pool.query('ALTER TABLE quote_orders AUTO_INCREMENT = 1');
+      } catch (err: any) {
+        console.warn('[MySQL clearQuoteOrders Warning]:', err?.message || err);
+      }
+    }
+  }
+
+  const store = getLocalStore();
+  if (!clearedCount) clearedCount = (store.quotes || []).length;
+  store.quotes = [];
+  store.claims = [];
+  saveLocalStore(store);
+
+  invalidateQuotesCache();
+  return { success: true, clearedCount };
 }
 
 export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<QuoteOrder> {
