@@ -27,13 +27,14 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import type { Product, Category } from '@/lib/types';
+import { useCurrency } from '@/context/CurrencyContext';
 
 interface InlinePriceCellsProps {
   productId: number;
   currentPriceBob: number;
   currentPriceUsd?: number;
-  exchangeRate: number;
-  onSavePrice: (id: number, newPriceBob: number, newPriceUsd?: number) => Promise<void>;
+  isBsMode: boolean;
+  onSavePrice: (id: number, newPriceBob?: number, newPriceUsd?: number) => Promise<void>;
   isUpdating: boolean;
 }
 
@@ -41,136 +42,74 @@ function InlinePriceCells({
   productId,
   currentPriceBob,
   currentPriceUsd,
-  exchangeRate,
+  isBsMode,
   onSavePrice,
   isUpdating
 }: InlinePriceCellsProps) {
-  const initialUsd = currentPriceUsd !== undefined && currentPriceUsd !== null
-    ? Number(currentPriceUsd)
-    : (exchangeRate > 0 ? currentPriceBob / exchangeRate : 0);
+  // Montos ingresados a criterio, sin cálculos automáticos de tipo de cambio
+  const displayVal = isBsMode
+    ? (currentPriceBob !== undefined && currentPriceBob !== null && Number(currentPriceBob) > 0
+      ? Number(currentPriceBob).toFixed(2)
+      : (currentPriceUsd !== undefined && currentPriceUsd !== null ? Number(currentPriceUsd).toFixed(2) : '0.00'))
+    : (currentPriceUsd !== undefined && currentPriceUsd !== null && Number(currentPriceUsd) > 0
+      ? Number(currentPriceUsd).toFixed(2)
+      : (currentPriceBob !== undefined && currentPriceBob !== null ? Number(currentPriceBob).toFixed(2) : '0.00'));
 
-  const [usdInput, setUsdInput] = useState<string>(initialUsd.toFixed(2));
-  const [bobInput, setBobInput] = useState<string>(Number(currentPriceBob).toFixed(2));
+  const [inputVal, setInputVal] = useState<string>(displayVal);
 
   useEffect(() => {
-    const usd = currentPriceUsd !== undefined && currentPriceUsd !== null
-      ? Number(currentPriceUsd)
-      : (exchangeRate > 0 ? currentPriceBob / exchangeRate : 0);
-    setUsdInput(usd.toFixed(2));
-    setBobInput(Number(currentPriceBob).toFixed(2));
-  }, [currentPriceBob, currentPriceUsd, exchangeRate]);
-
-  const handleChangeUsd = (val: string) => {
-    setUsdInput(val);
-    const parsed = parseFloat(val);
-    if (!isNaN(parsed) && parsed >= 0 && exchangeRate > 0) {
-      setBobInput((parsed * exchangeRate).toFixed(2));
-    } else if (val === '') {
-      setBobInput('');
-    }
-  };
-
-  const handleChangeBob = (val: string) => {
-    setBobInput(val);
-    const parsed = parseFloat(val);
-    if (!isNaN(parsed) && parsed >= 0 && exchangeRate > 0) {
-      setUsdInput((parsed / exchangeRate).toFixed(2));
-    } else if (val === '') {
-      setUsdInput('');
-    }
-  };
+    setInputVal(displayVal);
+  }, [displayVal]);
 
   const resetInputs = () => {
-    const usd = currentPriceUsd !== undefined && currentPriceUsd !== null
-      ? Number(currentPriceUsd)
-      : (exchangeRate > 0 ? currentPriceBob / exchangeRate : 0);
-    setUsdInput(usd.toFixed(2));
-    setBobInput(Number(currentPriceBob).toFixed(2));
+    setInputVal(displayVal);
   };
 
-  const commitPriceUsd = async () => {
-    const parsedUsd = parseFloat(usdInput);
-    if (isNaN(parsedUsd) || parsedUsd < 0) {
+  const commitPrice = async () => {
+    const parsed = parseFloat(inputVal);
+    if (isNaN(parsed) || parsed < 0) {
       resetInputs();
       return;
     }
-    const calculatedBob = exchangeRate > 0 ? Number((parsedUsd * exchangeRate).toFixed(2)) : currentPriceBob;
-    const currentUsd = currentPriceUsd !== undefined ? Number(currentPriceUsd) : (exchangeRate > 0 ? currentPriceBob / exchangeRate : 0);
-    if (Math.abs(parsedUsd - currentUsd) > 0.001 || Math.abs(calculatedBob - currentPriceBob) > 0.001) {
-      await onSavePrice(productId, calculatedBob, parsedUsd);
-    }
-  };
-
-  const commitPriceBob = async () => {
-    const parsedBob = parseFloat(bobInput);
-    if (isNaN(parsedBob) || parsedBob < 0) {
-      resetInputs();
-      return;
-    }
-    const calculatedUsd = exchangeRate > 0 ? Number((parsedBob / exchangeRate).toFixed(2)) : 0;
-    if (Math.abs(parsedBob - currentPriceBob) > 0.001) {
-      await onSavePrice(productId, parsedBob, calculatedUsd);
+    const currentNum = parseFloat(displayVal);
+    if (Math.abs(parsed - currentNum) > 0.001) {
+      if (isBsMode) {
+        // En modo Bs: se guarda el monto en Bs. directamente sin recalcular USD
+        await onSavePrice(productId, parsed, undefined);
+      } else {
+        // En modo USD: se guarda el monto en USD directamente sin recalcular Bs.
+        await onSavePrice(productId, undefined, parsed);
+      }
     }
   };
 
   return (
-    <>
-      {/* 1. Celda Precio Editable USD */}
-      <td className="py-3.5 px-3 text-center whitespace-nowrap min-w-[115px] border-b border-[#E2DCD3]/60 bg-white group-hover:bg-[#FAF8F5] transition-colors">
-        <div className="relative inline-flex items-center">
-          <span className="absolute left-2.5 text-[10px] font-black text-[#8A6220] pointer-events-none select-none">
-            $
-          </span>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={usdInput}
-            onChange={(e) => handleChangeUsd(e.target.value)}
-            onBlur={commitPriceUsd}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur();
-              } else if (e.key === 'Escape') {
-                resetInputs();
-                e.currentTarget.blur();
-              }
-            }}
-            disabled={isUpdating}
-            className="w-22 pl-6 pr-2 py-1.5 bg-[#FAF8F5] hover:bg-white focus:bg-white border border-[#E2DCD3] hover:border-[#D4A359] focus:border-[#D4A359] focus:ring-2 focus:ring-[#D4A359]/20 rounded-xl text-center font-mono font-bold text-xs text-[#8A6220] outline-none transition-all shadow-2xs disabled:opacity-50"
-            title="Editar precio en USD (se convertirá a Bs. al tipo de cambio oficial)"
-          />
-        </div>
-      </td>
-
-      {/* 2. Celda Precio Editable (Bs.) */}
-      <td className="py-3.5 px-3 text-center whitespace-nowrap min-w-[125px] border-b border-[#E2DCD3]/60 bg-white group-hover:bg-[#FAF8F5] transition-colors">
-        <div className="relative inline-flex items-center">
-          <span className="absolute left-2.5 text-[10px] font-black text-[#8C827A] pointer-events-none select-none">
-            Bs.
-          </span>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={bobInput}
-            onChange={(e) => handleChangeBob(e.target.value)}
-            onBlur={commitPriceBob}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur();
-              } else if (e.key === 'Escape') {
-                resetInputs();
-                e.currentTarget.blur();
-              }
-            }}
-            disabled={isUpdating}
-            className="w-26 pl-8 pr-2 py-1.5 bg-white hover:bg-[#FAF8F5] focus:bg-white border border-[#E2DCD3] hover:border-[#D4A359] focus:border-[#D4A359] focus:ring-2 focus:ring-[#D4A359]/20 rounded-xl text-center font-mono font-black text-xs text-[#1A1817] outline-none transition-all shadow-2xs disabled:opacity-50"
-            title="Editar precio en Bolivianos (presiona Enter o sal de la casilla para guardar)"
-          />
-        </div>
-      </td>
-    </>
+    <td className="py-3.5 px-3 text-center whitespace-nowrap min-w-[115px] border-b border-[#E2DCD3]/60 bg-white group-hover:bg-[#FAF8F5] transition-colors">
+      <div className="relative inline-flex items-center">
+        <span className="absolute left-2.5 text-[10px] font-black text-[#8A6220] pointer-events-none select-none">
+          {isBsMode ? 'Bs.' : '$'}
+        </span>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          onBlur={commitPrice}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.currentTarget.blur();
+            } else if (e.key === 'Escape') {
+              resetInputs();
+              e.currentTarget.blur();
+            }
+          }}
+          disabled={isUpdating}
+          className={`w-22 ${isBsMode ? 'pl-7' : 'pl-6'} pr-2 py-1.5 bg-[#FAF8F5] hover:bg-white focus:bg-white border border-[#E2DCD3] hover:border-[#D4A359] focus:border-[#D4A359] focus:ring-2 focus:ring-[#D4A359]/20 rounded-xl text-center font-mono font-bold text-xs text-[#8A6220] outline-none transition-all shadow-2xs disabled:opacity-50`}
+          title={`Editar precio en ${isBsMode ? 'Bs.' : 'USD ($)'} (presiona Enter o sal de la casilla para guardar)`}
+        />
+      </div>
+    </td>
   );
 }
 
@@ -332,6 +271,7 @@ function getCategoryBadgeStyle(catId: number, name: string) {
 }
 
 export function AdminProductsClient() {
+  const { isBsMode } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -700,13 +640,14 @@ export function AdminProductsClient() {
     }
   };
 
-  // Inline Fast Price Update (USD y Bolivianos sincronizados)
-  const handleInlinePriceUpdate = async (id: number, newBob: number, newUsd?: number) => {
+  // Inline Fast Price Update (Montos ingresados a criterio, sin cálculos automáticos de tipo de cambio)
+  const handleInlinePriceUpdate = async (id: number, newBob?: number, newUsd?: number) => {
     setInlineLoadingId(id);
     try {
-      const payload: any = {
-        price: newBob
-      };
+      const payload: any = {};
+      if (newBob !== undefined) {
+        payload.price = newBob;
+      }
       if (newUsd !== undefined) {
         payload.priceUsd = newUsd;
         payload.price_usd = newUsd;
@@ -724,7 +665,7 @@ export function AdminProductsClient() {
             p.id === id
               ? {
                 ...p,
-                price: newBob,
+                ...(newBob !== undefined ? { price: newBob } : {}),
                 ...(newUsd !== undefined ? { priceUsd: newUsd, price_usd: newUsd } : {})
               }
               : p
@@ -733,12 +674,12 @@ export function AdminProductsClient() {
 
         try {
           const channel = new BroadcastChannel('hb_catalog_channel');
-          channel.postMessage({ type: 'PRODUCT_UPDATED', id, field: 'price', value: newBob });
+          channel.postMessage({ type: 'PRODUCT_UPDATED', id, field: 'price', value: newBob ?? newUsd });
           channel.close();
         } catch { }
 
-        const usdText = newUsd !== undefined ? newUsd.toFixed(2) : (exchangeRate > 0 ? (newBob / exchangeRate).toFixed(2) : '0.00');
-        showToast(`Precio actualizado: $ ${usdText} USD (Bs. ${newBob.toFixed(2)})`);
+        const text = newUsd !== undefined ? `$ ${newUsd.toFixed(2)} USD` : `Bs. ${Number(newBob).toFixed(2)}`;
+        showToast(`Precio actualizado: ${text}`);
       } else {
         showToast(data.error || "Error al actualizar precio", "error");
       }
@@ -842,12 +783,22 @@ export function AdminProductsClient() {
       description: product.description || ''
     });
 
-    const num = parseFloat(String(product.price || ''));
-    const rate = exchangeRate > 0 ? exchangeRate : 11.84;
-    if (!isNaN(num) && num > 0) {
-      setUsdPriceInput((num / rate).toFixed(2));
+    const prodUsd = product.priceUsd !== undefined && product.priceUsd !== null
+      ? Number(product.priceUsd)
+      : (product.price_usd !== undefined && product.price_usd !== null
+        ? Number(product.price_usd)
+        : null);
+
+    if (prodUsd !== null && !isNaN(prodUsd) && prodUsd > 0) {
+      setUsdPriceInput(prodUsd.toFixed(2));
     } else {
-      setUsdPriceInput('');
+      const num = parseFloat(String(product.price || ''));
+      const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+      if (!isNaN(num) && num > 0) {
+        setUsdPriceInput((num / rate).toFixed(2));
+      } else {
+        setUsdPriceInput('');
+      }
     }
 
     setIsModalOpen(true);
@@ -861,10 +812,14 @@ export function AdminProductsClient() {
       showToast("El nombre del producto es obligatorio", "error");
       return;
     }
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      showToast("Ingresa un precio válido en Bolivianos", "error");
+    const parsedUsd = parseFloat(usdPriceInput);
+    if (isNaN(parsedUsd) || parsedUsd <= 0) {
+      showToast("Ingresa un precio válido en USD", "error");
       return;
     }
+
+    const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+    const calculatedBob = Math.round(parsedUsd * rate * 100) / 100;
 
     const payload = {
       sku: formData.sku.trim(),
@@ -874,7 +829,9 @@ export function AdminProductsClient() {
       material: formData.material,
       specs_line: formData.specs_line,
       compatible_models: formData.compatible_models,
-      price: parseFloat(formData.price),
+      price: calculatedBob,
+      priceUsd: parsedUsd,
+      price_usd: parsedUsd,
       currency: formData.currency,
       display_currency: formData.currency,
       old_price: formData.old_price ? parseFloat(formData.old_price) : null,
@@ -1069,10 +1026,25 @@ export function AdminProductsClient() {
     return products.reduce((acc, p) => acc + (p.stock !== undefined ? p.stock : (p.stockQuantity || 0)), 0);
   }, [products]);
 
-  const totalInventoryValue = useMemo(() => {
+  const totalInventoryValueUsd = useMemo(() => {
     return products.reduce((acc, p) => {
       const qty = p.stock !== undefined ? p.stock : (p.stockQuantity || 0);
-      return acc + (Number(p.price) || 0) * qty;
+      const usd = p.priceUsd !== undefined && p.priceUsd !== null
+        ? Number(p.priceUsd)
+        : (p.price_usd !== undefined && p.price_usd !== null
+          ? Number(p.price_usd)
+          : (exchangeRate > 0 ? (Number(p.price) || 0) / exchangeRate : 0));
+      return acc + usd * qty;
+    }, 0);
+  }, [products, exchangeRate]);
+
+  const totalInventoryValueBob = useMemo(() => {
+    return products.reduce((acc, p) => {
+      const qty = p.stock !== undefined ? p.stock : (p.stockQuantity || 0);
+      const bob = p.price !== undefined && p.price !== null && Number(p.price) > 0
+        ? Number(p.price)
+        : (p.priceUsd !== undefined && p.priceUsd !== null ? Number(p.priceUsd) : 0);
+      return acc + bob * qty;
     }, 0);
   }, [products]);
 
@@ -1187,14 +1159,18 @@ export function AdminProductsClient() {
         {/* 3. Valor Total del Inventario */}
         <div className="bg-[#FAF8F5] p-5 rounded-3xl border border-[#E2DCD3] shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-[#211E1C] text-[#D4A359] flex items-center justify-center shrink-0 border border-[#D4A359]/30">
-            <span className="text-lg font-black text-[#D4A359]">Bs.</span>
+            <span className="text-xl font-black text-[#D4A359]">{isBsMode ? 'Bs.' : '$'}</span>
           </div>
           <div>
             <span className="text-[10px] font-black text-[#8C827A] uppercase tracking-wider">
-              Valor Inventario (Bs.)
+              Valor Inventario {isBsMode ? '(Bs.)' : '(USD)'}
             </span>
             <p className="text-xl sm:text-2xl font-black text-[#1A1817] leading-tight">
-              Bs. {totalInventoryValue.toLocaleString('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              {isBsMode ? (
+                <>Bs. {totalInventoryValueBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+              ) : (
+                <>${totalInventoryValueUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-bold text-[#8C827A]">USD</span></>
+              )}
             </p>
           </div>
         </div>
@@ -1261,11 +1237,11 @@ export function AdminProductsClient() {
 
       <div className="space-y-4">
         {/* Controls: Search, Category & Brand filter (Estático, sin movimiento al deslizar barra vertical) */}
-        <div className="bg-[#FAF8F5] p-3.5 sm:p-4 rounded-2xl border border-[#E2DCD3] flex flex-col lg:flex-row items-center justify-between gap-3 shadow-2xs">
-          <div className="relative w-full lg:w-[420px]">
+        <div className="bg-[#FAF8F5] p-3.5 sm:p-4 rounded-2xl border border-[#E2DCD3] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
+          <div className="relative flex-1 min-w-[200px] max-w-lg">
             <input
               type="text"
-              placeholder="Buscar por código, nombre, precio (USD/Bs.) o stock..."
+              placeholder="Buscar por código, nombre, precio (USD) o stock..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs pl-9 pr-8 py-2.5 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none shadow-2xs font-medium"
@@ -1283,8 +1259,8 @@ export function AdminProductsClient() {
             )}
           </div>
 
-          <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap">
-            <div className="relative flex-1 sm:flex-initial min-w-[180px]">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+            <div className="relative w-full sm:w-[190px]">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -1300,7 +1276,7 @@ export function AdminProductsClient() {
               <ChevronDown className="w-3.5 h-3.5 text-[#8C827A] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
 
-            <div className="relative flex-1 sm:flex-initial min-w-[160px]">
+            <div className="relative w-full sm:w-[170px]">
               <select
                 value={brandFilter}
                 onChange={(e) => setBrandFilter(e.target.value)}
@@ -1320,7 +1296,7 @@ export function AdminProductsClient() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm hover:shadow-md whitespace-nowrap cursor-pointer shrink-0"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D4A359] hover:bg-[#C69755] active:scale-[0.98] text-[#161311] rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm hover:shadow-md whitespace-nowrap cursor-pointer shrink-0 w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 text-[#161311]" />
               <span>Nuevo Producto</span>
@@ -1371,10 +1347,7 @@ export function AdminProductsClient() {
                     CATEGORÍA ASIGNADA
                   </th>
                   <th className="py-4 px-3 text-center whitespace-nowrap min-w-[115px] border-b border-[#E2DCD3]/60">
-                    PRECIO (USD)
-                  </th>
-                  <th className="py-4 px-3 text-center whitespace-nowrap min-w-[125px] border-b border-[#E2DCD3]/60">
-                    PRECIO (BS.)
+                    {isBsMode ? 'PRECIO (BS.)' : 'PRECIO (USD)'}
                   </th>
                   <th className="py-4 px-3 text-center whitespace-nowrap min-w-[135px] border-b border-[#E2DCD3]/60">
                     STOCK DISPONIBLE ✏️
@@ -1390,7 +1363,7 @@ export function AdminProductsClient() {
               <tbody>
                 {loading && products.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center border-b border-[#E2DCD3]/60">
+                    <td colSpan={9} className="py-12 text-center border-b border-[#E2DCD3]/60">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 className="w-6 h-6 text-[#D4A359] animate-spin" />
                         <span className="text-xs text-[#8C827A] font-semibold">Cargando catálogo de productos...</span>
@@ -1399,7 +1372,7 @@ export function AdminProductsClient() {
                   </tr>
                 ) : filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-[#8C827A] border-b border-[#E2DCD3]/60">
+                    <td colSpan={9} className="py-12 text-center text-[#8C827A] border-b border-[#E2DCD3]/60">
                       No se encontraron productos con los filtros aplicados.
                     </td>
                   </tr>
@@ -1483,12 +1456,12 @@ export function AdminProductsClient() {
                           </span>
                         </td>
 
-                        {/* Precios Editables Inline: USD y Bs. */}
+                        {/* Precios Editables Inline */}
                         <InlinePriceCells
                           productId={p.id}
                           currentPriceBob={Number(p.price) || 0}
                           currentPriceUsd={p.priceUsd !== undefined && p.priceUsd !== null ? Number(p.priceUsd) : (p.price_usd !== undefined && p.price_usd !== null ? Number(p.price_usd) : undefined)}
-                          exchangeRate={exchangeRate}
+                          isBsMode={isBsMode}
                           onSavePrice={async (id, newBob, newUsd) => {
                             await handleInlinePriceUpdate(id, newBob, newUsd);
                           }}
@@ -1865,75 +1838,44 @@ export function AdminProductsClient() {
                     </div>
                   </div>
 
-                  {/* Fila 3: Bloque de Precios y Moneda */}
+                  {/* Fila 3: Bloque de Precio en USD */}
                   <div className="p-4 rounded-2xl bg-white border border-[#E2DCD3] shadow-2xs space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black uppercase tracking-wider text-[#8C827A]">
-                        Configuración de Precio y Moneda
+                        Configuración de Precio (USD)
                       </span>
                       <span className="text-[10px] font-mono font-bold text-[#5C5650]">
                         TC: 1 USD = Bs. {exchangeRate.toFixed(2)}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-end">
-                      <div>
-                        <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
-                          Precio en Bs. *
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-[#8C827A] pointer-events-none">
-                            Bs.
-                          </span>
-                          <input
-                            type="number"
-                            step="0.5"
-                            required
-                            placeholder="220.00"
-                            value={formData.price}
-                            onChange={(e) => {
-                              const newBs = e.target.value;
-                              setFormData({ ...formData, price: newBs });
-                              const num = parseFloat(newBs);
-                              const rate = exchangeRate > 0 ? exchangeRate : 11.84;
-                              if (!isNaN(num) && num > 0) {
-                                setUsdPriceInput((num / rate).toFixed(2));
-                              } else {
-                                setUsdPriceInput('');
-                              }
-                            }}
-                            className="w-full pl-9 pr-3 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl focus:bg-white focus:border-[#D4A359] outline-none font-mono font-bold text-xs text-[#1A1817]"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
-                          Precio en USD
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-[#8C827A] pointer-events-none">
-                            $
-                          </span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="18.59"
-                            value={usdPriceInput}
-                            onChange={(e) => {
-                              const newUsd = e.target.value;
-                              setUsdPriceInput(newUsd);
-                              const num = parseFloat(newUsd);
-                              const rate = exchangeRate > 0 ? exchangeRate : 11.84;
-                              if (!isNaN(num) && num > 0) {
-                                setFormData({ ...formData, price: (num * rate).toFixed(1) });
-                              } else if (newUsd === '') {
-                                setFormData({ ...formData, price: '' });
-                              }
-                            }}
-                            className="w-full pl-7 pr-3 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl focus:bg-white focus:border-[#D4A359] outline-none font-mono font-bold text-xs text-[#1A1817]"
-                          />
-                        </div>
+                    <div>
+                      <label className="block font-black text-[#1A1817] uppercase tracking-wide text-[11px] mb-1.5">
+                        Precio en USD ($) *
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-[#8A6220] pointer-events-none">
+                          $
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          placeholder="18.59"
+                          value={usdPriceInput}
+                          onChange={(e) => {
+                            const newUsd = e.target.value;
+                            setUsdPriceInput(newUsd);
+                            const num = parseFloat(newUsd);
+                            const rate = exchangeRate > 0 ? exchangeRate : 11.84;
+                            if (!isNaN(num) && num > 0) {
+                              setFormData({ ...formData, price: (num * rate).toFixed(2) });
+                            } else if (newUsd === '') {
+                              setFormData({ ...formData, price: '' });
+                            }
+                          }}
+                          className="w-full pl-7 pr-3 py-2.5 bg-[#FAF8F5] border border-[#E2DCD3] rounded-xl focus:bg-white focus:border-[#D4A359] outline-none font-mono font-bold text-xs text-[#1A1817]"
+                        />
                       </div>
                     </div>
                   </div>

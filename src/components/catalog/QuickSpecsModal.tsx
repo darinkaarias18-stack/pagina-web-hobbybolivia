@@ -4,16 +4,19 @@ import React, { useState } from 'react';
 import { X, ShoppingCart, Check, ShieldCheck, Truck, Scale, Box, Tag, MessageCircle } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface QuickSpecsModalProps {
   product: Product | null;
   isOpen?: boolean;
   onClose: () => void;
   exchangeRate?: number;
+  currencyMode?: 'auto' | 'BOB' | 'USD';
 }
 
-export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: QuickSpecsModalProps) {
+export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96, currencyMode = 'auto' }: QuickSpecsModalProps) {
   const { addToCart } = useCart();
+  const { t } = useLanguage();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
@@ -22,15 +25,23 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
 
   if (!product) return null;
 
-  const isUsd = product.currency === 'USD' || (product as any).display_currency === 'USD';
+  const isUsd =
+    currencyMode === 'USD'
+      ? true
+      : currencyMode === 'BOB'
+        ? false
+        : (product.currency === 'USD' || (product as any).display_currency === 'USD');
   const rate = exchangeRate > 0 ? exchangeRate : 12.1028;
   const rawUsd =
     product.priceUsd !== undefined && product.priceUsd !== null && Number(product.priceUsd) > 0
       ? Number(product.priceUsd)
       : (product.price_usd !== undefined && product.price_usd !== null && Number(product.price_usd) > 0
         ? Number(product.price_usd)
-        : (rate > 0 ? product.price / rate : 0));
-  const rawBob = rawUsd > 0 && rate > 0 ? rawUsd * rate : (product.price || 0);
+        : (rate > 0 && product.price ? Number(product.price) / rate : 0));
+  const rawBob =
+    product.price !== undefined && product.price !== null && Number(product.price) > 0
+      ? Number(product.price)
+      : (rawUsd > 0 && rate > 0 ? rawUsd * rate : 0);
   const usdPrice = rawUsd.toFixed(2);
   const bsPrice = rawBob.toFixed(2);
 
@@ -127,7 +138,7 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
 
             {/* Price Pill */}
             <div className="mt-3 inline-flex items-center gap-2 bg-[#211E1C] text-white px-4 py-1.5 rounded-full shadow-sm">
-              <span className="text-xs uppercase font-extrabold text-[#D4A359]">Precio:</span>
+              <span className="text-xs uppercase font-extrabold text-[#D4A359]">{t('modal.price')}</span>
               <span className="text-base font-black text-white">
                 {isUsd ? `$ ${usdPrice} USD` : `Bs. ${bsPrice}`}
               </span>
@@ -137,19 +148,19 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
             <div className="mt-4 pt-4 border-t border-[#E8E2D8] space-y-2.5 text-xs text-[#5C5650]">
               <div className="flex items-center gap-2">
                 <Scale className="w-4 h-4 text-[#D4A359] shrink-0" />
-                <span><strong>Escala:</strong> {product.scale || 'RC Estándar'}</span>
+                <span><strong>{t('modal.scale')}</strong> {product.scale || 'RC Estándar'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Box className="w-4 h-4 text-[#D4A359] shrink-0" />
-                <span><strong>Material:</strong> {product.material || 'Compuesto'}</span>
+                <span><strong>{t('modal.material')}</strong> {product.material || 'Compuesto'}</span>
               </div>
               <div className="flex items-start gap-2">
                 <Tag className="w-4 h-4 text-[#D4A359] shrink-0 mt-0.5" />
-                <span><strong>Especificaciones:</strong> {product.specs_line}</span>
+                <span><strong>{t('modal.specs')}</strong> {product.specs_line}</span>
               </div>
               <div className="flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 text-[#D4A359] shrink-0 mt-0.5" />
-                <span><strong>Compatibilidad:</strong> {product.compatible_models || 'Modelos RC generales'}</span>
+                <span><strong>{t('modal.compatibility')}</strong> {product.compatible_models || 'Modelos RC generales'}</span>
               </div>
             </div>
 
@@ -193,12 +204,12 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
                 {justAdded ? (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>¡Añadido al Carrito!</span>
+                    <span>{t('card.added')}</span>
                   </>
                 ) : (
                   <>
                     <ShoppingCart className="w-4 h-4" />
-                    <span>Añadir a mi Pedido</span>
+                    <span>{t('modal.add_to_cart')}</span>
                   </>
                 )}
               </button>

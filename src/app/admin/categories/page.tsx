@@ -695,7 +695,6 @@ export default function AdminCategoriesPage() {
                   <th className="py-3 px-4">NOMBRE DEL PRODUCTO</th>
                   <th className="py-3 px-4">CATEGORÍA</th>
                   <th className="py-3 px-3 text-center">PRECIO USD</th>
-                  <th className="py-3 px-3 text-center">PRECIO (BS.)</th>
                   <th className="py-3 px-3 text-center">STOCK</th>
                   <th className="py-3 px-4 text-center">ESTADO</th>
                 </tr>
@@ -731,9 +730,6 @@ export default function AdminCategoriesPage() {
                       </td>
                       <td className="py-3 px-3 text-center font-mono font-black text-xs text-[#8A6220]">
                         ${p.priceUsd ? Number(p.priceUsd).toFixed(2) : (p.price / 12.01).toFixed(2)}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono font-black text-xs text-[#1A1817]">
-                        Bs. {Number(p.price).toFixed(2)}
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span
@@ -803,7 +799,6 @@ export default function AdminCategoriesPage() {
                       <th className="py-3 px-4">SKU / CÓDIGO</th>
                       <th className="py-3 px-4">NOMBRE DEL PRODUCTO</th>
                       <th className="py-3 px-3 text-center">PRECIO USD</th>
-                      <th className="py-3 px-3 text-center">PRECIO (BS.)</th>
                       <th className="py-3 px-3 text-center">STOCK</th>
                     </tr>
                   </thead>
@@ -825,9 +820,6 @@ export default function AdminCategoriesPage() {
                         </td>
                         <td className="py-2.5 px-3 text-center font-mono font-black text-xs text-[#8A6220]">
                           ${p.priceUsd ? Number(p.priceUsd).toFixed(2) : (p.price / 12.01).toFixed(2)}
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-mono font-black text-xs text-[#1A1817]">
-                          Bs. {Number(p.price).toFixed(2)}
                         </td>
                         <td className="py-2.5 px-3 text-center">
                           <span

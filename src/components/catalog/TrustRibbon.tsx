@@ -2,28 +2,31 @@
 
 import React from 'react';
 import { Truck, QrCode, RefreshCw, Award } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export function TrustRibbon() {
+  const { t } = useLanguage();
+
   const items = [
     {
       icon: Truck,
-      title: "Envíos a Toda Bolivia",
-      desc: "Despachos protegidos en tubos de PVC por encomienda y courier"
+      title: t('trust.shipping_title'),
+      desc: t('trust.shipping_desc')
     },
     {
       icon: QrCode,
-      title: "Pagos QR Inmediatos",
-      desc: "Transferencia bancaria directa en Bolivianos (Bs.) sin comisiones"
+      title: t('trust.payment_title'),
+      desc: t('trust.payment_desc')
     },
     {
       icon: RefreshCw,
-      title: "Garantía de Compatibilidad",
-      desc: "Soporte preventa y reemplazo directo si el paso de rosca no calza"
+      title: t('trust.warranty_title'),
+      desc: t('trust.warranty_desc')
     },
     {
       icon: Award,
-      title: "Piezas 100% Genuinas",
-      desc: "Componentes importados oficiales Dubro, Great Planes y APC"
+      title: t('trust.genuine_title'),
+      desc: t('trust.genuine_desc')
     }
   ];
 

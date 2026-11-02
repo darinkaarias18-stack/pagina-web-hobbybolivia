@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartContext';
+import { LanguageProvider } from '@/context/LanguageContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';
 import { FloatingWhatsApp } from '@/components/layout/FloatingWhatsApp';
 import { ClientModals } from '@/components/layout/ClientModals';
 
@@ -41,11 +43,15 @@ export default function RootLayout({
         <meta name="theme-color" content="#161311" />
       </head>
       <body className={`${manrope.className} antialiased min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817]`}>
-        <CartProvider>
-          {children}
-          <ClientModals />
-          <FloatingWhatsApp phone="+591 77293446" />
-        </CartProvider>
+        <LanguageProvider>
+          <CurrencyProvider>
+            <CartProvider>
+              {children}
+              <ClientModals />
+              <FloatingWhatsApp phone="+591 77293446" />
+            </CartProvider>
+          </CurrencyProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

@@ -16,6 +16,7 @@ import {
   X
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { TopBar } from '@/components/layout/TopBar';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -57,6 +58,7 @@ export function CatalogView({
   const [products, setProducts] = useState<Product[]>(initialItems);
   const [categories] = useState<Category[]>(initialCategories);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null | undefined>(initialConfig);
+  const { t, language } = useLanguage();
 
   // Sync state if initialItems prop updates
   useEffect(() => {
@@ -479,13 +481,13 @@ export function CatalogView({
               <span className="h-px bg-gradient-to-r from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-24"></span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
               <h2 className="text-xl sm:text-3xl font-black text-[#1A1817] uppercase tracking-wider">
-                CATÁLOGO DE PRODUCTOS DE AVIONES A ESCALA
+                {t('catalog.title')}
               </h2>
               <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359]"></span>
               <span className="h-px bg-gradient-to-l from-transparent via-[#D4A359] to-[#D4A359] w-12 sm:w-24"></span>
             </div>
             <p className="text-xs sm:text-sm text-[#5C5650] max-w-none whitespace-normal md:whitespace-nowrap">
-              Filtra por sistema, material o escala y arma tu cotización directa con precios en Bolivianos (Bs.).
+              {t('catalog.subtitle')}
             </p>
           </div>
 
@@ -497,7 +499,7 @@ export function CatalogView({
               </div>
               <input
                 type="text"
-                placeholder="Buscar por producto, SKU, marca (Dubro, Great Planes)..."
+                placeholder={t('catalog.search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-12 py-3.5 bg-white text-[#1A1817] placeholder-[#8C827A] text-xs sm:text-sm font-medium rounded-full border border-[#E2DCD3] shadow-xs hover:border-[#D4A359] focus:border-[#D4A359] focus:ring-4 focus:ring-[#D4A359]/15 outline-none transition-all"
@@ -556,7 +558,7 @@ export function CatalogView({
                       : 'bg-[#FAF8F5] hover:bg-white text-[#1A1817] border border-[#E2DCD3]'
                       }`}
                   >
-                    Todos ({products.length})
+                    {t('catalog.filter_all')} ({products.length})
                   </button>
 
                   {categories.map((cat) => {
@@ -741,17 +743,17 @@ export function CatalogView({
               {/* Ordenar Por */}
               <div className="pt-3 border-t border-[#E2DCD3]">
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
-                  Ordenar Catálogo
+                  {t('catalog.sort_label')}
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="w-full text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold"
                 >
-                  <option value="popular">Más Populares / Destacados</option>
-                  <option value="price_asc">Precio: Menor a Mayor</option>
-                  <option value="price_desc">Precio: Mayor a Menor</option>
-                  <option value="name_asc">Nombre Alfabético</option>
+                  <option value="popular">{t('catalog.sort_relevance')}</option>
+                  <option value="price_asc">{t('catalog.sort_price_asc')}</option>
+                  <option value="price_desc">{t('catalog.sort_price_desc')}</option>
+                  <option value="name_asc">{t('catalog.sort_name_asc')}</option>
                 </select>
               </div>
 
@@ -776,7 +778,11 @@ export function CatalogView({
               <div className="pb-4 mb-5 border-b border-[#E2DCD3] space-y-2.5">
                 <div className="flex items-center justify-between text-xs text-[#5C5650] flex-wrap gap-2">
                   <span>
-                    Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} productos disponibles
+                    {language === 'en' ? (
+                      <>Showing <strong className="text-[#1A1817]">{filteredProducts.length}</strong> of {products.length} products available</>
+                    ) : (
+                      <>Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} productos disponibles</>
+                    )}
                   </span>
 
                   {activeFilters.length > 1 && (
@@ -786,7 +792,7 @@ export function CatalogView({
                       className="text-xs font-semibold text-amber-800 hover:text-red-600 transition-colors cursor-pointer flex items-center gap-1"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Limpiar todos los filtros</span>
+                      <span>{language === 'en' ? 'Clear all filters' : 'Limpiar todos los filtros'}</span>
                     </button>
                   )}
                 </div>
@@ -795,7 +801,7 @@ export function CatalogView({
                 {activeFilters.length > 0 && (
                   <div className="flex items-center gap-2 flex-wrap pt-1 animate-in fade-in duration-200">
                     <span className="text-[11px] font-bold text-[#8C827A] uppercase tracking-wider">
-                      Filtros activos:
+                      {t('catalog.active_filters')}:
                     </span>
                     {activeFilters.map((filter) => (
                       <span
@@ -831,16 +837,20 @@ export function CatalogView({
               {filteredProducts.length === 0 ? (
                 <div className="py-16 text-center bg-[#FAF8F5] rounded-2xl border border-dashed border-[#D4A359]/40 p-8 space-y-3">
                   <SlidersHorizontal className="w-8 h-8 text-[#D4A359] mx-auto" />
-                  <h4 className="font-extrabold text-base text-[#1A1817]">No se encontraron productos</h4>
+                  <h4 className="font-extrabold text-base text-[#1A1817]">
+                    {t('catalog.no_results')}
+                  </h4>
                   <p className="text-xs text-[#5C5650] max-w-sm mx-auto">
-                    Intenta cambiar o limpiar los filtros seleccionados para ver más componentes de aeromodelismo.
+                    {language === 'en'
+                      ? 'Try changing or clearing your active filters to see more scale model components.'
+                      : 'Intenta cambiar o limpiar los filtros seleccionados para ver más componentes de aeromodelismo.'}
                   </p>
                   <button
                     type="button"
                     onClick={resetFilters}
                     className="mt-2 px-5 py-2.5 bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] font-bold text-xs rounded-full transition-colors cursor-pointer"
                   >
-                    Restablecer Filtros
+                    {t('catalog.reset_filters')}
                   </button>
                 </div>
               ) : (
@@ -910,6 +920,13 @@ export function CatalogView({
           isOpen={Boolean(quickViewProduct)}
           onClose={() => setQuickViewProduct(null)}
           exchangeRate={initialExchangeRate}
+          currencyMode={
+            siteConfig?.currency === 'USD' || siteConfig?.currency === '$us'
+              ? 'USD'
+              : siteConfig?.currency === 'Bs.'
+                ? 'BOB'
+                : 'auto'
+          }
         />
       )}
 

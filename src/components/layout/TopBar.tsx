@@ -3,6 +3,8 @@
 import React from 'react';
 import { MapPin, ShieldAlert, HelpCircle } from 'lucide-react';
 import type { SiteConfig } from '@/lib/types';
+import { useLanguage } from '@/context/LanguageContext';
+import { LanguageToggle } from './LanguageToggle';
 
 interface TopBarProps {
   config?: SiteConfig | null;
@@ -10,6 +12,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ config }: TopBarProps) {
+  const { t, language } = useLanguage();
   const whatsapp = config?.whatsappNumber || "+591 77293446";
 
   return (
@@ -19,20 +22,20 @@ export function TopBar({ config }: TopBarProps) {
         {/* Main Message */}
         <div className="flex items-center gap-2 text-center md:text-left font-medium">
           <span className="inline-block w-2 h-2 rounded-full bg-[#D4A359] animate-pulse"></span>
-          {config?.topBarText ? (
+          {config?.topBarText && language === 'es' ? (
             <span className="text-[#FAF8F5]">{config.topBarText}</span>
           ) : (
             <span className="text-[#FAF8F5]">
-              <strong className="text-[#D4A359]">Hobby Bolivia:</strong> Productos y componentes de precisión para aviones a escala | Envíos seguros a toda Bolivia
+              <strong className="text-[#D4A359]">Hobby Bolivia:</strong> {t('topbar.announcement')}
             </span>
           )}
         </div>
 
-        {/* Quick links & Direct Admin Button */}
-        <div className="flex items-center flex-wrap gap-4 text-[#A89F91] text-[11.5px]">
+        {/* Quick links, Language Selector & Help */}
+        <div className="flex items-center flex-wrap gap-3 sm:gap-4 text-[#A89F91] text-[11.5px]">
           <span className="flex items-center gap-1 hover:text-[#D4A359] transition-colors cursor-pointer">
             <MapPin className="w-3.5 h-3.5 text-[#D4A359]" />
-            <span>La Paz, Bolivia</span>
+            <span>{t('topbar.location')}</span>
           </span>
 
           <a
@@ -40,7 +43,7 @@ export function TopBar({ config }: TopBarProps) {
             className="flex items-center gap-1 hover:text-[#D4A359] transition-colors"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-[#A89F91]" />
-            <span>Políticas</span>
+            <span>{t('topbar.policies')}</span>
           </a>
 
           <a
@@ -50,8 +53,13 @@ export function TopBar({ config }: TopBarProps) {
             className="flex items-center gap-1 hover:text-[#D4A359] transition-colors"
           >
             <HelpCircle className="w-3.5 h-3.5 text-[#A89F91]" />
-            <span>Ayuda</span>
+            <span>{t('topbar.help')}</span>
           </a>
+
+          {/* Language Selector Button */}
+          <div className="pl-1 sm:pl-2 border-l border-[#2D2622]">
+            <LanguageToggle variant="compact" />
+          </div>
         </div>
 
       </div>

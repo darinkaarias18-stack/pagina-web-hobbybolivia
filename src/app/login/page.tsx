@@ -53,11 +53,10 @@ function LoginForm() {
       localStorage.setItem('hb_user_username', data.user.username);
       localStorage.setItem('hb_user_name', data.user.name);
 
-      router.push(redirectPath.startsWith('/admin') ? redirectPath : '/admin');
-      router.refresh();
+      const target = redirectPath.startsWith('/admin') ? redirectPath : '/admin';
+      window.location.href = target;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error inesperado al iniciar sesión');
-    } finally {
       setLoading(false);
     }
   };
@@ -149,10 +148,13 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-[#161311] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] active:scale-[0.99] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 rounded-xl bg-[#161311] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] active:scale-[0.99] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-75 disabled:cursor-wait"
           >
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-[#D4A359]" />
+                <span>VERIFICANDO ACCESO...</span>
+              </span>
             ) : (
               <>
                 <span>VERIFICAR E INGRESAR AL PANEL</span>

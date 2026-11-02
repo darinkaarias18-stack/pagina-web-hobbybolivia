@@ -28,13 +28,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(false);
   const [userRole, setUserRole] = useState<'SUPERADMIN' | 'ADMIN' | null>(null);
   const [userName, setUserName] = useState<string>('Administrador');
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [remainingSeconds, setRemainingSeconds] = useState<number>(INACTIVITY_TIMEOUT_MS / 1000);
   const lastActivityRef = useRef<number>(0);
   const isLoggingOutRef = useRef<boolean>(false);
+
+  // Inicializar rol y nombre guardados en cliente sin provocar desincronización de hidratación SSR
+  useEffect(() => {
+    const role = localStorage.getItem('hb_user_role');
+    if (role === 'SUPERADMIN' || role === 'ADMIN') {
+      setUserRole(role);
+    }
+    const name = localStorage.getItem('hb_user_name');
+    if (name) {
+      setUserName(name);
+    }
+  }, []);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -195,15 +207,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#F5F2EB] text-[#1A1817] flex flex-col md:flex-row">
-      {checkingAuth && (
-        <div className="fixed inset-0 z-50 min-h-screen bg-[#161311] flex flex-col items-center justify-center text-white gap-3">
-          <div className="w-8 h-8 border-3 border-[#D4A359] border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-[#D4A359] font-mono">
-            Cargando Panel Administrativo Hobby Bolivia...
-          </span>
-        </div>
-      )}
-
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-[#161311] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-[#2D2622]">
         <div className="flex items-center gap-2 min-w-0">

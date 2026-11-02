@@ -1497,8 +1497,9 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
 // ============================================================================
 
 export async function getUserByUsername(username: string): Promise<User | null> {
+  // Sincronización en segundo plano no bloqueante para autenticación instantánea
   if (isMysqlConfigured() && !hasAutoSynced) {
-    await ensureMysqlSynced();
+    ensureMysqlSynced().catch(() => { });
   }
 
   const clean = username.trim().toLowerCase();
@@ -1506,7 +1507,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   if (pool) {
     try {
       const [rows]: any = await pool.query(
-        'SELECT * FROM admin_users WHERE LOWER(username) = ? OR LOWER(email) = ? LIMIT 1',
+        'SELECT id, username, name, email, password_hash, role, is_active FROM admin_users WHERE LOWER(username) = ? OR LOWER(email) = ? LIMIT 1',
         [clean, clean]
       );
       if (rows && rows.length > 0) {

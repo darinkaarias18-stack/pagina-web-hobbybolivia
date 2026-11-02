@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export function BrandsStrip() {
+  const { t } = useLanguage();
   const brands = [
     { name: "Dubro Products USA", tag: "Mandos & Varillaje" },
     { name: "Great Planes", tag: "Alambres & Herrajes" },
@@ -19,18 +21,18 @@ export function BrandsStrip() {
   return (
     <div className="bg-[#1E1916] border-b border-[#2D2622] py-3.5 overflow-hidden select-none relative">
       <div className="w-full max-w-[1320px] mx-auto px-4 flex items-center gap-4 sm:gap-6">
-        
+
         {/* Fixed Title Badge */}
         <div className="shrink-0 flex items-center gap-2 border-r border-[#2D2622] pr-4 sm:pr-6 z-20 bg-[#1E1916]">
           <span className="w-2 h-2 rounded-full bg-[#F85606] animate-pulse" />
           <span className="text-[11px] font-black uppercase tracking-widest text-[#D4A359] flex items-center gap-1.5 whitespace-nowrap">
-            Marcas Oficiales
+            {t('brands.title')}
           </span>
         </div>
 
         {/* Carousel Container with Gradient Masks */}
         <div className="relative flex-1 overflow-hidden">
-          
+
           {/* Gradient Masks (Fade edges) */}
           <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 sm:w-16 z-10 bg-gradient-to-r from-[#1E1916] to-transparent" />
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-16 z-10 bg-gradient-to-l from-[#1E1916] to-transparent" />

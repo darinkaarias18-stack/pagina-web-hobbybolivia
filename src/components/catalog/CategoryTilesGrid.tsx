@@ -3,6 +3,7 @@
 import React from 'react';
 import { ArrowRight, Plane } from 'lucide-react';
 import type { Category } from '@/lib/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface CategoryTilesGridProps {
   categories: Category[];
@@ -15,6 +16,7 @@ export function CategoryTilesGrid({
   onSelectCategory,
   activeCategory
 }: CategoryTilesGridProps) {
+  const { t } = useLanguage();
 
   const handleCategoryClick = (slug: string) => {
     onSelectCategory(slug);
@@ -50,7 +52,7 @@ export function CategoryTilesGrid({
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#161311]/80 backdrop-blur-md border border-[#D4A359]/40 shadow-lg">
                   <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-pulse"></span>
                   <span className="text-[#D4A359] text-[11px] font-black uppercase tracking-wider">
-                    PLANEA · CONSTRUYE · VUELA
+                    {t('banner.badge')}
                   </span>
                 </div>
 
@@ -61,17 +63,17 @@ export function CategoryTilesGrid({
                       Hobby Bolivia
                     </span>
                     <span className="text-[#A89F91] text-xs">·</span>
-                    <span className="text-[#FAF8F5]/80 text-xs font-semibold">Descubre. Arma. Vuela.</span>
+                    <span className="text-[#FAF8F5]/80 text-xs font-semibold">{t('banner.discover')}</span>
                   </div>
                   <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white uppercase tracking-tight leading-[1.05] drop-shadow-xl">
-                    PRODUCTOS <span className="text-white">A ESCALA</span>
-                    <span className="block text-[#D4A359] mt-1">PRECISIÓN EN VUELO</span>
+                    {t('banner.title_line1')}
+                    <span className="block text-[#D4A359] mt-1">{t('banner.title_line2')}</span>
                   </h2>
                 </div>
 
                 {/* Subtitle */}
                 <p className="text-xs sm:text-sm md:text-base text-[#FAF8F5]/90 font-medium leading-relaxed drop-shadow max-w-lg">
-                  La mayor variedad de productos mecánicos, varillajes templados, hélices balanceadas y componentes electrónicos para aeronaves a radio control en Bolivia.
+                  {t('banner.subtitle')}
                 </p>
 
                 {/* Call to action buttons */}
@@ -81,7 +83,7 @@ export function CategoryTilesGrid({
                     onClick={() => handleCategoryClick('all')}
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-[#D4A359]/25 hover:scale-105 cursor-pointer"
                   >
-                    <span>VER CATÁLOGO COMPLETO</span>
+                    <span>{t('banner.cta')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -100,10 +102,10 @@ export function CategoryTilesGrid({
               </div>
               <div>
                 <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 justify-center sm:justify-start">
-                  <span>MANTÉN TU FLOTA EN EL AIRE</span>
+                  <span>{t('banner.fleet_title')}</span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-[#E2DCD3]/80">
-                  Envíos blindados con entrega rápida a toda Bolivia (La Paz, Santa Cruz, Cochabamba y el resto del país).
+                  {t('banner.fleet_desc')}
                 </p>
               </div>
             </div>
@@ -113,7 +115,7 @@ export function CategoryTilesGrid({
               onClick={() => handleCategoryClick('all')}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-md hover:scale-105 cursor-pointer shrink-0"
             >
-              <span>Explorar Catálogo</span>
+              <span>{t('banner.fleet_btn')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

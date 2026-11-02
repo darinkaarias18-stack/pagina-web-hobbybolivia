@@ -11,6 +11,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
 import type { SiteConfig } from '@/lib/types';
 
 interface HeaderProps {
@@ -20,14 +21,15 @@ interface HeaderProps {
 
 export function Header({ config, favoritesCount = 0 }: HeaderProps) {
   const { totalCount, subtotal, subtotalUsd, openDrawer } = useCart();
+  const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { label: "Inicio", href: "#" },
-    { label: "Catálogo de Productos", href: "#catalogo" },
-    { label: "Categorías", href: "#categorias" },
-    { label: "Ofertas", href: "#ofertas" },
-    { label: "Contacto", href: "#contacto" },
+    { label: t('header.home'), href: "#" },
+    { label: t('header.catalog'), href: "#catalogo" },
+    { label: t('header.categories'), href: "#categorias" },
+    { label: t('header.deals'), href: "#ofertas" },
+    { label: t('header.contact'), href: "#contacto" },
   ];
 
   return (
@@ -84,7 +86,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
             <a
               href="#catalogo"
               className="p-2 sm:p-2.5 rounded-xl text-[#A89F91] hover:text-[#D4A359] hover:bg-[#211E1C] transition-colors relative"
-              title="Mis Favoritos"
+              title={t('header.favorites')}
             >
               <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
               {favoritesCount > 0 && (
@@ -109,7 +111,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
                 )}
               </div>
               <div className="flex flex-col text-left leading-tight">
-                <span className="text-[8px] sm:text-[9px] uppercase font-bold text-[#D4A359]">Mi Carrito</span>
+                <span className="text-[8px] sm:text-[9px] uppercase font-bold text-[#D4A359]">{t('header.my_cart')}</span>
                 <span className="text-[10px] sm:text-xs font-black text-[#FAF8F5] whitespace-nowrap">
                   {subtotalUsd > 0
                     ? `$${subtotalUsd.toFixed(2)} USD`
@@ -123,7 +125,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
               href="#catalogo"
               className="hidden md:inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs tracking-wide transition-all shadow-md hover:scale-[1.02] cursor-pointer"
             >
-              <span>Comprar Ahora</span>
+              <span>{t('header.shop_now')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </a>
 
@@ -131,7 +133,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-1.5 sm:p-2 rounded-xl text-[#FAF8F5] hover:bg-[#211E1C] border border-[#2D2622]"
-              aria-label="Abrir menú"
+              aria-label={t('header.open_menu')}
             >
               {mobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
             </button>
@@ -161,7 +163,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
             href="#catalogo"
             className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-[10px] tracking-wide transition-all shadow-sm shrink-0 cursor-pointer"
           >
-            <span>Comprar Ahora</span>
+            <span>{t('header.shop_now')}</span>
             <ArrowRight className="w-3 h-3" />
           </a>
         </div>
@@ -178,7 +180,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
                   className="px-3 py-2 text-sm font-semibold text-[#FAF8F5] hover:bg-[#211E1C] rounded-lg flex items-center justify-between"
                 >
                   <span className="flex items-center gap-2">
-                    {link.label === "Ofertas" && (
+                    {link.label === t('header.deals') && (
                       <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-pulse"></span>
                     )}
                     {link.label}
@@ -194,7 +196,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-2.5 px-4 rounded-xl bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
-                <span>Comprar Ahora</span>
+                <span>{t('header.shop_now')}</span>
                 <ArrowRight className="w-4 h-4" />
               </a>
             </div>

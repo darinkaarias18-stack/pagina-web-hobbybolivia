@@ -660,7 +660,9 @@ export default function AdminSettingsPage() {
                     { value: 'USD', label: 'Todo en USD' }
                   ].map((opt) => {
                     const isActive =
-                      (opt.value === 'USD' && (currency === 'USD' || currency === '$us')) ||
+                      (opt.value === 'USD' && (currency === 'USD' || currency === 'ALL_USD' || currency === '$us' || currency === '$')) ||
+                      (opt.value === 'Bs.' && (currency === 'Bs.' || currency === 'ALL_BS' || currency === 'BOB' || currency === 'Bs')) ||
+                      (opt.value === 'auto' && (currency === 'auto' || currency === 'BY_PRODUCT')) ||
                       currency === opt.value;
                     return (
                       <button

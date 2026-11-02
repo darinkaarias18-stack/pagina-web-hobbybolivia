@@ -32,11 +32,13 @@ import {
   GripVertical
 } from 'lucide-react';
 import type { QuoteOrder, OrderStatus } from '@/lib/types';
+import { useCurrency } from '@/context/CurrencyContext';
 
 type FilterTab = 'ALL' | 'PEDIDO' | 'PENDING' | 'PAID' | 'DISPATCHED' | 'CANCELLED';
 type ViewMode = 'kanban' | 'table';
 
 export default function AdminQuotesPage() {
+  const { isBsMode } = useCurrency();
   const [orders, setOrders] = useState<QuoteOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -284,11 +286,21 @@ export default function AdminQuotesPage() {
     return { text, color, hours: diffHours };
   };
 
-  const formatBs = (amount: number) =>
-    `Bs. ${(Number(amount) || 0).toLocaleString('es-BO', {
+  const formatPrice = (amount: number) => {
+    const val = Number(amount) || 0;
+    if (isBsMode) {
+      return `Bs. ${val.toLocaleString('es-BO', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+    }
+    return `$${val.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    })}`;
+    })} USD`;
+  };
+
+  const formatBs = formatPrice;
 
   const renderStatusBadge = (status?: string) => {
     const norm = normalizeStatus(status);
@@ -689,7 +701,7 @@ export default function AdminQuotesPage() {
                             )}
                           </div>
 
-                          {/* Fila 4: Total en Bs. */}
+                          {/* Fila 4: Total en USD */}
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[10px] font-black uppercase text-[#8C827A]">
                               Total:
@@ -780,7 +792,7 @@ export default function AdminQuotesPage() {
                   <th className="py-3.5 px-4 whitespace-nowrap text-center">TIEMPO ESPERA</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">FECHA & DESTINO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">CLIENTE</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-right">TOTAL (BS.)</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-right">TOTAL (USD)</th>
                   <th className="py-3.5 px-4 whitespace-nowrap text-center">ESTADO (GESTIONAR)</th>
                   <th className="py-3.5 px-4 whitespace-nowrap text-center">ACCIONES</th>
                 </tr>
@@ -1324,7 +1336,7 @@ export default function AdminQuotesPage() {
                       <ShieldCheck className="w-4 h-4 text-[#3E7B44]" />
                       <span>Garantía de Productos Hobby Bolivia</span>
                     </div>
-                    <p>Comprobante de retiro de almacén oficial. Precios expresados en Bolivianos (Bs.).</p>
+                    <p>Comprobante de retiro de almacén oficial. Precios expresados en Dólares (USD).</p>
                   </div>
 
                   <div className="bg-white px-5 py-3.5 rounded-2xl border-2 border-[#D4A359]/40 shadow-xs flex items-center gap-6 shrink-0">

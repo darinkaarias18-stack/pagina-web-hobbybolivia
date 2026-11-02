@@ -17,6 +17,7 @@ import {
   Plane
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
 import type { SiteConfig } from '@/lib/types';
 
 interface CartQuoteDrawerProps {
@@ -45,6 +46,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
     subtotal,
     totalCount
   } = useCart();
+  const { t, language } = useLanguage();
 
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(config || null);
   const [exchangeRate, setExchangeRate] = useState<number>(12.1028);
@@ -193,14 +195,17 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
     return 0;
   };
 
-  // Helper para obtener el precio unitario en BOB considerando el tipo de cambio oficial del sistema
+  // Helper para obtener el precio unitario en BOB respetando el precio ingresado sin cálculos
   const getItemBobPrice = (item: any): number => {
+    if (item.price !== undefined && item.price !== null && Number(item.price) > 0) {
+      return Number(item.price);
+    }
     const usd = getItemUsdPrice(item);
     const currentRate = exchangeRate > 0 ? exchangeRate : 12.1028;
     if (usd > 0) {
       return usd * currentRate;
     }
-    return Number(item.price) || 0;
+    return 0;
   };
 
   // Totales calculados en USD y en Bs.
@@ -268,7 +273,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
         message += `${idx + 1}. *${item.name || item.title}*\n`;
         message += `   • SKU: ${item.sku}\n`;
         if (isCatalogUsd) {
-          message += `   • Cantidad: ${ci.quantity} x $ ${itemUsd.toFixed(2)} USD (Bs. ${itemBob.toFixed(2)}) = *$ ${lineTotalUsd.toFixed(2)} USD* (Bs. ${lineTotalBob.toFixed(2)})\n`;
+          message += `   • Cantidad: ${ci.quantity} x $ ${itemUsd.toFixed(2)} USD = *$ ${lineTotalUsd.toFixed(2)} USD*\n`;
         } else {
           message += `   • Cantidad: ${ci.quantity} x Bs. ${itemBob.toFixed(2)} = *Bs. ${lineTotalBob.toFixed(2)}*\n`;
         }
@@ -325,10 +330,10 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
               </div>
               <div>
                 <h2 className="font-black text-sm sm:text-base uppercase tracking-wider text-[#FAF8F5] flex items-center gap-2">
-                  <span>Datos de la compra</span>
+                  <span>{t('cart.title')}</span>
                 </h2>
                 <p className="text-[11px] text-[#D4A359] font-bold">
-                  {totalCount} {totalCount === 1 ? 'pieza seleccionada' : 'piezas seleccionadas'}
+                  {totalCount} {totalCount === 1 ? t('cart.item_selected') : t('cart.items_selected')}
                 </p>
               </div>
             </div>
@@ -338,11 +343,11 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                 <button
                   onClick={clearCart}
                   type="button"
-                  title="Vaciar carrito"
+                  title={t('cart.empty_cart')}
                   className="text-xs text-[#A89F91] hover:text-[#FAF8F5] font-bold px-2.5 py-1.5 rounded-xl bg-[#211E1C] hover:bg-[#2E2A27] border border-[#2D2622] transition-colors cursor-pointer flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-[#D4A359]" />
-                  <span>Vaciar</span>
+                  <span>{t('cart.empty_cart')}</span>
                 </button>
               )}
 
@@ -397,12 +402,10 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
 
                 <div className="space-y-2">
                   <h4 className="font-black text-base sm:text-lg text-[#1A1817] uppercase tracking-wide">
-                    Tu carrito aún está vacío
+                    {t('cart.empty_title')}
                   </h4>
                   <p className="text-xs text-[#5C5650] leading-relaxed">
-                    Elige los conectores, varillajes, hélices o componentes mecánicos que necesitas en el catálogo y haz clic en el botón{' '}
-                    <strong className="text-[#1A1817]">&quot;+&quot;</strong> o{' '}
-                    <strong className="text-[#1A1817]">&quot;Añadir a mi Pedido&quot;</strong> de cada pieza.
+                    {t('cart.empty_desc')}
                   </p>
                 </div>
 
@@ -412,7 +415,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                     onClick={handleGoToCatalog}
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4A359] hover:bg-[#C69755] text-[#161311] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#D4A359]/25 hover:scale-105 cursor-pointer"
                   >
-                    <span>Ir al Catálogo de Productos</span>
+                    <span>{t('cart.go_catalog')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -420,10 +423,10 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                 <div className="p-4 rounded-2xl bg-[#F5F2EB] border border-[#E2DCD3] text-left space-y-2">
                   <div className="flex items-center gap-2 text-xs font-black uppercase text-[#1A1817]">
                     <ShieldCheck className="w-4 h-4 text-[#D4A359]" />
-                    <span>Atención y Despacho Directo</span>
+                    <span>{t('cart.dispatch_title')}</span>
                   </div>
                   <p className="text-xs text-[#5C5650] leading-relaxed">
-                    Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp. Realizamos envíos blindados con número de guía a toda Bolivia.
+                    {t('cart.dispatch_desc')}
                   </p>
                 </div>
               </div>
@@ -487,14 +490,9 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                                     {item.sku}
                                   </span>
                                   {showUsd ? (
-                                    <>
-                                      <span className="text-[11px] text-[#1A1817] font-extrabold">
-                                        ${itemUsd.toFixed(2)} <span className="text-[9.5px] text-[#5C5650] font-normal">USD c/u</span>
-                                      </span>
-                                      <span className="text-[10px] text-[#8C827A] font-semibold">
-                                        (≈ Bs. {itemBob.toFixed(2)})
-                                      </span>
-                                    </>
+                                    <span className="text-[11px] text-[#1A1817] font-extrabold">
+                                      ${itemUsd.toFixed(2)} <span className="text-[9.5px] text-[#5C5650] font-normal">USD c/u</span>
+                                    </span>
                                   ) : (
                                     <span className="text-[11px] text-[#5C5650] font-semibold">
                                       Bs. {itemBob.toFixed(2)} c/u
@@ -536,14 +534,9 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
 
                               <div className="text-right">
                                 {showUsd ? (
-                                  <>
-                                    <span className="text-xs font-black text-[#1A1817] block leading-tight">
-                                      ${lineTotalUsd.toFixed(2)} <span className="text-[9.5px] font-bold text-[#5C5650]">USD</span>
-                                    </span>
-                                    <span className="text-[10px] font-bold text-[#8C827A] block leading-tight">
-                                      Bs. {lineTotalBob.toFixed(2)}
-                                    </span>
-                                  </>
+                                  <span className="text-xs font-black text-[#1A1817] block leading-tight">
+                                    ${lineTotalUsd.toFixed(2)} <span className="text-[9.5px] font-bold text-[#5C5650]">USD</span>
+                                  </span>
                                 ) : (
                                   <span className="text-xs font-black text-[#1A1817]">
                                     Bs. {lineTotalBob.toFixed(2)}

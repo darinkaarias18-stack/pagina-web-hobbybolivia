@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Eye, Check, Plus } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ProductCardProps {
   product?: Product;
@@ -23,6 +24,7 @@ export function ProductCard({
   onQuickView
 }: ProductCardProps) {
   const { addToCart } = useCart();
+  const { t } = useLanguage();
   const [justAdded, setJustAdded] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const product = productProp || itemProp;
@@ -64,14 +66,17 @@ export function ProductCard({
       : (product.price_usd !== undefined && product.price_usd !== null && Number(product.price_usd) > 0
         ? Number(product.price_usd)
         : (rate > 0 ? product.price / rate : 0));
-  const rawBob = rawUsd > 0 && rate > 0 ? rawUsd * rate : (product.price || 0);
+  const rawBob =
+    product.price !== undefined && product.price !== null && Number(product.price) > 0
+      ? Number(product.price)
+      : (rawUsd > 0 && rate > 0 ? rawUsd * rate : 0);
   const usdPrice = rawUsd.toFixed(2);
   const bsPrice = rawBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // Badges: Popular o Nuevo
   const showPopular = product.badge === 'Popular' || product.badge === 'Best Seller';
   const showNuevo = product.badge === 'Nuevo';
-  const validBadge = showPopular ? 'Popular' : (showNuevo ? 'Nuevo' : null);
+  const validBadge = showPopular ? t('card.popular') : (showNuevo ? t('card.new') : null);
 
   return (
     <div
@@ -144,7 +149,7 @@ export function ProductCard({
             <button
               onClick={handleQuickView}
               type="button"
-              title="Vista rápida del producto"
+              title={t('card.quick_view')}
               className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-amber-100 text-neutral-600 hover:text-amber-800 border border-neutral-200/80 hover:border-amber-400 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-90 cursor-pointer shadow-2xs"
             >
               <Eye className="w-3.5 h-3.5" />
@@ -153,7 +158,7 @@ export function ProductCard({
             <button
               onClick={handleAddToCart}
               type="button"
-              title={justAdded ? "¡Añadido al carrito!" : "Añadir al carrito"}
+              title={justAdded ? t('card.added') : t('card.add_to_cart')}
               className={`w-8 h-8 rounded-full font-bold transition-all duration-200 shadow-xs flex items-center justify-center cursor-pointer ${justAdded
                 ? 'bg-emerald-600 text-white scale-110 shadow-md ring-2 ring-emerald-400/40'
                 : 'bg-neutral-900 hover:bg-amber-600 hover:scale-110 text-white hover:text-white active:scale-90'

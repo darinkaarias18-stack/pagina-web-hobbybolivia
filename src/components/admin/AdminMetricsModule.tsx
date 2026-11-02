@@ -36,6 +36,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import type { QuoteOrder, Product, OrderStatus } from '@/lib/types';
+import { useCurrency } from '@/context/CurrencyContext';
 
 interface AdminMetricsModuleProps {
   orders: QuoteOrder[];
@@ -67,6 +68,7 @@ export function AdminMetricsModule({
   onRefreshRate,
   isRefreshingRate
 }: AdminMetricsModuleProps) {
+  const { isBsMode, currencyLabel, currencySymbol } = useCurrency();
   const [periodTab, setPeriodTab] = useState<PeriodType>('OVERVIEW');
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('HORIZONTAL');
   const [productTab, setProductTab] = useState<ProductTab>('BEST_SELLERS');
@@ -709,17 +711,27 @@ export function AdminMetricsModule({
     return Math.max(...activePeriodData.items.map((i) => i.totalBob), 1);
   }, [activePeriodData]);
 
-  const formatBs = (num: number) =>
-    `Bs. ${(Number(num) || 0).toLocaleString('es-BO', {
+  const formatPrice = (num: number) => {
+    const val = Number(num) || 0;
+    if (isBsMode) {
+      return `Bs. ${val.toLocaleString('es-BO', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+    }
+    return `$${val.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    })}`;
+    })} USD`;
+  };
+
+  const formatBs = formatPrice;
 
   const formatUsd = (num: number) =>
-    `$us ${(Number(num) || 0).toLocaleString('en-US', {
+    `$${(Number(num) || 0).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    })}`;
+    })} USD`;
 
   // Paleta de colores cromática para barras (horizontales, verticales y lista)
   const getItemColor = (rawKey: string, index: number, isOverview: boolean) => {
@@ -838,7 +850,7 @@ export function AdminMetricsModule({
             </h2>
           </div>
           <span className="text-xs text-[#8C827A] font-medium">
-            Moneda activa: <strong className="text-[#1A1817]">Bs. (BOB)</strong> · TC Oficial: 1 USD = Bs. {exchangeRate.toFixed(2)}
+            Moneda activa: <strong className="text-[#1A1817]">{isBsMode ? 'Bolivianos (Bs.)' : 'Dólares ($ USD)'}</strong> · TC Oficial: 1 USD = Bs. {exchangeRate.toFixed(2)}
           </span>
         </div>
 
@@ -959,7 +971,7 @@ export function AdminMetricsModule({
                 {activePeriodData.title}
               </h3>
               <p className="text-xs text-[#8C827A] mt-0.5">
-                Volumen de facturación expresado en Bolivianos (Bs.) y cantidad de pedidos por período.
+                Volumen de facturación expresado en Dólares (USD) y cantidad de pedidos por período.
               </p>
             </div>
 
@@ -1144,7 +1156,7 @@ export function AdminMetricsModule({
                   </div>
                   <div className="border-b-2 border-[#1A1817] w-full relative">
                     <span className="text-[10px] font-mono text-[#1A1817] font-bold -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
-                      Bs. 0
+                      $0 USD
                     </span>
                   </div>
                 </div>

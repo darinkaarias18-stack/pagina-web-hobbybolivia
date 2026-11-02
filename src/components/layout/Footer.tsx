@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Plane, Phone, Mail, MapPin, ArrowRight, ArrowUp } from 'lucide-react';
 import type { SiteConfig, Product } from '@/lib/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface FooterProps {
   config?: SiteConfig | null;
@@ -15,6 +16,7 @@ interface FooterProps {
 export function Footer({
   config
 }: FooterProps) {
+  const { t, language } = useLanguage();
   const whatsapp = config?.whatsappNumber || "+591 77293446";
   const email = config?.contactEmail || "contacto@hobbybolivia.com";
 
@@ -34,10 +36,14 @@ export function Footer({
             </div>
             <div>
               <h4 className="text-sm font-black text-[#FAF8F5] uppercase tracking-wide">
-                ¿Necesitas asesoría técnica sobre roscas o compatibilidad?
+                {language === 'en'
+                  ? 'Need technical advice on threads or compatibility?'
+                  : '¿Necesitas asesoría técnica sobre roscas o compatibilidad?'}
               </h4>
               <p className="text-[#A89F91] text-xs mt-0.5">
-                Te asistimos de inmediato con diagramas de paso, diámetros de varilla y brazos de servo.
+                {language === 'en'
+                  ? 'We assist you immediately with thread pitch diagrams, rod diameters, and servo arms.'
+                  : 'Te asistimos de inmediato con diagramas de paso, diámetros de varilla y brazos de servo.'}
               </p>
             </div>
           </div>
@@ -55,7 +61,7 @@ export function Footer({
             style={{ color: '#161311' }}
           >
             <span className="font-black !text-[#161311]" style={{ color: '#161311' }}>
-              Explorar Catálogo de Productos
+              {language === 'en' ? 'Explore Product Catalog' : 'Explorar Catálogo de Productos'}
             </span>
             <ArrowRight className="w-4 h-4 !text-[#161311]" style={{ color: '#161311' }} />
           </Link>
@@ -89,17 +95,17 @@ export function Footer({
             </div>
 
             <p className="text-[#A89F91] text-xs leading-relaxed max-w-md">
-              Plataforma especializada en la distribución de productos, componentes mecánicos, electrónica y accesorios para aviones a escala y aeromodelismo en toda Bolivia.
+              {t('footer.description')}
             </p>
 
             <div className="space-y-2 text-[#A89F91] text-xs pt-1">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#D4A359] shrink-0" />
-                <span>La Paz, Bolivia (Despachos a los 9 Departamentos)</span>
+                <span>{language === 'en' ? 'La Paz, Bolivia (Shipping to all 9 Departments)' : 'La Paz, Bolivia (Despachos a los 9 Departamentos)'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#D4A359] shrink-0" />
-                <span>{whatsapp} (Atención y Cotizaciones)</span>
+                <span>{whatsapp} ({language === 'en' ? 'Support & Quotes' : 'Atención y Cotizaciones'})</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#A89F91] shrink-0" />
@@ -111,10 +117,10 @@ export function Footer({
           {/* Medios de Pago & Enlace Admin */}
           <div className="md:col-span-5 md:pl-8 space-y-4">
             <h5 className="font-black text-[#D4A359] text-xs uppercase tracking-wider mb-4 border-l-2 border-[#D4A359] pl-2">
-              Pagos en Bolivia
+              {language === 'en' ? 'Payments in Bolivia' : 'Pagos en Bolivia'}
             </h5>
             <p className="text-[#A89F91] text-xs mb-3">
-              Transferencias seguras y pagos digitales autorizados:
+              {language === 'en' ? 'Secure digital payments and bank transfers:' : 'Transferencias seguras y pagos digitales autorizados:'}
             </p>
             <div className="flex flex-wrap gap-1.5">
               <span className="px-2.5 py-1 bg-[#211E1C] border border-[#2D2622] text-[#FAF8F5] rounded-full font-bold text-[10px]">
@@ -127,7 +133,7 @@ export function Footer({
                 Tigo Money
               </span>
               <span className="px-2.5 py-1 bg-[#211E1C] border border-[#2D2622] text-[#FAF8F5] rounded-full font-bold text-[10px]">
-                Efectivo Contraentrega
+                {language === 'en' ? 'Cash on Delivery' : 'Efectivo Contraentrega'}
               </span>
             </div>
           </div>
@@ -135,13 +141,11 @@ export function Footer({
         </div>
       </div>
 
-
-
       {/* 4. Bottom Copyright Strip */}
       <div className="bg-[#100D0B] py-3 px-4 border-t border-[#241F1C]">
         <div className="w-full max-w-[1320px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[#8C827A] text-[11px]">
           <div>
-            © 2026 <strong className="text-[#FAF8F5]">Hobby Bolivia</strong>. Todos los derechos reservados. Productos de precisión para aeromodelismo.
+            © 2026 <strong className="text-[#FAF8F5]">Hobby Bolivia</strong>. {t('footer.rights')}
           </div>
 
           <div className="flex items-center gap-4">
@@ -149,7 +153,7 @@ export function Footer({
               onClick={scrollToTop}
               type="button"
               className="p-1.5 rounded-lg bg-[#211E1C] hover:bg-[#D4A359] text-[#FAF8F5] hover:text-[#161311] transition-colors cursor-pointer"
-              title="Volver arriba"
+              title={language === 'en' ? 'Scroll to top' : 'Volver arriba'}
             >
               <ArrowUp className="w-3.5 h-3.5" />
             </button>
