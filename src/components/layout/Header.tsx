@@ -19,7 +19,7 @@ interface HeaderProps {
 }
 
 export function Header({ config, favoritesCount = 0 }: HeaderProps) {
-  const { totalCount, subtotal, openDrawer } = useCart();
+  const { totalCount, subtotal, subtotalUsd, openDrawer } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -111,7 +111,9 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
               <div className="flex flex-col text-left leading-tight">
                 <span className="text-[8px] sm:text-[9px] uppercase font-bold text-[#D4A359]">Mi Carrito</span>
                 <span className="text-[10px] sm:text-xs font-black text-[#FAF8F5] whitespace-nowrap">
-                  Bs. {subtotal.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {subtotalUsd > 0
+                    ? `$${subtotalUsd.toFixed(2)} USD`
+                    : `Bs. ${subtotal.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </span>
               </div>
             </button>

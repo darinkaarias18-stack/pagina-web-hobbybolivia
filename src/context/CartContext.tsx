@@ -20,6 +20,7 @@ interface CartContextType {
   closeCustomModal: () => void;
   totalCount: number;
   subtotal: number;
+  subtotalUsd: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -101,7 +102,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const closeCustomModal = () => setIsCustomModalOpen(false);
 
   const totalCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
-  const subtotal = cartItems.reduce((acc, ci) => acc + ci.item.price * ci.quantity, 0);
+  const subtotal = cartItems.reduce((acc, ci) => acc + (Number(ci.item.price) || 0) * ci.quantity, 0);
+  const subtotalUsd = cartItems.reduce((acc, ci) => {
+    const usd = ci.item.priceUsd ?? ci.item.price_usd ?? (ci.item.price ? Number(ci.item.price) / 12.1028 : 0);
+    return acc + (Number(usd) || 0) * ci.quantity;
+  }, 0);
 
   return (
     <CartContext.Provider
@@ -121,7 +126,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         openCustomModal,
         closeCustomModal,
         totalCount,
-        subtotal
+        subtotal,
+        subtotalUsd
       }}
     >
       {children}

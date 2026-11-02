@@ -57,9 +57,16 @@ export function ProductCard({
         ? false
         : String(product.currency || '').trim().toUpperCase() === 'USD' ||
         String((product as any).display_currency || '').trim().toUpperCase() === 'USD';
-  const rate = exchangeRate > 0 ? exchangeRate : 11.8552;
-  const usdPrice = (product.price / rate).toFixed(2);
-  const bsPrice = product.price.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rate = exchangeRate > 0 ? exchangeRate : 12.1028;
+  const rawUsd =
+    product.priceUsd !== undefined && product.priceUsd !== null && Number(product.priceUsd) > 0
+      ? Number(product.priceUsd)
+      : (product.price_usd !== undefined && product.price_usd !== null && Number(product.price_usd) > 0
+        ? Number(product.price_usd)
+        : (rate > 0 ? product.price / rate : 0));
+  const rawBob = rawUsd > 0 && rate > 0 ? rawUsd * rate : (product.price || 0);
+  const usdPrice = rawUsd.toFixed(2);
+  const bsPrice = rawBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // Badges: Popular o Nuevo
   const showPopular = product.badge === 'Popular' || product.badge === 'Best Seller';

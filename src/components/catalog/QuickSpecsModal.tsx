@@ -23,9 +23,16 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96 }: Quick
   if (!product) return null;
 
   const isUsd = product.currency === 'USD' || (product as any).display_currency === 'USD';
-  const rate = exchangeRate > 0 ? exchangeRate : 6.96;
-  const usdPrice = (product.price / rate).toFixed(2);
-  const bsPrice = product.price.toFixed(2);
+  const rate = exchangeRate > 0 ? exchangeRate : 12.1028;
+  const rawUsd =
+    product.priceUsd !== undefined && product.priceUsd !== null && Number(product.priceUsd) > 0
+      ? Number(product.priceUsd)
+      : (product.price_usd !== undefined && product.price_usd !== null && Number(product.price_usd) > 0
+        ? Number(product.price_usd)
+        : (rate > 0 ? product.price / rate : 0));
+  const rawBob = rawUsd > 0 && rate > 0 ? rawUsd * rate : (product.price || 0);
+  const usdPrice = rawUsd.toFixed(2);
+  const bsPrice = rawBob.toFixed(2);
 
   const handleAdd = () => {
     addToCart(product, qty);

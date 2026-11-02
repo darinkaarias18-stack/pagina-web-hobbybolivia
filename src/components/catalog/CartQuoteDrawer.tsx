@@ -47,6 +47,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
   } = useCart();
 
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(config || null);
+  const [exchangeRate, setExchangeRate] = useState<number>(12.1028);
   const [customerName, setCustomerName] = useState('');
   const [countryCode, setCountryCode] = useState('+591');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -59,7 +60,20 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
 
   const selectedCountry = COUNTRY_LIST.find((c) => c.code === countryCode) || COUNTRY_LIST[0];
 
-  // Fetch settings dynamically and listen to live updates from Admin
+  // Load cached exchange rate initially
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('hb_cached_rate');
+      if (cached) {
+        const r = parseFloat(cached);
+        if (r > 0) setExchangeRate(r);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Fetch settings & live exchange rate dynamically and listen to updates
   useEffect(() => {
     const loadSettings = () => {
       fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' })
@@ -72,8 +86,28 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
         .catch((err) => console.error("Error loading cart settings:", err));
     };
 
+    const loadRate = () => {
+      fetch('/api/exchange-rate?t=' + Date.now(), { cache: 'no-store' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.success && data?.data?.exchangeRate) {
+            const r = Number(data.data.exchangeRate);
+            if (r > 0) {
+              setExchangeRate(r);
+              try {
+                localStorage.setItem('hb_cached_rate', String(r));
+              } catch {
+                // ignore
+              }
+            }
+          }
+        })
+        .catch((err) => console.error("Error loading exchange rate:", err));
+    };
+
     if (isDrawerOpen) {
       loadSettings();
+      loadRate();
     }
 
     let channel: BroadcastChannel | null = null;
@@ -82,6 +116,9 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
       channel.onmessage = (event) => {
         if (event.data?.type === 'CONFIG_UPDATED' && event.data?.config) {
           setSiteConfig(event.data.config);
+        }
+        if (event.data?.type === 'RATE_UPDATED' && event.data?.exchangeRate) {
+          setExchangeRate(Number(event.data.exchangeRate));
         }
       };
     } catch {
@@ -94,6 +131,16 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
           const parsed = JSON.parse(e.newValue);
           if (parsed?.config) {
             setSiteConfig(parsed.config);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (e.key === 'hb_rate_sync' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed?.exchangeRate) {
+            setExchangeRate(Number(parsed.exchangeRate));
           }
         } catch {
           // ignore
@@ -118,6 +165,48 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
     "Las instrucciones para realizar la compra se brindarán únicamente por WhatsApp.";
   const showPaymentQr = currentConfig?.enablePaymentQr !== false && Boolean(paymentQrUrl);
 
+  // Determinación de modo de moneda del catálogo (USD por defecto en Hobby Bolivia)
+  const isCatalogUsd =
+    currentConfig?.currency === 'USD' ||
+    currentConfig?.currency === '$us' ||
+    (!currentConfig?.currency && true);
+
+  // Helper para verificar si un producto individual está fijado en USD
+  const isItemUsd = (item: any): boolean => {
+    if (isCatalogUsd) return true;
+    const curr = String(item?.currency || item?.display_currency || '').trim().toUpperCase();
+    return curr === 'USD';
+  };
+
+  // Helper para obtener el precio unitario en USD
+  const getItemUsdPrice = (item: any): number => {
+    if (item.priceUsd !== undefined && item.priceUsd !== null && Number(item.priceUsd) > 0) {
+      return Number(item.priceUsd);
+    }
+    if (item.price_usd !== undefined && item.price_usd !== null && Number(item.price_usd) > 0) {
+      return Number(item.price_usd);
+    }
+    const currentRate = exchangeRate > 0 ? exchangeRate : 12.1028;
+    if (item.price && Number(item.price) > 0) {
+      return Number(item.price) / currentRate;
+    }
+    return 0;
+  };
+
+  // Helper para obtener el precio unitario en BOB considerando el tipo de cambio oficial del sistema
+  const getItemBobPrice = (item: any): number => {
+    const usd = getItemUsdPrice(item);
+    const currentRate = exchangeRate > 0 ? exchangeRate : 12.1028;
+    if (usd > 0) {
+      return usd * currentRate;
+    }
+    return Number(item.price) || 0;
+  };
+
+  // Totales calculados en USD y en Bs.
+  const totalUsd = cartItems.reduce((acc, ci) => acc + getItemUsdPrice(ci.item) * ci.quantity, 0);
+  const totalBob = cartItems.reduce((acc, ci) => acc + getItemBobPrice(ci.item) * ci.quantity, 0);
+
   const handleGoToCatalog = () => {
     closeDrawer();
     const el = document.getElementById('catalogo');
@@ -138,7 +227,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
         ? customerPhone
         : `${countryCode} ${customerPhone}`.trim();
 
-      // 1. Save quote/order in database via API
+      // 1. Guardar orden/cotización en base de datos vía API
       const res = await fetch('/api/quotes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,14 +238,14 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
           deliveryAddress,
           customerNotes,
           items: cartItems,
-          total: subtotal
+          total: totalBob
         })
       });
 
       const orderData = await res.json();
       const orderCode = orderData?.data?.orderCode || `HB-${Date.now().toString().slice(-6)}`;
 
-      // 2. Generate WhatsApp formatted message
+      // 2. Generar mensaje estructurado para WhatsApp con montos oficiales en USD y Bs.
       let message = `*NUEVO PEDIDO DE PRODUCTOS - HOBBY BOLIVIA*\n`;
       message += `*Código de Orden:* ${orderCode}\n`;
       message += `------------------------------------\n`;
@@ -172,17 +261,29 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
 
       cartItems.forEach((ci, idx) => {
         const item = ci.item;
-        const itemTotal = item.price * ci.quantity;
+        const itemUsd = getItemUsdPrice(item);
+        const itemBob = getItemBobPrice(item);
+        const lineTotalUsd = itemUsd * ci.quantity;
+        const lineTotalBob = itemBob * ci.quantity;
         message += `${idx + 1}. *${item.name || item.title}*\n`;
         message += `   • SKU: ${item.sku}\n`;
-        message += `   • Cantidad: ${ci.quantity} x Bs. ${item.price.toFixed(2)} = *Bs. ${itemTotal.toFixed(2)}*\n`;
+        if (isCatalogUsd) {
+          message += `   • Cantidad: ${ci.quantity} x $ ${itemUsd.toFixed(2)} USD (Bs. ${itemBob.toFixed(2)}) = *$ ${lineTotalUsd.toFixed(2)} USD* (Bs. ${lineTotalBob.toFixed(2)})\n`;
+        } else {
+          message += `   • Cantidad: ${ci.quantity} x Bs. ${itemBob.toFixed(2)} = *Bs. ${lineTotalBob.toFixed(2)}*\n`;
+        }
       });
 
       message += `------------------------------------\n`;
-      message += `*TOTAL A PAGAR:* Bs. ${subtotal.toFixed(2)}\n`;
-      message += `*MÉTODO DE PAGO:* QR Simple Bolivia (Comprobante adjunto)\n`;
+      if (isCatalogUsd) {
+        message += `*TOTAL A PAGAR:* $ ${totalUsd.toFixed(2)} USD\n`;
+        message += `*TOTAL EN BOLIVIANOS:* Bs. ${totalBob.toFixed(2)} (Tipo de cambio oficial: 1 USD = Bs. ${exchangeRate.toFixed(2)})\n`;
+      } else {
+        message += `*TOTAL A PAGAR:* Bs. ${totalBob.toFixed(2)}\n`;
+      }
+      message += `*MÉTODO DE PAGO:* QR Simple Bolivia / Transferencia / Efectivo\n`;
       message += `------------------------------------\n`;
-      message += `Adjunto mi comprobante de pago QR Simple para verificación y despacho.`;
+      message += `Adjunto mi comprobante de pago o consulta para verificación y despacho.`;
 
       // 3. Clear cart and show completion
       setOrderCompleted(orderCode);
@@ -341,7 +442,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                       </h3>
                     </div>
                     <span className="text-[10px] font-bold text-[#D4A359] bg-[#211E1C] px-2.5 py-0.5 rounded-full border border-[#D4A359]/30">
-                      Precios en Bs.
+                      {isCatalogUsd ? `Precios en USD · TC: Bs. ${exchangeRate.toFixed(2)}` : `Precios en Bs.`}
                     </span>
                   </div>
 
@@ -350,7 +451,11 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                       const item = ci.item;
                       const rawItemImg = item.image_url || (item.images && item.images[0]) || item.imageUrl;
                       const itemImg = !rawItemImg || rawItemImg.includes('d0721149ad-dubq3570tn-t') ? '/placeholder.webp' : rawItemImg;
-                      const itemTotal = item.price * ci.quantity;
+                      const itemUsd = getItemUsdPrice(item);
+                      const itemBob = getItemBobPrice(item);
+                      const lineTotalUsd = itemUsd * ci.quantity;
+                      const lineTotalBob = itemBob * ci.quantity;
+                      const showUsd = isItemUsd(item);
 
                       return (
                         <div
@@ -381,9 +486,20 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                                   <span className="text-[9.5px] font-mono font-bold text-[#D4A359] bg-[#211E1C] px-1.5 py-0.5 rounded">
                                     {item.sku}
                                   </span>
-                                  <span className="text-[11px] text-[#5C5650] font-semibold">
-                                    Bs. {item.price.toFixed(2)} c/u
-                                  </span>
+                                  {showUsd ? (
+                                    <>
+                                      <span className="text-[11px] text-[#1A1817] font-extrabold">
+                                        ${itemUsd.toFixed(2)} <span className="text-[9.5px] text-[#5C5650] font-normal">USD c/u</span>
+                                      </span>
+                                      <span className="text-[10px] text-[#8C827A] font-semibold">
+                                        (≈ Bs. {itemBob.toFixed(2)})
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-[11px] text-[#5C5650] font-semibold">
+                                      Bs. {itemBob.toFixed(2)} c/u
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
@@ -418,9 +534,22 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                                 </button>
                               </div>
 
-                              <span className="text-xs font-black text-[#1A1817]">
-                                Bs. {itemTotal.toFixed(2)}
-                              </span>
+                              <div className="text-right">
+                                {showUsd ? (
+                                  <>
+                                    <span className="text-xs font-black text-[#1A1817] block leading-tight">
+                                      ${lineTotalUsd.toFixed(2)} <span className="text-[9.5px] font-bold text-[#5C5650]">USD</span>
+                                    </span>
+                                    <span className="text-[10px] font-bold text-[#8C827A] block leading-tight">
+                                      Bs. {lineTotalBob.toFixed(2)}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-black text-[#1A1817]">
+                                    Bs. {lineTotalBob.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -600,18 +729,41 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
           {/* Sticky Sidebar Footer: TOTAL A PAGAR & Finalizar Pedido */}
           {cartItems.length > 0 && !orderCompleted && (
             <footer className="shrink-0 border-t border-[#2D2622] bg-[#161311] text-[#FAF8F5] p-4 sm:p-5 space-y-3 shadow-2xl">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
                   <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#FAF8F5] block">
                     TOTAL A PAGAR:
                   </span>
-                  <span className="text-[10.5px] text-[#D4A359] font-bold">
+                  <span className="text-[10px] sm:text-[10.5px] text-[#D4A359] font-bold line-clamp-1">
                     Las instrucciones de compra se coordinarán por WhatsApp
                   </span>
                 </div>
-                <span className="text-xl sm:text-2xl font-black text-[#D4A359]">
-                  Bs. {subtotal.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
+                <div className="text-right shrink-0">
+                  {isCatalogUsd ? (
+                    <>
+                      <div className="flex items-baseline justify-end gap-1.5">
+                        <span className="text-2xl sm:text-3xl font-black text-[#D4A359] tracking-tight">
+                          ${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-xs sm:text-sm font-black uppercase text-[#D4A359]/90 tracking-wide">
+                          USD
+                        </span>
+                      </div>
+                      <div className="text-xs sm:text-sm font-bold text-[#FAF8F5] mt-0.5 flex items-center justify-end gap-1.5">
+                        <span>
+                          Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[9.5px] text-[#D4A359] font-bold bg-[#211E1C] px-1.5 py-0.5 rounded border border-[#3E3834]">
+                          TC: {exchangeRate.toFixed(2)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-xl sm:text-2xl font-black text-[#D4A359]">
+                      Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <button
@@ -662,9 +814,24 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
 
             <div className="text-center space-y-1">
               <span className="text-xs font-bold uppercase text-[#8C827A] block">TOTAL A PAGAR:</span>
-              <span className="text-2xl font-black text-[#161311]">
-                Bs. {subtotal.toFixed(2)}
-              </span>
+              {isCatalogUsd ? (
+                <>
+                  <div className="flex items-baseline justify-center gap-1.5">
+                    <span className="text-2xl font-black text-[#161311]">
+                      ${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-xs font-black uppercase text-[#8C827A]">USD</span>
+                  </div>
+                  <span className="text-xs font-bold text-[#8C827A] block">
+                    Equivalente: <strong className="text-[#161311]">Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>{' '}
+                    <span className="text-[10px] text-[#A89F91]">(TC: {exchangeRate.toFixed(2)})</span>
+                  </span>
+                </>
+              ) : (
+                <span className="text-2xl font-black text-[#161311]">
+                  Bs. {totalBob.toFixed(2)}
+                </span>
+              )}
             </div>
 
             <div className="text-[11px] text-[#5C5650] whitespace-pre-line text-left bg-[#F5F2EB] p-3 rounded-xl border border-[#E2DCD3]">
