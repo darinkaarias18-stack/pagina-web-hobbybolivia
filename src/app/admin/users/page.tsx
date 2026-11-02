@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import type { User, UserRole } from '@/lib/types';
 
-export const COUNTRY_CODES = [
+const COUNTRY_CODES = [
   { code: '+591', flag: '🇧🇴', name: 'Bolivia (+591)', placeholder: '77012345' },
   { code: '+54', flag: '🇦🇷', name: 'Argentina (+54)', placeholder: '9112345678' },
   { code: '+51', flag: '🇵🇪', name: 'Perú (+51)', placeholder: '987654321' },
