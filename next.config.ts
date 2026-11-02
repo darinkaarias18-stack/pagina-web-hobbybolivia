@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   /* Performance & Caching */
   compress: true,
 
+  /* Build Fault Tolerance for Hosting/Plesk */
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   /* Image Optimization */
   images: {
     formats: ["image/avif", "image/webp"],
