@@ -40,11 +40,13 @@ export function AdminDashboardClient() {
         fetch('/api/quotes?t=' + Date.now(), { cache: 'no-store' })
       ]);
 
-      const prodData = await prodRes.json();
-      const rateData = await rateRes.json();
-      const quotesData = await quotesRes.json();
+      const [prodData, rateData, quotesData] = await Promise.all([
+        prodRes.json().catch(() => ({ success: false })),
+        rateRes.json().catch(() => ({ success: false })),
+        quotesRes.json().catch(() => ({ success: false }))
+      ]);
 
-      if (prodData.success) setProducts(prodData.data);
+      if (prodData.success && Array.isArray(prodData.data)) setProducts(prodData.data);
       if (quotesData.success && Array.isArray(quotesData.data)) setOrders(quotesData.data);
       if (rateData.success && rateData.data) {
         const r = Number(rateData.data.exchangeRate) || 6.96;
@@ -181,7 +183,7 @@ export function AdminDashboardClient() {
       </div>
 
       {/* Main Metrics Content */}
-      {loading && orders.length === 0 ? (
+      {loading && products.length === 0 && orders.length === 0 ? (
         <div className="py-24 flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-8 h-8 text-[#D4A359] animate-spin" />
           <span className="text-xs text-[#8C827A] font-semibold">

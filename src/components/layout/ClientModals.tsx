@@ -1,9 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CartQuoteDrawer } from '@/components/catalog/CartQuoteDrawer';
-import { ProductOptionsModal } from '@/components/catalog/ProductOptionsModal';
-import { CustomArrangementModal } from '@/components/catalog/CustomArrangementModal';
+import dynamic from 'next/dynamic';
+
+const CartQuoteDrawer = dynamic(
+  () => import('@/components/catalog/CartQuoteDrawer').then((m) => m.CartQuoteDrawer),
+  { ssr: false }
+);
+const ProductOptionsModal = dynamic(
+  () => import('@/components/catalog/ProductOptionsModal').then((m) => m.ProductOptionsModal),
+  { ssr: false }
+);
+const CustomArrangementModal = dynamic(
+  () => import('@/components/catalog/CustomArrangementModal').then((m) => m.CustomArrangementModal),
+  { ssr: false }
+);
 
 export function ClientModals() {
   const [mounted, setMounted] = useState(false);

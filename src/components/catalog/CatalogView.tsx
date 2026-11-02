@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
+import dynamic from 'next/dynamic';
 import { TopBar } from '@/components/layout/TopBar';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -24,10 +25,14 @@ import { HeroSection } from './HeroSection';
 import { BrandsStrip } from './BrandsStrip';
 import { CategoryTilesGrid } from './CategoryTilesGrid';
 import { ProductCard } from './ProductCard';
-import { QuickSpecsModal } from './QuickSpecsModal';
 import { TrustRibbon } from './TrustRibbon';
 import { Testimonials } from './Testimonials';
 import { ContactSection } from './ContactSection';
+
+const QuickSpecsModal = dynamic(
+  () => import('./QuickSpecsModal').then((m) => m.QuickSpecsModal),
+  { ssr: false }
+);
 
 import type {
   SiteConfig,

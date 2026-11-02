@@ -3,8 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* Performance & Caching */
   compress: true,
-  cacheComponents: true,
-  partialPrefetching: true,
 
   /* Image Optimization */
   images: {

@@ -4,6 +4,8 @@ import { ArrowLeft, ShieldCheck, Truck, FileText, Lock } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/BrandLogo';
 import { getSiteConfig } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PoliticasPage() {
   const config = await getSiteConfig();
 

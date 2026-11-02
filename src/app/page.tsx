@@ -1,12 +1,10 @@
-import { connection } from 'next/server';
 import { getSiteConfig, getCategories, getOccasions, getCatalogItems, getBanners, getPolicies } from '@/lib/db';
 import { getExchangeRateConfig } from '@/lib/exchange-rate';
 import { CatalogView } from '@/components/catalog/CatalogView';
 
-export const instant = false;
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  await connection();
   const [config, categories, occasions, items, banners, policies, rateConfig] = await Promise.all([
     getSiteConfig(),
     getCategories(),
