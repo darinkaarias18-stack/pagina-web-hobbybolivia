@@ -3,9 +3,16 @@ const { parse } = require('url');
 const next = require('next');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = parseInt(process.env.PORT || '3000', 10);
-const app = next({ dev, hostname, port });
+const hostname = '0.0.0.0';
+const rawPort = process.env.PORT || '3000';
+const isNamedPipeOrSocket = isNaN(Number(rawPort));
+const port = isNamedPipeOrSocket ? rawPort : parseInt(rawPort, 10);
+
+const app = next({
+  dev,
+  hostname: 'localhost',
+  port: isNamedPipeOrSocket ? 3000 : port
+});
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
@@ -24,7 +31,8 @@ app.prepare().then(() => {
       process.exit(1);
     })
     .listen(port, () => {
-      console.log(`> Servidor Hobby Bolivia listo en http://${hostname}:${port}`);
+      console.log(`> Servidor Hobby Bolivia listo en puerto/socket: ${port}`);
     });
 });
+
 
