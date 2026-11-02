@@ -5,8 +5,6 @@ import { zipSync } from 'fflate';
 import { getAllProductsAdmin } from '@/lib/db';
 import { requireSuperAdmin } from '@/lib/auth';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(request: NextRequest) {
   try {
     const authCheck = await requireSuperAdmin(request);

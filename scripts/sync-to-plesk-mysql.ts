@@ -162,3 +162,4 @@ main().catch(err => {
   console.error('Error fatal durante la sincronización:', err);
   process.exit(1);
 });
+
