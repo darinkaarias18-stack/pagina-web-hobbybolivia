@@ -57,6 +57,21 @@ export async function PUT(
     }
 
     const body = await request.json();
+
+    if (userId === 1 && body.role && body.role !== 'SUPERADMIN') {
+      return NextResponse.json(
+        { success: false, error: "El Superadmin Maestro (Darinka Arias) no puede cambiar de rol." },
+        { status: 400 }
+      );
+    }
+
+    if (userId !== 1 && body.role === 'SUPERADMIN') {
+      return NextResponse.json(
+        { success: false, error: "Solo existe un único Superadmin Maestro en el sistema. Ningún otro usuario puede ser promovido a SUPERADMIN." },
+        { status: 400 }
+      );
+    }
+
     const updated = await updateUserRecord(userId, body);
 
     if (!updated) {
@@ -96,6 +111,13 @@ export async function DELETE(
     const userId = parseInt(id, 10);
     if (isNaN(userId)) {
       return NextResponse.json({ success: false, error: "ID de usuario inválido" }, { status: 400 });
+    }
+
+    if (userId === 1) {
+      return NextResponse.json(
+        { success: false, error: "El Superadmin Maestro (Darinka Arias) nunca puede ser eliminado bajo ninguna circunstancia." },
+        { status: 400 }
+      );
     }
 
     try {

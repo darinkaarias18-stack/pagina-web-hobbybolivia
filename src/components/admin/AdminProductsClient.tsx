@@ -34,6 +34,7 @@ interface InlinePriceCellsProps {
   currentPriceBob: number;
   currentPriceUsd?: number;
   isBsMode: boolean;
+  exchangeRate: number;
   onSavePrice: (id: number, newPriceBob?: number, newPriceUsd?: number) => Promise<void>;
   isUpdating: boolean;
 }
@@ -43,17 +44,22 @@ function InlinePriceCells({
   currentPriceBob,
   currentPriceUsd,
   isBsMode,
+  exchangeRate,
   onSavePrice,
   isUpdating
 }: InlinePriceCellsProps) {
-  // Montos ingresados a criterio, sin cálculos automáticos de tipo de cambio
+  const rate = exchangeRate > 0 ? exchangeRate : 6.96;
+  const baseUsd = currentPriceUsd !== undefined && currentPriceUsd !== null && Number(currentPriceUsd) > 0
+    ? Number(currentPriceUsd)
+    : (currentPriceBob > 0 ? Number(currentPriceBob) / rate : 0);
+
+  const calculatedBob = Number((baseUsd * rate).toFixed(2));
+
+  // En modo USD: muestra el precio en USD.
+  // En modo Bs: muestra el precio calculado de acuerdo al tipo de cambio oficial del dólar en ese momento.
   const displayVal = isBsMode
-    ? (currentPriceBob !== undefined && currentPriceBob !== null && Number(currentPriceBob) > 0
-      ? Number(currentPriceBob).toFixed(2)
-      : (currentPriceUsd !== undefined && currentPriceUsd !== null ? Number(currentPriceUsd).toFixed(2) : '0.00'))
-    : (currentPriceUsd !== undefined && currentPriceUsd !== null && Number(currentPriceUsd) > 0
-      ? Number(currentPriceUsd).toFixed(2)
-      : (currentPriceBob !== undefined && currentPriceBob !== null ? Number(currentPriceBob).toFixed(2) : '0.00'));
+    ? calculatedBob.toFixed(2)
+    : baseUsd.toFixed(2);
 
   const [inputVal, setInputVal] = useState<string>(displayVal);
 
@@ -74,11 +80,13 @@ function InlinePriceCells({
     const currentNum = parseFloat(displayVal);
     if (Math.abs(parsed - currentNum) > 0.001) {
       if (isBsMode) {
-        // En modo Bs: se guarda el monto en Bs. directamente sin recalcular USD
-        await onSavePrice(productId, parsed, undefined);
+        // En modo Bs: se guarda el monto en Bs. y se calcula el equivalente en USD según el tipo de cambio oficial
+        const newUsd = Number((parsed / rate).toFixed(2));
+        await onSavePrice(productId, parsed, newUsd);
       } else {
-        // En modo USD: se guarda el monto en USD directamente sin recalcular Bs.
-        await onSavePrice(productId, undefined, parsed);
+        // En modo USD: se guarda el monto en USD y se calcula el equivalente en Bs. según el tipo de cambio oficial
+        const newBob = Number((parsed * rate).toFixed(2));
+        await onSavePrice(productId, newBob, parsed);
       }
     }
   };
@@ -1467,6 +1475,7 @@ export function AdminProductsClient() {
                           currentPriceBob={Number(p.price) || 0}
                           currentPriceUsd={p.priceUsd !== undefined && p.priceUsd !== null ? Number(p.priceUsd) : (p.price_usd !== undefined && p.price_usd !== null ? Number(p.price_usd) : undefined)}
                           isBsMode={isBsMode}
+                          exchangeRate={exchangeRate}
                           onSavePrice={async (id, newBob, newUsd) => {
                             await handleInlinePriceUpdate(id, newBob, newUsd);
                           }}

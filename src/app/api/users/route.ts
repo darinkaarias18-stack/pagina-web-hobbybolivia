@@ -81,6 +81,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (body.role && body.role === 'SUPERADMIN') {
+      return NextResponse.json(
+        { success: false, error: "Solo existe un único Superadmin Maestro (Darinka Arias) en el sistema. Los nuevos administradores se registran exclusivamente con rol ADMIN." },
+        { status: 400 }
+      );
+    }
+
     // Al crear un nuevo usuario desde el panel, su rol es exclusivamente ADMIN
     const newUser = await createUserRecord({
       name: rawName,

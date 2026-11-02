@@ -7,6 +7,7 @@ import {
   Users,
   UserPlus,
   ShieldCheck,
+  ShieldAlert,
   Key,
   Trash2,
   Edit2,
@@ -106,6 +107,7 @@ export default function AdminUsersPage() {
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -134,6 +136,7 @@ export default function AdminUsersPage() {
         return;
       }
       if (res.status === 403) {
+        setIsAuthorized(false);
         router.replace('/admin');
         return;
       }
@@ -155,9 +158,11 @@ export default function AdminUsersPage() {
     // Regla estricta: Gestión de Usuarios solo está disponible para el SUPERADMIN
     const role = localStorage.getItem('hb_user_role');
     if (role && role !== 'SUPERADMIN') {
+      setIsAuthorized(false);
       router.replace('/admin');
       return;
     }
+    setIsAuthorized(true);
     loadUsers();
   }, [loadUsers, router]);
 
@@ -404,6 +409,18 @@ export default function AdminUsersPage() {
     }
   };
 
+  if (isAuthorized === false) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="w-12 h-12 text-[#D4A359] mb-3 animate-pulse" />
+        <h2 className="text-xl font-black text-[#1A1817]">Acceso Exclusivo Superadmin</h2>
+        <p className="text-xs text-[#5C5650] max-w-md mt-1">
+          La sección de Gestión de Usuarios no está permitida para el rol Administrador. Redirigiendo al panel...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Toast Notification */}
@@ -568,26 +585,18 @@ export default function AdminUsersPage() {
                         )}
                       </td>
 
-                      {/* 4. Rol Asignado (Editable por Superadmin para cuentas Admin) */}
+                      {/* 4. Rol Asignado (Único Superadmin Maestro; todas las demás cuentas son Administrador) */}
                       <td className="py-3.5 px-4">
                         {isPrimaryMaster ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#161311] text-[#D4A359] border border-[#D4A359]/40 shadow-xs">
-                            <Crown className="w-3 h-3 text-[#D4A359]" />
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#161311] text-[#D4A359] border border-[#D4A359]/40 shadow-xs">
+                            <Crown className="w-3.5 h-3.5 text-[#D4A359]" />
                             <span>Superadmin Maestro</span>
                           </span>
                         ) : (
-                          <select
-                            value={u.role}
-                            onChange={(e) => handleQuickRoleChange(u, e.target.value as UserRole)}
-                            className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border cursor-pointer outline-none transition-colors ${u.role === 'SUPERADMIN'
-                              ? 'bg-[#161311] text-[#D4A359] border-[#D4A359]/50'
-                              : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359]'
-                              }`}
-                            title="Cambiar rol del usuario"
-                          >
-                            <option value="ADMIN">ADMIN (Catálogo y Pedidos)</option>
-                            <option value="SUPERADMIN">SUPERADMIN (Acceso Total)</option>
-                          </select>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FAF8F5] text-[#5C5650] border border-[#E2DCD3]">
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#D4A359]" />
+                            <span>Administrador</span>
+                          </span>
                         )}
                       </td>
 
@@ -1164,47 +1173,16 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              {/* Rol Asignado (Editable por Superadmin) */}
+              {/* Rol Asignado: Fijo como Administrador para cuentas secundarias */}
               {!isPrimaryMasterAccount(editingUser) && (
-                <div>
-                  <label className="font-bold text-[#1A1817] block mb-1">
-                    Rol Asignado (Exclusivo Superadmin)
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label
-                      onClick={() => setEditRole('ADMIN')}
-                      className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${editRole === 'ADMIN'
-                        ? 'border-[#D4A359] bg-[#FAF8F5] shadow-xs'
-                        : 'border-[#E2DCD3] bg-white opacity-70'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-black text-xs text-[#1A1817]">ADMIN</span>
-                        <ShieldCheck className="w-4 h-4 text-[#D4A359]" />
-                      </div>
-                      <span className="text-[10px] text-[#5C5650] leading-tight">
-                        Acceso a productos y pedidos. Sin acceso a usuarios.
-                      </span>
-                    </label>
-
-                    <label
-                      onClick={() => setEditRole('SUPERADMIN')}
-                      className={`p-3 rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all ${editRole === 'SUPERADMIN'
-                        ? 'border-[#D4A359] bg-[#161311] text-[#FAF8F5] shadow-xs'
-                        : 'border-[#E2DCD3] bg-white opacity-70'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className={`font-black text-xs ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#1A1817]'}`}>
-                          SUPERADMIN
-                        </span>
-                        <Crown className={`w-4 h-4 ${editRole === 'SUPERADMIN' ? 'text-[#D4A359]' : 'text-[#8C827A]'}`} />
-                      </div>
-                      <span className={`text-[10px] leading-tight ${editRole === 'SUPERADMIN' ? 'text-[#A89F91]' : 'text-[#5C5650]'}`}>
-                        Control maestro total.
-                      </span>
-                    </label>
+                <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2DCD3]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldCheck className="w-4 h-4 text-[#D4A359]" />
+                    <span className="font-bold text-xs text-[#1A1817]">Rol Asignado: Administrador (Fijo)</span>
                   </div>
+                  <p className="text-[11px] text-[#5C5650] leading-relaxed">
+                    Acceso a catálogo, productos y pedidos. La cuenta de Superadmin Maestro es única e intransferible por seguridad del sistema.
+                  </p>
                 </div>
               )}
 

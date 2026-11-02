@@ -1901,6 +1901,8 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
   const nextId = store.users.length > 0 ? Math.max(...store.users.map(u => u.id), 0) + 1 : 1;
   const now = new Date().toISOString();
 
+  // Regla estricta: Solo existe un único Superadmin Maestro (Darinka Arias).
+  // Todo usuario creado a través del sistema tiene obligatoriamente el rol de ADMIN.
   const newUser: User = {
     id: nextId,
     name: userData.name || userData.username || 'Usuario Admin',
@@ -1909,7 +1911,7 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
     phone: userData.phone ? String(userData.phone).trim() : '',
     countryCode: userData.countryCode ? String(userData.countryCode).trim() : '+591',
     password: userData.password || 'admin1234*',
-    role: (userData.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as UserRole,
+    role: 'ADMIN',
     isActive: userData.isActive !== undefined ? Boolean(userData.isActive) : true,
     createdAt: now,
     updatedAt: now
@@ -1922,7 +1924,7 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
       await pool.query(
         `INSERT INTO admin_users (id, name, username, email, password_hash, role, is_active)
          VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), password_hash=VALUES(password_hash), role=VALUES(role), is_active=VALUES(is_active)`,
+         ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), password_hash=VALUES(password_hash), role='ADMIN', is_active=VALUES(is_active)`,
         [newUser.id, newUser.name, newUser.username, newUser.email, newUser.password, newUser.role, newUser.isActive ? 1 : 0]
       );
     } catch (e) {
@@ -1945,6 +1947,12 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
   const current = store.users[index];
   const now = new Date().toISOString();
 
+  // Regla estricta: La cuenta de Darinka Arias (id 1) es el único SUPERADMIN MAESTRO y no puede perder su rol ni desactivarse.
+  // Cualquier otra cuenta de administrador es estrictamente ADMIN y nunca puede promoverse a SUPERADMIN.
+  const isMasterAccount = id === 1 || current.email?.toLowerCase() === 'darinka.arias18@gmail.com' || current.username?.toLowerCase() === 'darinka.arias18@gmail.com';
+  const role: UserRole = isMasterAccount ? 'SUPERADMIN' : 'ADMIN';
+  const isActive = isMasterAccount ? true : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive);
+
   const updated: User = {
     ...current,
     ...data,
@@ -1954,8 +1962,8 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
     email: data.email !== undefined ? data.email.trim().toLowerCase() : current.email,
     phone: data.phone !== undefined ? data.phone : current.phone,
     countryCode: data.countryCode !== undefined ? data.countryCode : current.countryCode,
-    role: data.role !== undefined ? (data.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') : current.role,
-    isActive: data.isActive !== undefined ? Boolean(data.isActive) : current.isActive,
+    role,
+    isActive,
     password: data.password && data.password.trim() ? data.password.trim() : current.password,
     updatedAt: now
   };
@@ -1980,31 +1988,52 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
 }
 
 export async function deleteUserRecord(id: number): Promise<boolean> {
-  const store = getLocalStore();
-  if (!store.users) return false;
-
-  const user = store.users.find(u => u.id === id);
-  if (!user) return false;
-
-  // Validación de seguridad: no permitir eliminar al único SUPERADMIN
-  if (user.role === 'SUPERADMIN') {
-    const activeSuperadmins = store.users.filter(u => u.role === 'SUPERADMIN' && u.isActive);
-    if (activeSuperadmins.length <= 1) {
-      throw new Error("No es posible eliminar al único Superadministrador del sistema.");
-    }
+  // Regla estricta e inviolable: El Superadmin Maestro (Darinka Arias / id 1) NUNCA puede ser eliminado
+  if (id === 1) {
+    throw new Error("El Superadmin Maestro (Darinka Arias) nunca puede ser eliminado bajo ninguna circunstancia.");
   }
 
   // 1. MySQL si está disponible
   const pool = getMysqlPool();
   if (pool) {
     try {
+      const [rows]: any = await pool.query('SELECT id, email, username, role FROM admin_users WHERE id = ?', [id]);
+      if (rows && rows.length > 0) {
+        const target = rows[0];
+        if (
+          target.id === 1 ||
+          target.role === 'SUPERADMIN' ||
+          target.email?.toLowerCase() === 'darinka.arias18@gmail.com' ||
+          target.username?.toLowerCase() === 'darinka.arias18@gmail.com'
+        ) {
+          throw new Error("El Superadmin Maestro (Darinka Arias) nunca puede ser eliminado bajo ninguna circunstancia.");
+        }
+      }
       await pool.query('DELETE FROM admin_users WHERE id = ?', [id]);
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message && e.message.includes("Superadmin Maestro")) {
+        throw e;
+      }
       console.warn('[MySQL deleteUserRecord Warning]:', e);
     }
   }
 
   // 2. Almacenamiento local
+  const store = getLocalStore();
+  if (!store.users) return false;
+
+  const user = store.users.find(u => u.id === id);
+  if (!user) return false;
+
+  if (
+    user.id === 1 ||
+    user.role === 'SUPERADMIN' ||
+    user.email?.toLowerCase() === 'darinka.arias18@gmail.com' ||
+    user.username?.toLowerCase() === 'darinka.arias18@gmail.com'
+  ) {
+    throw new Error("El Superadmin Maestro (Darinka Arias) nunca puede ser eliminado bajo ninguna circunstancia.");
+  }
+
   store.users = store.users.filter(u => u.id !== id);
   saveLocalStore(store);
   return true;

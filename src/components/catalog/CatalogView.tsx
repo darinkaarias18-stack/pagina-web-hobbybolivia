@@ -13,6 +13,7 @@ import {
   Plane,
   ChevronLeft,
   ChevronRight,
+  Plus,
   X
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -171,6 +172,26 @@ export function CatalogView({
   const [minPriceUsd, setMinPriceUsd] = useState<string>('');
   const [maxPriceUsd, setMaxPriceUsd] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('popular');
+
+  // Progressive Batch Pagination State (24 products per batch)
+  const BATCH_SIZE = 24;
+  const [visibleCount, setVisibleCount] = useState<number>(BATCH_SIZE);
+
+  // Automatically reset pagination when any search or filter criteria changes
+  useEffect(() => {
+    setVisibleCount(BATCH_SIZE);
+  }, [
+    activeCategorySlug,
+    searchQuery,
+    selectedScale,
+    selectedMaterial,
+    onlyInStock,
+    minPrice,
+    maxPrice,
+    minPriceUsd,
+    maxPriceUsd,
+    sortBy
+  ]);
 
   // Modal & Favorites State
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
@@ -354,6 +375,7 @@ export function CatalogView({
     setMinPriceUsd('');
     setMaxPriceUsd('');
     setSortBy('popular');
+    setVisibleCount(BATCH_SIZE);
   };
 
   // Filtered Products
@@ -446,6 +468,11 @@ export function CatalogView({
     initialExchangeRate,
     sortBy
   ]);
+
+  // Progressive displayed batch of filtered items
+  const displayedProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817] overflow-x-hidden w-full max-w-full">
@@ -656,43 +683,6 @@ export function CatalogView({
                 </div>
               </div>
 
-              {/* Escala */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
-                  Escala de Modelo
-                </label>
-                <select
-                  value={selectedScale}
-                  onChange={(e) => setSelectedScale(e.target.value)}
-                  className="w-full text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold"
-                >
-                  <option value="all">Todas las Escalas</option>
-                  <option value="RC Estándar">RC Estándar</option>
-                  <option value="Micro">Micro / 1:32</option>
-                  <option value="1:10">1:10 / Escala Grande</option>
-                  <option value="1:48">1:48</option>
-                </select>
-              </div>
-
-              {/* Material */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
-                  Material
-                </label>
-                <select
-                  value={selectedMaterial}
-                  onChange={(e) => setSelectedMaterial(e.target.value)}
-                  className="w-full text-xs py-2 px-3 bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-semibold"
-                >
-                  <option value="all">Todos los Materiales</option>
-                  <option value="Acero">Acero Templado</option>
-                  <option value="Aluminio">Aluminio CNC / Latón</option>
-                  <option value="Fibra de Carbono">Fibra de Carbono</option>
-                  <option value="Nylon">Nylon Compuesto</option>
-                  <option value="Compuesto">Compuesto Poliamida</option>
-                </select>
-              </div>
-
               {/* Rango de Precios en Bs. */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5650] mb-1.5">
@@ -784,9 +774,9 @@ export function CatalogView({
                 <div className="flex items-center justify-between text-xs text-[#5C5650] flex-wrap gap-2">
                   <span>
                     {language === 'en' ? (
-                      <>Showing <strong className="text-[#1A1817]">{filteredProducts.length}</strong> of {products.length} products available</>
+                      <>Showing <strong className="text-[#1A1817]">{Math.min(visibleCount, filteredProducts.length)}</strong> of {filteredProducts.length} products available</>
                     ) : (
-                      <>Mostrando <strong className="text-[#1A1817]">{filteredProducts.length}</strong> de {products.length} productos disponibles</>
+                      <>Mostrando <strong className="text-[#1A1817]">{Math.min(visibleCount, filteredProducts.length)}</strong> de {filteredProducts.length} productos disponibles</>
                     )}
                   </span>
 
@@ -859,35 +849,56 @@ export function CatalogView({
                   </button>
                 </div>
               ) : (
-                <div
-                  className={
-                    siteConfig?.desktopColumns === 8
-                      ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5'
-                      : siteConfig?.desktopColumns === 6
-                        ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3'
-                        : siteConfig?.desktopColumns === 3
-                          ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-4'
-                          : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5'
-                  }
-                >
-                  {filteredProducts.map((prod) => (
-                    <ProductCard
-                      key={prod.id}
-                      product={prod}
-                      exchangeRate={initialExchangeRate}
-                      currencyMode={
-                        siteConfig?.currency === 'USD' || siteConfig?.currency === '$us'
-                          ? 'USD'
-                          : siteConfig?.currency === 'Bs.'
-                            ? 'BOB'
-                            : 'auto'
-                      }
-                      onQuickView={(p) => setQuickViewProduct(p)}
-                      isFavorite={favorites.includes(prod.id)}
-                      onToggleFavorite={toggleFavorite}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div
+                    className={
+                      siteConfig?.desktopColumns === 8
+                        ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5'
+                        : siteConfig?.desktopColumns === 6
+                          ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3'
+                          : siteConfig?.desktopColumns === 3
+                            ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-4'
+                            : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5'
+                    }
+                  >
+                    {displayedProducts.map((prod) => (
+                      <ProductCard
+                        key={prod.id}
+                        product={prod}
+                        exchangeRate={initialExchangeRate}
+                        currencyMode={
+                          siteConfig?.currency === 'USD' || siteConfig?.currency === '$us'
+                            ? 'USD'
+                            : siteConfig?.currency === 'Bs.'
+                              ? 'BOB'
+                              : 'auto'
+                        }
+                        onQuickView={(p) => setQuickViewProduct(p)}
+                        isFavorite={favorites.includes(prod.id)}
+                        onToggleFavorite={toggleFavorite}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Botón de Paginación Progresiva: Cargar más productos */}
+                  {visibleCount < filteredProducts.length && (
+                    <div className="mt-10 mb-6 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleCount((prev) => prev + BATCH_SIZE)}
+                        className="bg-neutral-900 hover:bg-amber-600 text-white font-bold rounded-xl px-8 py-4 shadow-md transition-all duration-200 active:scale-95 border-2 border-amber-700/50 flex items-center gap-2 cursor-pointer group"
+                      >
+                        <Plus className="w-5 h-5 text-amber-400 group-hover:rotate-90 transition-transform duration-200" />
+                        <span>
+                          {language === 'en' ? 'Load more products' : 'Cargar más productos'}
+                        </span>
+                        <span className="text-xs text-amber-200/80 font-normal ml-1">
+                          ({language === 'en' ? 'Showing' : 'Mostrando'} {Math.min(visibleCount, filteredProducts.length)} {language === 'en' ? 'of' : 'de'} {filteredProducts.length})
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
 
             </div>
