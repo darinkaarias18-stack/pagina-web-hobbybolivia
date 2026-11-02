@@ -240,6 +240,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
 
+      {/* Mobile Horizontal Quick Navigation Ribbon (Desplazamiento fluido entre todos los módulos) */}
+      <div className="md:hidden bg-[#1E1916] border-b border-[#2D2622] px-2.5 py-2 overflow-x-auto whitespace-nowrap scrollbar-none touch-pan-x sticky top-[57px] z-30 shadow-md">
+        <div className="flex items-center gap-1.5 min-w-max">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.href === '/admin'
+              ? pathname === '/admin'
+              : pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all whitespace-nowrap shrink-0 ${isActive
+                  ? 'bg-[#D4A359] text-[#161311] shadow-xs font-black'
+                  : 'bg-[#211E1C] text-[#A89F91] hover:text-white hover:bg-[#2A2623] border border-[#2D2622]'
+                  }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#161311]' : 'text-[#D4A359]'}`} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Mobile Backdrop when Sidebar is open */}
       {sidebarOpen && (
         <div

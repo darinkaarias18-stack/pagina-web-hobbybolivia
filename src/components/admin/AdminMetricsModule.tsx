@@ -951,7 +951,7 @@ export function AdminMetricsModule({
         </div>
 
         {/* ================= GRÁFICO DE BARRAS DE RENDIMIENTO ================= */}
-        <div className="bg-[#FAF8F5] rounded-3xl p-5 sm:p-6 border border-[#E2DCD3] shadow-sm space-y-5">
+        <div className="bg-[#FAF8F5] rounded-3xl p-4 sm:p-6 border border-[#E2DCD3] shadow-sm space-y-5 w-full max-w-full overflow-hidden">
           {/* Cabecera del Gráfico con Controles */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
             <div>
@@ -975,88 +975,92 @@ export function AdminMetricsModule({
               </p>
             </div>
 
-            {/* Controles: Tabs de Período + Selector Gráfico/Lista */}
-            <div className="flex items-center flex-wrap gap-2.5">
+            {/* Controles: Tabs de Período + Selector Gráfico/Lista (Desplazamiento horizontal fluido en móviles) */}
+            <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-2.5 w-full lg:w-auto max-w-full">
               {/* Tabs de Período */}
-              <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setPeriodTab('OVERVIEW')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'OVERVIEW'
-                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                >
-                  Comparativa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeriodTab('WEEK')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'WEEK'
-                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                >
-                  Por Semana
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeriodTab('MONTH')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'MONTH'
-                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                >
-                  Por Mes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeriodTab('DAY')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'DAY'
-                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                >
-                  Por Día
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeriodTab('YEAR')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${periodTab === 'YEAR'
-                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                >
-                  Por Año
-                </button>
+              <div className="w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 touch-pan-x">
+                <div className="inline-flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setPeriodTab('OVERVIEW')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${periodTab === 'OVERVIEW'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                  >
+                    Comparativa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeriodTab('WEEK')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${periodTab === 'WEEK'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                  >
+                    Por Semana
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeriodTab('MONTH')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${periodTab === 'MONTH'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                  >
+                    Por Mes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeriodTab('DAY')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${periodTab === 'DAY'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                  >
+                    Por Día
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeriodTab('YEAR')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${periodTab === 'YEAR'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                  >
+                    Por Año
+                  </button>
+                </div>
               </div>
 
               {/* View Switcher: Barras Horizontales vs Barras Verticales */}
-              <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setChartViewMode('HORIZONTAL')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${chartViewMode === 'HORIZONTAL'
-                    ? 'bg-[#D4A359] text-[#161311] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                  title="Ver Gráfico de Barras Horizontales con Colores"
-                >
-                  <BarChart2 className="w-3.5 h-3.5" />
-                  <span>Barras Horiz.</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChartViewMode('VERTICAL')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${chartViewMode === 'VERTICAL'
-                    ? 'bg-[#D4A359] text-[#161311] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                  title="Ver Gráfico de Barras Verticales con Colores"
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span>Barras Vert.</span>
-                </button>
+              <div className="overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 touch-pan-x">
+                <div className="inline-flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setChartViewMode('HORIZONTAL')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${chartViewMode === 'HORIZONTAL'
+                      ? 'bg-[#D4A359] text-[#161311] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                    title="Ver Gráfico de Barras Horizontales con Colores"
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    <span>Barras Horiz.</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartViewMode('VERTICAL')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${chartViewMode === 'VERTICAL'
+                      ? 'bg-[#D4A359] text-[#161311] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                    title="Ver Gráfico de Barras Verticales con Colores"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span>Barras Vert.</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1502,30 +1506,32 @@ export function AdminMetricsModule({
                 </h3>
               </div>
 
-              {/* Tabs Más Vendidos vs Stock Estancado */}
-              <div className="flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setProductTab('BEST_SELLERS')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${productTab === 'BEST_SELLERS'
-                    ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                >
-                  <Flame className="w-3.5 h-3.5" />
-                  <span>Más Vendidos ({topProducts.length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProductTab('STAGNANT_STOCK')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${productTab === 'STAGNANT_STOCK'
-                    ? 'bg-amber-500 text-[#161311] shadow-xs'
-                    : 'text-[#8C827A] hover:text-[#1A1817]'
-                    }`}
-                >
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>Stock Estancado ({stagnantProducts.length})</span>
-                </button>
+              {/* Tabs Más Vendidos vs Stock Estancado (Desplazamiento fluido en móviles) */}
+              <div className="w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 touch-pan-x">
+                <div className="inline-flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setProductTab('BEST_SELLERS')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${productTab === 'BEST_SELLERS'
+                      ? 'bg-[#211E1C] text-[#D4A359] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                  >
+                    <Flame className="w-3.5 h-3.5" />
+                    <span>Más Vendidos ({topProducts.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductTab('STAGNANT_STOCK')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${productTab === 'STAGNANT_STOCK'
+                      ? 'bg-amber-500 text-[#161311] shadow-xs'
+                      : 'text-[#8C827A] hover:text-[#1A1817]'
+                      }`}
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Stock Estancado ({stagnantProducts.length})</span>
+                  </button>
+                </div>
               </div>
             </div>
 

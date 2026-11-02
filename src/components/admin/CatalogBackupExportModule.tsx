@@ -769,7 +769,8 @@ export function CatalogBackupExportModule() {
               </div>
 
               {/* Table with Thumbnails */}
-              <table className="w-full border-collapse text-left text-xs">
+              <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-neutral-200 touch-pan-x">
+                <table className="w-full border-collapse text-left text-xs min-w-[720px]">
                 <thead>
                   <tr className="bg-[#161311] text-[#D4A359] text-[10px] font-black uppercase tracking-wider border-b border-[#161311]">
                     <th className="py-2.5 px-2 w-[4%] text-center">N°</th>
@@ -856,6 +857,7 @@ export function CatalogBackupExportModule() {
                   })}
                 </tbody>
               </table>
+            </div>
 
               {/* Document Footer (Visible en Impresión) */}
               <div className="mt-6 pt-4 border-t border-[#E2DCD3] text-center text-[10px] text-[#8C827A] flex justify-between items-center">

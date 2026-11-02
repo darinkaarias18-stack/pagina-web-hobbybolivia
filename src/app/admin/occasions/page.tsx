@@ -134,7 +134,8 @@ export default function AdminOccasionsPage() {
             <span>Cargando ocasiones...</span>
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
+          <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-slate-200 touch-pan-x">
+            <table className="w-full text-left text-xs min-w-[620px]">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
               <tr>
                 <th className="py-3 px-4">Icono</th>
@@ -175,7 +176,8 @@ export default function AdminOccasionsPage() {
               ))}
             </tbody>
           </table>
-        )}
+        </div>
+      )}
       </div>
 
       {isModalOpen && (

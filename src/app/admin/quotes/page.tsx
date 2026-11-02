@@ -785,177 +785,177 @@ export default function AdminQuotesPage() {
         /* ================= VISTA TABLA TABULAR ================= */
         <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-neutral-200 bg-white shadow-sm touch-pan-x">
           <table className="w-full text-left border-collapse text-xs min-w-[880px]">
-              <thead>
-                <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase tracking-wider text-[10px] font-black border-b border-[#2D2622]">
-                  <th className="py-3.5 px-4 whitespace-nowrap">ORDEN</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-center">TIEMPO ESPERA</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">FECHA & DESTINO</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">CLIENTE</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-right">TOTAL (USD)</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-center">ESTADO (GESTIONAR)</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-center">ACCIONES</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2DCD3]">
-                {filteredOrders.map((ord) => {
-                  const itemsCount = (ord.items || []).reduce(
-                    (sum, i) => sum + (Number(i.quantity) || 1),
-                    0
-                  );
-                  const waitInfo = getWaitingTime(ord.createdAt);
-                  const city = ord.deliveryCity || 'La Paz';
-                  const isUpdating = updatingCode === ord.orderCode;
-                  const currentMappedValue = normalizeStatus(ord.status);
+            <thead>
+              <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase tracking-wider text-[10px] font-black border-b border-[#2D2622]">
+                <th className="py-3.5 px-4 whitespace-nowrap">ORDEN</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-center">TIEMPO ESPERA</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">FECHA & DESTINO</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">CLIENTE</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-right">TOTAL (USD)</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-center">ESTADO (GESTIONAR)</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-center">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2DCD3]">
+              {filteredOrders.map((ord) => {
+                const itemsCount = (ord.items || []).reduce(
+                  (sum, i) => sum + (Number(i.quantity) || 1),
+                  0
+                );
+                const waitInfo = getWaitingTime(ord.createdAt);
+                const city = ord.deliveryCity || 'La Paz';
+                const isUpdating = updatingCode === ord.orderCode;
+                const currentMappedValue = normalizeStatus(ord.status);
 
-                  return (
-                    <tr
-                      key={ord.orderCode}
-                      className="hover:bg-[#FAF8F5]/80 transition-colors group"
-                    >
-                      {/* 1. ORDEN */}
-                      <td className="py-3.5 px-4 align-middle">
-                        <div className="space-y-1">
-                          <span className="font-mono font-black text-xs text-[#D4A359] bg-[#211E1C] px-2.5 py-1 rounded-lg border border-[#D4A359]/30 inline-block shadow-2xs">
-                            #{ord.orderCode}
-                          </span>
-                          <span className="text-[10px] text-[#8C827A] font-bold block">
-                            {ord.items?.length || 0} rep. ({itemsCount} unid.)
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* 2. TIEMPO ESPERA */}
-                      <td className="py-3.5 px-4 align-middle text-center whitespace-nowrap">
-                        {waitInfo.color === 'green' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>{waitInfo.text}</span>
-                          </span>
-                        ) : waitInfo.color === 'yellow' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            <span>{waitInfo.text}</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-red-50 text-red-700 border border-red-200 shadow-2xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-bounce" />
-                            <span>{waitInfo.text}</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 3. FECHA & DESTINO */}
-                      <td className="py-3.5 px-4 align-middle">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-[11px] font-semibold text-[#5C5650]">
-                            <Calendar className="w-3 h-3 text-[#D4A359] shrink-0" />
-                            <span>
-                              {ord.createdAt
-                                ? new Date(ord.createdAt).toLocaleDateString('es-BO', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric'
-                                })
-                                : 'Fecha reciente'}
-                            </span>
-                          </div>
-                          <div className="inline-flex items-center gap-1 font-bold text-xs text-[#1A1817]">
-                            <MapPin className="w-3 h-3 text-[#D4A359] shrink-0" />
-                            <span>{city}</span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* 4. CLIENTE */}
-                      <td className="py-3.5 px-4 align-middle">
-                        <div className="space-y-1">
-                          <p className="font-black text-xs text-[#1A1817] truncate max-w-[200px]" title={ord.customerName}>
-                            {ord.customerName}
-                          </p>
-                          <a
-                            href={`https://wa.me/${(ord.customerPhone || '').replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-[#5C5650] hover:text-[#3E7B44] transition-colors"
-                            title="Contactar al cliente por WhatsApp"
-                          >
-                            <Phone className="w-3 h-3 text-[#3E7B44] shrink-0" />
-                            <span>{ord.customerPhone}</span>
-                          </a>
-                        </div>
-                      </td>
-
-                      {/* 5. TOTAL (BS.) */}
-                      <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
-                        <span className="font-mono font-black text-sm text-[#1A1817] block">
-                          {formatBs(ord.total)}
+                return (
+                  <tr
+                    key={ord.orderCode}
+                    className="hover:bg-[#FAF8F5]/80 transition-colors group"
+                  >
+                    {/* 1. ORDEN */}
+                    <td className="py-3.5 px-4 align-middle">
+                      <div className="space-y-1">
+                        <span className="font-mono font-black text-xs text-[#D4A359] bg-[#211E1C] px-2.5 py-1 rounded-lg border border-[#D4A359]/30 inline-block shadow-2xs">
+                          #{ord.orderCode}
                         </span>
-                        <span className="text-[10px] text-[#8C827A] font-medium block">
-                          Efectivo / QR
+                        <span className="text-[10px] text-[#8C827A] font-bold block">
+                          {ord.items?.length || 0} rep. ({itemsCount} unid.)
                         </span>
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* 6. ESTADO (GESTIONAR) */}
-                      <td className="py-3.5 px-4 align-middle text-center whitespace-nowrap">
-                        <div className="relative inline-block">
-                          <select
-                            value={currentMappedValue}
-                            disabled={isUpdating}
-                            onChange={(e) =>
-                              handleUpdateStatus(ord.orderCode, e.target.value as OrderStatus)
-                            }
-                            className={`text-xs font-black rounded-xl px-3 py-1.5 pr-7 border cursor-pointer outline-none transition-all appearance-none shadow-2xs ${currentMappedValue === 'PEDIDO'
-                              ? 'bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200/80'
-                              : currentMappedValue === 'PAGADO'
-                                ? 'bg-emerald-100 text-emerald-900 border-emerald-400 hover:bg-emerald-200/80'
-                                : currentMappedValue === 'DESPACHADO'
-                                  ? 'bg-blue-100 text-blue-900 border-blue-400 hover:bg-blue-200/80'
-                                  : currentMappedValue === 'CANCELADO'
-                                    ? 'bg-red-100 text-red-900 border-red-300 hover:bg-red-200/80'
-                                    : 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200/80'
-                              }`}
-                          >
-                            <option value="PEDIDO">Pedido</option>
-                            <option value="PENDING">Pendiente de Pago</option>
-                            <option value="PAGADO">Pagado</option>
-                            <option value="DESPACHADO">Despachado</option>
-                            <option value="CANCELADO">Cancelado</option>
-                          </select>
-                          <ChevronDown className="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-current opacity-70" />
-                        </div>
-                        {isUpdating && (
-                          <span className="text-[10px] text-[#D4A359] font-bold block mt-1 animate-pulse">
-                            Actualizando...
+                    {/* 2. TIEMPO ESPERA */}
+                    <td className="py-3.5 px-4 align-middle text-center whitespace-nowrap">
+                      {waitInfo.color === 'green' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>{waitInfo.text}</span>
+                        </span>
+                      ) : waitInfo.color === 'yellow' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          <span>{waitInfo.text}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-red-50 text-red-700 border border-red-200 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-bounce" />
+                          <span>{waitInfo.text}</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 3. FECHA & DESTINO */}
+                    <td className="py-3.5 px-4 align-middle">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-[#5C5650]">
+                          <Calendar className="w-3 h-3 text-[#D4A359] shrink-0" />
+                          <span>
+                            {ord.createdAt
+                              ? new Date(ord.createdAt).toLocaleDateString('es-BO', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })
+                              : 'Fecha reciente'}
                           </span>
-                        )}
-                      </td>
-
-                      {/* 7. ACCIONES */}
-                      <td className="py-3.5 px-4 align-middle text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setDetailOrder(ord)}
-                            className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#211E1C] text-[#5C5650] hover:text-[#D4A359] border border-[#E2DCD3] transition-colors cursor-pointer shadow-2xs"
-                            title="Ver detalle de productos"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPrintOrder(ord)}
-                            className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#211E1C] text-[#5C5650] hover:text-[#D4A359] border border-[#E2DCD3] transition-colors cursor-pointer shadow-2xs"
-                            title="Imprimir Nota de Pedido / Despacho Oficial"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <div className="inline-flex items-center gap-1 font-bold text-xs text-[#1A1817]">
+                          <MapPin className="w-3 h-3 text-[#D4A359] shrink-0" />
+                          <span>{city}</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* 4. CLIENTE */}
+                    <td className="py-3.5 px-4 align-middle">
+                      <div className="space-y-1">
+                        <p className="font-black text-xs text-[#1A1817] truncate max-w-[200px]" title={ord.customerName}>
+                          {ord.customerName}
+                        </p>
+                        <a
+                          href={`https://wa.me/${(ord.customerPhone || '').replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-[#5C5650] hover:text-[#3E7B44] transition-colors"
+                          title="Contactar al cliente por WhatsApp"
+                        >
+                          <Phone className="w-3 h-3 text-[#3E7B44] shrink-0" />
+                          <span>{ord.customerPhone}</span>
+                        </a>
+                      </div>
+                    </td>
+
+                    {/* 5. TOTAL (BS.) */}
+                    <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
+                      <span className="font-mono font-black text-sm text-[#1A1817] block">
+                        {formatBs(ord.total)}
+                      </span>
+                      <span className="text-[10px] text-[#8C827A] font-medium block">
+                        Efectivo / QR
+                      </span>
+                    </td>
+
+                    {/* 6. ESTADO (GESTIONAR) */}
+                    <td className="py-3.5 px-4 align-middle text-center whitespace-nowrap">
+                      <div className="relative inline-block">
+                        <select
+                          value={currentMappedValue}
+                          disabled={isUpdating}
+                          onChange={(e) =>
+                            handleUpdateStatus(ord.orderCode, e.target.value as OrderStatus)
+                          }
+                          className={`text-xs font-black rounded-xl px-3 py-1.5 pr-7 border cursor-pointer outline-none transition-all appearance-none shadow-2xs ${currentMappedValue === 'PEDIDO'
+                            ? 'bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200/80'
+                            : currentMappedValue === 'PAGADO'
+                              ? 'bg-emerald-100 text-emerald-900 border-emerald-400 hover:bg-emerald-200/80'
+                              : currentMappedValue === 'DESPACHADO'
+                                ? 'bg-blue-100 text-blue-900 border-blue-400 hover:bg-blue-200/80'
+                                : currentMappedValue === 'CANCELADO'
+                                  ? 'bg-red-100 text-red-900 border-red-300 hover:bg-red-200/80'
+                                  : 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200/80'
+                            }`}
+                        >
+                          <option value="PEDIDO">Pedido</option>
+                          <option value="PENDING">Pendiente de Pago</option>
+                          <option value="PAGADO">Pagado</option>
+                          <option value="DESPACHADO">Despachado</option>
+                          <option value="CANCELADO">Cancelado</option>
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-current opacity-70" />
+                      </div>
+                      {isUpdating && (
+                        <span className="text-[10px] text-[#D4A359] font-bold block mt-1 animate-pulse">
+                          Actualizando...
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 7. ACCIONES */}
+                    <td className="py-3.5 px-4 align-middle text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setDetailOrder(ord)}
+                          className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#211E1C] text-[#5C5650] hover:text-[#D4A359] border border-[#E2DCD3] transition-colors cursor-pointer shadow-2xs"
+                          title="Ver detalle de productos"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPrintOrder(ord)}
+                          className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-[#211E1C] text-[#5C5650] hover:text-[#D4A359] border border-[#E2DCD3] transition-colors cursor-pointer shadow-2xs"
+                          title="Imprimir Nota de Pedido / Despacho Oficial"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

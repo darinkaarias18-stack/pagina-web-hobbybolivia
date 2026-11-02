@@ -120,64 +120,64 @@ export default function AdminClaimsPage() {
             No hay reclamos o quejas registradas. ¡Excelente servicio!
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
-              <tr>
-                <th className="py-3 px-4">Código</th>
-                <th className="py-3 px-4">Tipo</th>
-                <th className="py-3 px-4">Consumidor</th>
-                <th className="py-3 px-4">Arreglo / Orden</th>
-                <th className="py-3 px-4">Fecha</th>
-                <th className="py-3 px-4">Estado</th>
-                <th className="py-3 px-4 text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredClaims.map((c) => (
-                <tr key={c.trackingCode} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4 font-mono font-bold text-slate-900">{c.trackingCode}</td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`px-2 py-0.5 rounded-md font-extrabold text-[10px] ${
-                        c.type === 'RECLAMO' ? 'bg-rose-100 text-[#E11D48]' : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {c.type}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="font-bold text-slate-800">{c.fullName}</div>
-                    <div className="text-[11px] text-slate-400">CI: {c.documentId}</div>
-                  </td>
-                  <td className="py-3 px-4 font-medium text-slate-700">{c.contractedItem}</td>
-                  <td className="py-3 px-4 text-slate-500">
-                    {new Date(c.createdAt || 0).toLocaleDateString('es-BO')}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                        c.status === 'RESUELTO'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : c.status === 'EN_PROCESO'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-rose-100 text-[#E11D48]'
-                      }`}
-                    >
-                      {c.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => openClaimDetails(c)}
-                      className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors"
-                    >
-                      Gestionar
-                    </button>
-                  </td>
+          <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-slate-200 touch-pan-x">
+            <table className="w-full text-left text-xs min-w-[680px]">
+              <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                <tr>
+                  <th className="py-3 px-4">Código</th>
+                  <th className="py-3 px-4">Tipo</th>
+                  <th className="py-3 px-4">Consumidor</th>
+                  <th className="py-3 px-4">Arreglo / Orden</th>
+                  <th className="py-3 px-4">Fecha</th>
+                  <th className="py-3 px-4">Estado</th>
+                  <th className="py-3 px-4 text-right">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredClaims.map((c) => (
+                  <tr key={c.trackingCode} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-slate-900">{c.trackingCode}</td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-extrabold text-[10px] ${c.type === 'RECLAMO' ? 'bg-rose-100 text-[#E11D48]' : 'bg-amber-100 text-amber-800'
+                          }`}
+                      >
+                        {c.type}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="font-bold text-slate-800">{c.fullName}</div>
+                      <div className="text-[11px] text-slate-400">CI: {c.documentId}</div>
+                    </td>
+                    <td className="py-3 px-4 font-medium text-slate-700">{c.contractedItem}</td>
+                    <td className="py-3 px-4 text-slate-500">
+                      {new Date(c.createdAt || 0).toLocaleDateString('es-BO')}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${c.status === 'RESUELTO'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : c.status === 'EN_PROCESO'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-rose-100 text-[#E11D48]'
+                          }`}
+                      >
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={() => openClaimDetails(c)}
+                        className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors"
+                      >
+                        Gestionar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

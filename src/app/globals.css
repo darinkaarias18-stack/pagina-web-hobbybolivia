@@ -173,14 +173,17 @@ body::-webkit-scrollbar-thumb:hover {
   scrollbar-width: thin;
   scrollbar-color: #D4A359 #FAF8F5;
 }
+
 .scrollbar-thin::-webkit-scrollbar {
   height: 6px;
   width: 6px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-track {
   background: #FAF8F5;
   border-radius: 9999px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: #D4A359;
   border-radius: 9999px;
@@ -190,6 +193,7 @@ body::-webkit-scrollbar-thumb:hover {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
+
 .scrollbar-none::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;

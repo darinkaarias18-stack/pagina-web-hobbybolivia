@@ -499,155 +499,155 @@ export default function AdminUsersPage() {
                   <th className="py-3.5 px-4 text-right min-w-[120px]">Acciones</th>
                 </tr>
               </thead>
-            <tbody className="divide-y divide-[#EFEAE2]">
-              {users.map((u) => {
-                const isPrimaryMaster = isPrimaryMasterAccount(u);
+              <tbody className="divide-y divide-[#EFEAE2]">
+                {users.map((u) => {
+                  const isPrimaryMaster = isPrimaryMasterAccount(u);
 
-                // Initial Avatar letters
-                const initials = (u.name || u.username)
-                  .split(' ')
-                  .map((n) => n[0])
-                  .slice(0, 2)
-                  .join('')
-                  .toUpperCase();
+                  // Initial Avatar letters
+                  const initials = (u.name || u.username)
+                    .split(' ')
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase();
 
-                return (
-                  <tr key={u.id} className="hover:bg-[#FAF8F5]/80 transition-colors">
-                    {/* 1. Usuario & Credencial */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 ${u.role === 'SUPERADMIN'
-                            ? 'bg-[#161311] text-[#D4A359] border border-[#D4A359]/30 shadow-xs'
-                            : 'bg-[#FAF8F5] text-[#1A1817] border border-[#E2DCD3]'
-                            }`}
-                        >
-                          {initials}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-mono font-black text-[#1A1817] truncate flex items-center gap-1.5">
-                            <span>{u.username}</span>
-                            {isPrimaryMaster && (
-                              <span title="Superadmin Maestro Principal" className="inline-flex items-center">
-                                <Crown className="w-3.5 h-3.5 text-[#D4A359] shrink-0" />
+                  return (
+                    <tr key={u.id} className="hover:bg-[#FAF8F5]/80 transition-colors">
+                      {/* 1. Usuario & Credencial */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 ${u.role === 'SUPERADMIN'
+                              ? 'bg-[#161311] text-[#D4A359] border border-[#D4A359]/30 shadow-xs'
+                              : 'bg-[#FAF8F5] text-[#1A1817] border border-[#E2DCD3]'
+                              }`}
+                          >
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-mono font-black text-[#1A1817] truncate flex items-center gap-1.5">
+                              <span>{u.username}</span>
+                              {isPrimaryMaster && (
+                                <span title="Superadmin Maestro Principal" className="inline-flex items-center">
+                                  <Crown className="w-3.5 h-3.5 text-[#D4A359] shrink-0" />
+                                </span>
+                              )}
+                            </div>
+                            {u.email && (
+                              <span className="text-[10px] text-[#8C827A] truncate block font-sans">
+                                {u.email}
                               </span>
                             )}
                           </div>
-                          {u.email && (
-                            <span className="text-[10px] text-[#8C827A] truncate block font-sans">
-                              {u.email}
-                            </span>
-                          )}
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* 2. Nombre Completo */}
-                    <td className="py-3.5 px-4 font-bold text-[#1A1817] truncate">
-                      {u.name}
-                    </td>
+                      {/* 2. Nombre Completo */}
+                      <td className="py-3.5 px-4 font-bold text-[#1A1817] truncate">
+                        {u.name}
+                      </td>
 
-                    {/* 3. Teléfono / WhatsApp con Código de País */}
-                    <td className="py-3.5 px-4">
-                      {u.phone ? (
-                        <div className="flex items-center gap-1.5 font-mono text-xs text-[#1A1817]">
-                          <Phone className="w-3.5 h-3.5 text-[#D4A359] shrink-0" />
-                          <span className="font-bold whitespace-nowrap">{u.phone}</span>
-                          <a
-                            href={`https://api.whatsapp.com/send?phone=${u.phone.replace(/[^\d]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 transition-colors cursor-pointer ml-1 inline-flex items-center"
-                            title="Contactar o enviar mensaje por WhatsApp"
+                      {/* 3. Teléfono / WhatsApp con Código de País */}
+                      <td className="py-3.5 px-4">
+                        {u.phone ? (
+                          <div className="flex items-center gap-1.5 font-mono text-xs text-[#1A1817]">
+                            <Phone className="w-3.5 h-3.5 text-[#D4A359] shrink-0" />
+                            <span className="font-bold whitespace-nowrap">{u.phone}</span>
+                            <a
+                              href={`https://api.whatsapp.com/send?phone=${u.phone.replace(/[^\d]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 transition-colors cursor-pointer ml-1 inline-flex items-center"
+                              title="Contactar o enviar mensaje por WhatsApp"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-[#8C827A] italic">No registrado</span>
+                        )}
+                      </td>
+
+                      {/* 4. Rol Asignado (Editable por Superadmin para cuentas Admin) */}
+                      <td className="py-3.5 px-4">
+                        {isPrimaryMaster ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#161311] text-[#D4A359] border border-[#D4A359]/40 shadow-xs">
+                            <Crown className="w-3 h-3 text-[#D4A359]" />
+                            <span>Superadmin Maestro</span>
+                          </span>
+                        ) : (
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleQuickRoleChange(u, e.target.value as UserRole)}
+                            className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border cursor-pointer outline-none transition-colors ${u.role === 'SUPERADMIN'
+                              ? 'bg-[#161311] text-[#D4A359] border-[#D4A359]/50'
+                              : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359]'
+                              }`}
+                            title="Cambiar rol del usuario"
                           >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-[#8C827A] italic">No registrado</span>
-                      )}
-                    </td>
+                            <option value="ADMIN">ADMIN (Catálogo y Pedidos)</option>
+                            <option value="SUPERADMIN">SUPERADMIN (Acceso Total)</option>
+                          </select>
+                        )}
+                      </td>
 
-                    {/* 4. Rol Asignado (Editable por Superadmin para cuentas Admin) */}
-                    <td className="py-3.5 px-4">
-                      {isPrimaryMaster ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#161311] text-[#D4A359] border border-[#D4A359]/40 shadow-xs">
-                          <Crown className="w-3 h-3 text-[#D4A359]" />
-                          <span>Superadmin Maestro</span>
-                        </span>
-                      ) : (
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleQuickRoleChange(u, e.target.value as UserRole)}
-                          className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border cursor-pointer outline-none transition-colors ${u.role === 'SUPERADMIN'
-                            ? 'bg-[#161311] text-[#D4A359] border-[#D4A359]/50'
-                            : 'bg-[#FAF8F5] text-[#1A1817] border-[#E2DCD3] hover:border-[#D4A359]'
-                            }`}
-                          title="Cambiar rol del usuario"
-                        >
-                          <option value="ADMIN">ADMIN (Catálogo y Pedidos)</option>
-                          <option value="SUPERADMIN">SUPERADMIN (Acceso Total)</option>
-                        </select>
-                      )}
-                    </td>
-
-                    {/* 4. Estado (Activo / Desactivado) */}
-                    <td className="py-3.5 px-4">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(u)}
-                        disabled={isPrimaryMaster && u.isActive}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${u.isActive !== false
-                          ? 'bg-[#3E7B44]/15 text-[#3E7B44] border border-[#3E7B44]/30 hover:bg-[#3E7B44]/25 cursor-pointer'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
-                          } ${isPrimaryMaster && u.isActive ? 'opacity-90 cursor-default' : ''}`}
-                        title={
-                          isPrimaryMaster && u.isActive
-                            ? 'Cuenta maestra permanentemente activa'
-                            : 'Clic para alternar estado'
-                        }
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-[#3E7B44] animate-pulse' : 'bg-rose-500'
-                            }`}
-                        />
-                        <span>{u.isActive !== false ? 'Activo' : 'Inactivo'}</span>
-                      </button>
-                    </td>
-
-                    {/* 5. Acciones (Editar y Eliminar habilitados para Superadmin) */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      {/* 4. Estado (Activo / Desactivado) */}
+                      <td className="py-3.5 px-4">
                         <button
                           type="button"
-                          onClick={() => openEditModal(u)}
-                          className="px-2.5 py-1.5 rounded-xl border border-[#E2DCD3] hover:border-[#161311] bg-white hover:bg-[#161311] text-[#1A1817] hover:text-[#D4A359] font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
-                          title="Editar usuario, rol o contraseña"
+                          onClick={() => handleToggleActive(u)}
+                          disabled={isPrimaryMaster && u.isActive}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${u.isActive !== false
+                            ? 'bg-[#3E7B44]/15 text-[#3E7B44] border border-[#3E7B44]/30 hover:bg-[#3E7B44]/25 cursor-pointer'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
+                            } ${isPrimaryMaster && u.isActive ? 'opacity-90 cursor-default' : ''}`}
+                          title={
+                            isPrimaryMaster && u.isActive
+                              ? 'Cuenta maestra permanentemente activa'
+                              : 'Clic para alternar estado'
+                          }
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Editar</span>
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-[#3E7B44] animate-pulse' : 'bg-rose-500'
+                              }`}
+                          />
+                          <span>{u.isActive !== false ? 'Activo' : 'Inactivo'}</span>
                         </button>
+                      </td>
 
-                        {!isPrimaryMaster && (
+                      {/* 5. Acciones (Editar y Eliminar habilitados para Superadmin) */}
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => {
-                              setDeleteError('');
-                              setUserToDelete(u);
-                            }}
-                            className="px-2.5 py-1.5 rounded-xl border border-rose-200 hover:border-rose-500 bg-rose-50/60 hover:bg-rose-600 text-rose-600 hover:text-white font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
-                            title="Eliminar cuenta de administrador"
+                            onClick={() => openEditModal(u)}
+                            className="px-2.5 py-1.5 rounded-xl border border-[#E2DCD3] hover:border-[#161311] bg-white hover:bg-[#161311] text-[#1A1817] hover:text-[#D4A359] font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                            title="Editar usuario, rol o contraseña"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Eliminar</span>
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Editar</span>
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+
+                          {!isPrimaryMaster && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteError('');
+                                setUserToDelete(u);
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl border border-rose-200 hover:border-rose-500 bg-rose-50/60 hover:bg-rose-600 text-rose-600 hover:text-white font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                              title="Eliminar cuenta de administrador"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Eliminar</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         )}

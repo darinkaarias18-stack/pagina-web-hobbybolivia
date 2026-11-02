@@ -1084,27 +1084,32 @@ export function AdminProductsClient() {
           </h1>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2.5">
-          {/* Quick Currency Status (Botón interactivo para actualizar con fecha y hora de última actualización) */}
+        <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
+          {/* Quick Currency Status (Adaptable a pantallas móviles) */}
           <button
             type="button"
             onClick={handleRefreshExchangeRate}
             disabled={isRefreshingRate}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none max-w-full"
             title={`Clic para actualizar el tipo de cambio oficial ahora. Última actualización: ${lastUpdatedStr || 'reciente'}`}
           >
             {isRefreshingRate ? (
-              <Loader2 className="w-4 h-4 text-[#D4A359] animate-spin shrink-0" />
+              <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A359] animate-spin shrink-0" />
             ) : (
-              <Coins className="w-4 h-4 text-[#D4A359] shrink-0 group-hover:scale-110 transition-transform" />
+              <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A359] shrink-0 group-hover:scale-110 transition-transform" />
             )}
-            <span>
-              TC Oficial{lastUpdatedStr ? ` (${lastUpdatedStr})` : ''}:
+            <span className="whitespace-nowrap">
+              TC Oficial
+              {lastUpdatedStr && (
+                <span className="hidden sm:inline font-normal text-[#8C827A] ml-1">
+                  ({lastUpdatedStr})
+                </span>
+              )}:
             </span>
-            <span className="font-mono font-black text-[#1A1817]">
+            <span className="font-mono font-black text-[#1A1817] whitespace-nowrap">
               Bs. {exchangeRate.toFixed(2)}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold">
+            <span className="text-[9.5px] sm:text-[10px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold shrink-0">
               {autoUpdate ? 'Auto' : 'Manual'}
             </span>
             <RefreshCw
@@ -1116,7 +1121,7 @@ export function AdminProductsClient() {
           <Link
             href="/"
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-xs border border-[#E2DCD3] shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FAF8F5] hover:bg-white text-[#1A1817] font-bold text-[11px] sm:text-xs border border-[#E2DCD3] shadow-xs transition-colors whitespace-nowrap shrink-0"
           >
             <span>Ver Tienda Pública</span>
             <ExternalLink className="w-3.5 h-3.5 text-[#D4A359]" />
