@@ -27,3 +27,4 @@ app.prepare().then(() => {
       console.log(`> Servidor Hobby Bolivia listo en http://${hostname}:${port}`);
     });
 });
+

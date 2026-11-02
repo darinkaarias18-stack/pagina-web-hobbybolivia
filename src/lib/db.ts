@@ -97,6 +97,14 @@ export function getMysqlConfig() {
     }
   }
 
+  // Fallback por defecto a la base de datos de producción Plesk de Hobby Bolivia
+  if (!host || !user || !database) {
+    host = host || (process.env.NODE_ENV === 'production' ? 'localhost' : '50.30.32.59');
+    user = user || 'dariasdigital_hobbybolivia';
+    password = password || 'Imp6fSMr2%mj0w?v';
+    database = database || 'dariasdigital_hobbybolivia';
+  }
+
   return { host, port, user, password, database, ssl };
 }
 
@@ -389,109 +397,117 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
       ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
     `);
 
-    // 2. Verificar datos existentes
-    const [catCountRows]: any = await conn.query('SELECT COUNT(*) as cnt FROM categories');
-    const existingCats = catCountRows[0]?.cnt || 0;
-
+    // 2. Sincronización bidireccional automática continua
     let catInserted = 0;
     let prodInserted = 0;
     let polInserted = 0;
 
-    if (existingCats === 0 || forceSeed) {
-      if (forceSeed) {
-        await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-        await conn.query('TRUNCATE TABLE products');
-        await conn.query('TRUNCATE TABLE categories');
-        await conn.query('TRUNCATE TABLE policies');
-        await conn.query('TRUNCATE TABLE admin_users');
-        await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+    if (forceSeed) {
+      await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+      await conn.query('TRUNCATE TABLE products');
+      await conn.query('TRUNCATE TABLE categories');
+      await conn.query('TRUNCATE TABLE policies');
+      await conn.query('TRUNCATE TABLE admin_users');
+      await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+    }
+
+    // Obtener datos fuente desde getLocalStore() o fallback inicial
+    const store = getLocalStore();
+    const seedCats = store.categories && store.categories.length > 0 ? store.categories : initialCategories;
+    const seedProducts = store.items && store.items.length > 0 ? store.items : initialProducts;
+    const seedPolicies = store.policies && store.policies.length > 0 ? store.policies : initialPolicies;
+
+    // Sincronizar Categorías (Upsert en MySQL)
+    for (const cat of seedCats) {
+      await conn.query(
+        `INSERT INTO categories (id, name, slug, description, image_url, display_order, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           name=VALUES(name), description=VALUES(description), image_url=VALUES(image_url),
+           display_order=VALUES(display_order), is_active=VALUES(is_active)`,
+        [
+          cat.id,
+          cat.name,
+          cat.slug,
+          cat.description || '',
+          cat.image_url || cat.imageUrl || '',
+          cat.order || (cat as any).display_order || cat.id,
+          cat.isActive !== false && (cat as any).is_active !== false ? 1 : 0
+        ]
+      );
+      catInserted++;
+    }
+
+    // Sincronizar Productos con price y price_usd exactos (Upsert en MySQL)
+    for (const prod of seedProducts) {
+      const pUsd = prod.price_usd !== undefined && prod.price_usd !== null
+        ? Number(prod.price_usd)
+        : (prod.priceUsd !== undefined && prod.priceUsd !== null ? Number(prod.priceUsd) : null);
+      const pImg = prod.image_url || prod.imageUrl || (prod.images && prod.images[0]) || '/placeholder.webp';
+      const pActive = prod.is_active !== undefined ? (prod.is_active ? 1 : 0) : (prod.isActive !== undefined ? (prod.isActive ? 1 : 0) : 1);
+
+      await conn.query(
+        `INSERT INTO products (
+          id, sku, name, slug, category_id, scale, material, specs_line,
+          compatible_models, price, price_usd, old_price, stock, badge, image_url,
+          is_active, brand, description
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          name=VALUES(name), price=VALUES(price), price_usd=VALUES(price_usd),
+          stock=VALUES(stock), specs_line=VALUES(specs_line), image_url=VALUES(image_url),
+          is_active=VALUES(is_active), badge=VALUES(badge), brand=VALUES(brand), description=VALUES(description)`,
+        [
+          prod.id,
+          prod.sku,
+          prod.name || prod.title,
+          prod.slug,
+          prod.category_id || prod.categoryId || 1,
+          prod.scale || 'RC Estándar',
+          prod.material || 'Compuesto',
+          prod.specs_line || '',
+          prod.compatible_models || '',
+          prod.price || 0,
+          pUsd,
+          prod.old_price || null,
+          prod.stock !== undefined ? Number(prod.stock) : (prod.stockQuantity !== undefined ? Number(prod.stockQuantity) : 0),
+          prod.badge || null,
+          pImg,
+          pActive,
+          prod.brand || 'Hobby Bolivia',
+          prod.description || ''
+        ]
+      );
+      prodInserted++;
+    }
+
+    // Sincronizar Políticas (Upsert en MySQL)
+    for (const pol of seedPolicies) {
+      await conn.query(
+        `INSERT INTO policies (id, slug, title, content)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE title=VALUES(title), content=VALUES(content)`,
+        [pol.id, pol.slug, pol.title, pol.content]
+      );
+      polInserted++;
+    }
+
+    // Asegurar Administradores
+    await conn.query(`
+      INSERT INTO admin_users (id, username, email, password_hash, role)
+      VALUES (1, 'darinka.arias18@gmail.com', 'darinka.arias18@gmail.com', 'superadmin1234*', 'SUPERADMIN'),
+             (2, 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN')
+      ON DUPLICATE KEY UPDATE username=VALUES(username), email=VALUES(email), password_hash=VALUES(password_hash), role=VALUES(role)
+    `);
+
+    // Sincronizar de vuelta: refrescar localStore desde MySQL para coherencia absoluta
+    try {
+      const [allRows]: any = await conn.query('SELECT * FROM products ORDER BY id ASC');
+      if (allRows && allRows.length >= store.items.length) {
+        store.items = allRows.map(mapMysqlRowToProduct);
+        saveLocalStore(store);
       }
-
-      // Obtener datos fuente desde getLocalStore() o fallback inicial
-      const store = getLocalStore();
-      const seedCats = store.categories && store.categories.length > 0 ? store.categories : initialCategories;
-      const seedProducts = store.items && store.items.length > 0 ? store.items : initialProducts;
-      const seedPolicies = store.policies && store.policies.length > 0 ? store.policies : initialPolicies;
-
-      // Insertar Categorías
-      for (const cat of seedCats) {
-        await conn.query(
-          `INSERT INTO categories (id, name, slug, description, image_url, display_order, is_active)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), image_url=VALUES(image_url)`,
-          [
-            cat.id,
-            cat.name,
-            cat.slug,
-            cat.description || '',
-            cat.image_url || cat.imageUrl || '',
-            cat.order || (cat as any).display_order || cat.id,
-            cat.isActive !== false && (cat as any).is_active !== false ? 1 : 0
-          ]
-        );
-        catInserted++;
-      }
-
-      // Insertar Productos con price y price_usd exactos
-      for (const prod of seedProducts) {
-        const pUsd = prod.price_usd !== undefined && prod.price_usd !== null
-          ? Number(prod.price_usd)
-          : (prod.priceUsd !== undefined && prod.priceUsd !== null ? Number(prod.priceUsd) : null);
-        const pImg = prod.image_url || prod.imageUrl || (prod.images && prod.images[0]) || '/placeholder.webp';
-        const pActive = prod.is_active !== undefined ? (prod.is_active ? 1 : 0) : (prod.isActive !== undefined ? (prod.isActive ? 1 : 0) : 1);
-
-        await conn.query(
-          `INSERT INTO products (
-            id, sku, name, slug, category_id, scale, material, specs_line,
-            compatible_models, price, price_usd, old_price, stock, badge, image_url,
-            is_active, brand, description
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-            name=VALUES(name), price=VALUES(price), price_usd=VALUES(price_usd),
-            stock=VALUES(stock), specs_line=VALUES(specs_line), image_url=VALUES(image_url),
-            is_active=VALUES(is_active)`,
-          [
-            prod.id,
-            prod.sku,
-            prod.name || prod.title,
-            prod.slug,
-            prod.category_id || prod.categoryId || 1,
-            prod.scale || 'RC Estándar',
-            prod.material || 'Compuesto',
-            prod.specs_line || '',
-            prod.compatible_models || '',
-            prod.price || 0,
-            pUsd,
-            prod.old_price || null,
-            prod.stock !== undefined ? Number(prod.stock) : (prod.stockQuantity !== undefined ? Number(prod.stockQuantity) : 0),
-            prod.badge || null,
-            pImg,
-            pActive,
-            prod.brand || 'Hobby Bolivia',
-            prod.description || ''
-          ]
-        );
-        prodInserted++;
-      }
-
-      // Insertar Políticas
-      for (const pol of seedPolicies) {
-        await conn.query(
-          `INSERT INTO policies (id, slug, title, content)
-           VALUES (?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE title=VALUES(title), content=VALUES(content)`,
-          [pol.id, pol.slug, pol.title, pol.content]
-        );
-        polInserted++;
-      }
-
-      // Insertar Administradores
-      await conn.query(`
-        INSERT INTO admin_users (id, username, email, password_hash, role)
-        VALUES (1, 'darinka.arias18@gmail.com', 'darinka.arias18@gmail.com', 'superadmin1234*', 'SUPERADMIN'),
-               (2, 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN')
-        ON DUPLICATE KEY UPDATE username=VALUES(username), email=VALUES(email), password_hash=VALUES(password_hash), role=VALUES(role)
-      `);
+    } catch (e) {
+      // Ignorar si falla lectura inversa
     }
 
     return {
