@@ -1032,6 +1032,13 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
       if (rows && rows.length > 0) {
         const mapped = rows.map(mapMysqlRowToProduct);
         memoryCache.productsAll = { data: mapped, timestamp: getNow() };
+        try {
+          const store = getLocalStore();
+          if (store.items.length !== mapped.length) {
+            store.items = mapped;
+            saveLocalStore(store);
+          }
+        } catch { }
         return mapped;
       }
     } catch (e) {
@@ -1139,7 +1146,28 @@ export async function getProductBySku(sku: string): Promise<Product | null> {
 
 export async function createProduct(data: Partial<Product>): Promise<Product> {
   const store = getLocalStore();
-  const newId = store.items.length > 0 ? Math.max(...store.items.map(p => p.id)) + 1 : 1;
+  const pool = getMysqlPool();
+  let newId: number;
+
+  if (pool) {
+    try {
+      const [maxRes]: any = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM products');
+      newId = Number(maxRes[0]?.next_id) || 1;
+    } catch {
+      newId = store.items.length > 0 ? Math.max(...store.items.map(p => p.id), 0) + 1 : 1;
+    }
+  } else {
+    newId = store.items.length > 0 ? Math.max(...store.items.map(p => p.id), 0) + 1 : 1;
+  }
+
+  // Asegurar que newId sea mayor que cualquier ID existente en la tienda local
+  if (store.items.length > 0) {
+    const maxStoreId = Math.max(...store.items.map(p => p.id), 0);
+    if (maxStoreId >= newId) {
+      newId = maxStoreId + 1;
+    }
+  }
+
   const sku = data.sku || `HB-${newId.toString().padStart(4, '0')}`;
   const slug = data.slug || (data.name || `producto-${newId}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   const imageUrl = data.image_url || (data.images && data.images[0]) || data.imageUrl || "/placeholder.webp";
@@ -1183,10 +1211,9 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
   };
 
   // 1. Guardar en MySQL si está disponible
-  const pool = getMysqlPool();
   if (pool) {
     try {
-      await pool.query(
+      const [insertRes]: any = await pool.query(
         `INSERT INTO products (
           id, sku, name, slug, category_id, scale, material, specs_line,
           compatible_models, price, price_usd, old_price, stock, badge, image_url,
@@ -1213,8 +1240,11 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
           newProduct.description
         ]
       );
-    } catch (e) {
-      console.warn('[MySQL createProduct Warning]:', e);
+      if (insertRes?.insertId && insertRes.insertId !== newProduct.id) {
+        newProduct.id = insertRes.insertId;
+      }
+    } catch (e: any) {
+      console.warn('[MySQL createProduct Warning]:', e?.message || e);
     }
   }
 
@@ -1229,99 +1259,128 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
 export async function updateProduct(id: number, data: Partial<Product>): Promise<Product | null> {
   const store = getLocalStore();
   const index = store.items.findIndex(p => p.id === id);
-  if (index === -1) return null;
 
-  const current = store.items[index];
   const candidateImage = data.image_url || data.imageUrl || (data.images && data.images[0]);
   if (candidateImage) {
     assertCatalogImageUnder1MB(candidateImage);
   }
-  const updated: Product = {
-    ...current,
-    ...data,
-    id,
-    sku: data.sku || current.sku,
-    name: data.name || current.name,
-    title: data.name || current.title || current.name,
-    price: data.price !== undefined ? Number(data.price) : current.price,
-    priceUsd: data.priceUsd !== undefined ? (data.priceUsd === null ? undefined : Number(data.priceUsd)) : (data.price_usd !== undefined ? (data.price_usd === null ? undefined : Number(data.price_usd)) : current.priceUsd),
-    price_usd: data.price_usd !== undefined ? (data.price_usd === null ? undefined : Number(data.price_usd)) : (data.priceUsd !== undefined ? (data.priceUsd === null ? undefined : Number(data.priceUsd)) : current.price_usd),
-    currency: data.currency !== undefined ? data.currency : (current.currency || 'Bs.'),
-    display_currency: (data.display_currency !== undefined ? data.display_currency : (current.display_currency || current.currency || 'Bs.')) as any,
-    stock: data.stock !== undefined ? Number(data.stock) : current.stock,
-    stockQuantity: data.stock !== undefined ? Number(data.stock) : (current.stockQuantity || current.stock),
-    specs_line: data.specs_line || current.specs_line,
-    material: data.material || current.material,
-    scale: data.scale || current.scale,
-    badge: data.badge !== undefined ? data.badge : current.badge,
-    image_url: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.image_url,
-    imageUrl: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.imageUrl,
-    is_active: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.is_active),
-    isActive: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive),
-    updated_at: new Date().toISOString()
-  };
 
-  // 1. Actualizar en MySQL
   const pool = getMysqlPool();
   if (pool) {
     try {
-      await pool.query(
-        `UPDATE products SET
-          sku = ?, name = ?, price = ?, price_usd = ?, old_price = ?, stock = ?,
-          specs_line = ?, material = ?, scale = ?, badge = ?,
-          image_url = ?, is_active = ?, brand = ?, description = ?
-         WHERE id = ?`,
-        [
-          updated.sku,
-          updated.name,
-          updated.price,
-          updated.price_usd ?? updated.priceUsd ?? null,
-          updated.old_price || null,
-          updated.stock,
-          updated.specs_line,
-          updated.material,
-          updated.scale,
-          updated.badge || null,
-          updated.image_url,
-          updated.is_active ? 1 : 0,
-          updated.brand || 'Hobby Bolivia',
-          updated.description || '',
-          id
-        ]
-      );
-    } catch (e) {
-      console.warn('[MySQL updateProduct Warning]:', e);
+      const fields: string[] = [];
+      const values: any[] = [];
+
+      if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
+      if (data.slug !== undefined) { fields.push('slug = ?'); values.push(data.slug); }
+      if (data.sku !== undefined) { fields.push('sku = ?'); values.push(data.sku); }
+      if (data.category_id !== undefined || data.categoryId !== undefined) {
+        fields.push('category_id = ?');
+        values.push(data.category_id || data.categoryId);
+      }
+      if (data.scale !== undefined) { fields.push('scale = ?'); values.push(data.scale); }
+      if (data.material !== undefined) { fields.push('material = ?'); values.push(data.material); }
+      if (data.specs_line !== undefined) { fields.push('specs_line = ?'); values.push(data.specs_line); }
+      if (data.compatible_models !== undefined) { fields.push('compatible_models = ?'); values.push(data.compatible_models); }
+      if (data.price !== undefined) { fields.push('price = ?'); values.push(Number(data.price)); }
+      if (data.price_usd !== undefined || data.priceUsd !== undefined) {
+        fields.push('price_usd = ?');
+        values.push(data.price_usd ?? data.priceUsd);
+      }
+      if (data.old_price !== undefined) { fields.push('old_price = ?'); values.push(data.old_price); }
+      if (data.stock !== undefined) { fields.push('stock = ?'); values.push(Number(data.stock)); }
+      if (data.badge !== undefined) { fields.push('badge = ?'); values.push(data.badge); }
+      if (candidateImage !== undefined) { fields.push('image_url = ?'); values.push(candidateImage); }
+      if (data.is_active !== undefined || data.isActive !== undefined) {
+        fields.push('is_active = ?');
+        values.push(data.is_active !== undefined ? (data.is_active ? 1 : 0) : (data.isActive ? 1 : 0));
+      }
+      if (data.brand !== undefined) { fields.push('brand = ?'); values.push(data.brand); }
+      if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description); }
+
+      if (fields.length > 0) {
+        values.push(id);
+        await pool.query(`UPDATE products SET ${fields.join(', ')} WHERE id = ?`, values);
+      }
+    } catch (e: any) {
+      console.warn('[MySQL updateProduct Warning]:', e?.message || e);
     }
   }
 
   // 2. Actualizar en localStore
-  store.items[index] = updated;
-  saveLocalStore(store);
+  if (index !== -1) {
+    const current = store.items[index];
+    const updated: Product = {
+      ...current,
+      ...data,
+      id,
+      sku: data.sku || current.sku,
+      name: data.name || current.name,
+      title: data.name || current.title || current.name,
+      price: data.price !== undefined ? Number(data.price) : current.price,
+      priceUsd: data.priceUsd !== undefined ? (data.priceUsd === null ? undefined : Number(data.priceUsd)) : (data.price_usd !== undefined ? (data.price_usd === null ? undefined : Number(data.price_usd)) : current.priceUsd),
+      price_usd: data.price_usd !== undefined ? (data.price_usd === null ? undefined : Number(data.price_usd)) : (data.priceUsd !== undefined ? (data.priceUsd === null ? undefined : Number(data.priceUsd)) : current.price_usd),
+      currency: data.currency !== undefined ? data.currency : (current.currency || 'Bs.'),
+      display_currency: (data.display_currency !== undefined ? data.display_currency : (current.display_currency || current.currency || 'Bs.')) as any,
+      stock: data.stock !== undefined ? Number(data.stock) : current.stock,
+      stockQuantity: data.stock !== undefined ? Number(data.stock) : (current.stockQuantity || current.stock),
+      specs_line: data.specs_line || current.specs_line,
+      material: data.material || current.material,
+      scale: data.scale || current.scale,
+      badge: data.badge !== undefined ? data.badge : current.badge,
+      image_url: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.image_url,
+      imageUrl: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.imageUrl,
+      is_active: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.is_active),
+      isActive: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive),
+      updated_at: new Date().toISOString()
+    };
+
+    store.items[index] = updated;
+    saveLocalStore(store);
+    invalidateProductsCache();
+    return updated;
+  } else {
+    // Si no estaba en localStore, refrescar desde MySQL
+    invalidateProductsCache();
+    const all = await getAllProductsAdmin();
+    const found = all.find(p => p.id === id);
+    if (found) {
+      store.items.unshift(found);
+      saveLocalStore(store);
+      return found;
+    }
+  }
 
   invalidateProductsCache();
-  return updated;
+  return null;
 }
 
 export async function deleteProduct(id: number): Promise<boolean> {
+  let deletedFromMysql = false;
+  let deletedFromLocal = false;
+
+  const pool = getMysqlPool();
+  if (pool) {
+    try {
+      const [res]: any = await pool.query('DELETE FROM products WHERE id = ?', [id]);
+      if (res?.affectedRows > 0) {
+        deletedFromMysql = true;
+      }
+    } catch (e: any) {
+      console.warn('[MySQL deleteProduct Warning]:', e?.message || e);
+    }
+  }
+
   const store = getLocalStore();
   const initCount = store.items.length;
   store.items = store.items.filter(p => p.id !== id);
-
   if (store.items.length !== initCount) {
+    deletedFromLocal = true;
     saveLocalStore(store);
-
-    const pool = getMysqlPool();
-    if (pool) {
-      try {
-        await pool.query('DELETE FROM products WHERE id = ?', [id]);
-      } catch (e) {
-        console.warn('[MySQL deleteProduct Warning]:', e);
-      }
-    }
-    invalidateProductsCache();
-    return true;
   }
-  return false;
+
+  invalidateProductsCache();
+  return deletedFromMysql || deletedFromLocal;
 }
 
 // ============================================================================
@@ -1357,6 +1416,23 @@ export async function getCategories(): Promise<Category[]> {
           itemCount: Number(r.item_count || 0)
         }));
         memoryCache.categories = { data: mapped, timestamp: getNow() };
+        try {
+          const store = getLocalStore();
+          if (store.categories.length !== mapped.length) {
+            store.categories = mapped.map((c: Category) => ({
+              id: c.id,
+              name: c.name,
+              slug: c.slug,
+              description: c.description,
+              imageUrl: c.imageUrl,
+              image_url: c.image_url,
+              order: c.order,
+              isActive: c.isActive,
+              itemCount: c.itemCount
+            }));
+            saveLocalStore(store);
+          }
+        } catch { }
         return mapped;
       }
     } catch (e) {
@@ -1376,37 +1452,69 @@ export async function getCategories(): Promise<Category[]> {
 export async function saveCategory(data: Partial<Category>): Promise<Category> {
   invalidateCategoriesCache();
   const store = getLocalStore();
+  const pool = getMysqlPool();
 
   if (data.id) {
     const index = store.categories.findIndex(c => c.id === data.id);
+    if (pool) {
+      try {
+        await pool.query(
+          'UPDATE categories SET name = ?, slug = ?, description = ?, image_url = ?, is_active = ? WHERE id = ?',
+          [
+            data.name,
+            data.slug,
+            data.description || '',
+            data.image_url || data.imageUrl || '',
+            data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1,
+            data.id
+          ]
+        );
+      } catch (e: any) {
+        console.warn('[MySQL saveCategory Update Warning]:', e?.message || e);
+      }
+    }
+
     if (index !== -1) {
       store.categories[index] = { ...store.categories[index], ...data } as Category;
-      saveLocalStore(store);
+    } else {
+      store.categories.push({
+        id: data.id,
+        name: data.name || "Categoría",
+        slug: data.slug || `categoria-${data.id}`,
+        imageUrl: data.imageUrl || data.image_url || "/placeholder.webp",
+        image_url: data.image_url || data.imageUrl || "/placeholder.webp",
+        description: data.description || "",
+        isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+        order: data.order !== undefined ? Number(data.order) : data.id,
+        itemCount: 0
+      });
+    }
+    saveLocalStore(store);
+    invalidateCategoriesCache();
+    const updated = store.categories.find(c => c.id === data.id)!;
+    return updated;
+  }
 
-      const pool = getMysqlPool();
-      if (pool) {
-        try {
-          await pool.query(
-            'UPDATE categories SET name = ?, slug = ?, description = ?, image_url = ?, is_active = ? WHERE id = ?',
-            [
-              data.name,
-              data.slug,
-              data.description || '',
-              data.image_url || data.imageUrl || '',
-              data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1,
-              data.id
-            ]
-          );
-        } catch (e) {
-          console.warn('[MySQL saveCategory Update Warning]:', e);
-        }
-      }
-      invalidateCategoriesCache();
-      return store.categories[index];
+  // Creación de nueva categoría: obtener nextId desde MySQL
+  let newId: number;
+  if (pool) {
+    try {
+      const [maxRes]: any = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM categories');
+      newId = Number(maxRes[0]?.next_id) || 1;
+    } catch {
+      newId = store.categories.length > 0 ? Math.max(...store.categories.map(c => c.id), 0) + 1 : 1;
+    }
+  } else {
+    newId = store.categories.length > 0 ? Math.max(...store.categories.map(c => c.id), 0) + 1 : 1;
+  }
+
+  if (store.categories.length > 0) {
+    const maxStoreId = Math.max(...store.categories.map(c => c.id), 0);
+    if (maxStoreId >= newId) {
+      newId = maxStoreId + 1;
     }
   }
 
-  const newId = store.categories.length > 0 ? Math.max(...store.categories.map(c => c.id)) + 1 : 1;
   const slug = data.slug || (data.name || `categoria-${newId}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
   const newCat: Category = {
@@ -1421,15 +1529,17 @@ export async function saveCategory(data: Partial<Category>): Promise<Category> {
     itemCount: 0
   };
 
-  const pool = getMysqlPool();
   if (pool) {
     try {
-      await pool.query(
+      const [insertRes]: any = await pool.query(
         'INSERT INTO categories (id, name, slug, description, image_url, display_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [newCat.id, newCat.name, newCat.slug, newCat.description, newCat.image_url, newCat.order, newCat.isActive ? 1 : 0]
       );
-    } catch (e) {
-      console.warn('[MySQL saveCategory Insert Warning]:', e);
+      if (insertRes?.insertId && insertRes.insertId !== newCat.id) {
+        newCat.id = insertRes.insertId;
+      }
+    } catch (e: any) {
+      console.warn('[MySQL saveCategory Insert Warning]:', e?.message || e);
     }
   }
 
@@ -1445,11 +1555,28 @@ export async function createCategory(data: Partial<Category>): Promise<Category>
 
 export async function deleteCategory(id: number): Promise<boolean> {
   const store = getLocalStore();
+  const pool = getMysqlPool();
+  let deletedFromMysql = false;
+  let deletedFromLocal = false;
+
+  const fallbackCatId = store.categories.find(c => c.id !== id)?.id || 1;
+
+  if (pool) {
+    try {
+      await pool.query('UPDATE products SET category_id = ? WHERE category_id = ?', [fallbackCatId, id]);
+      const [res]: any = await pool.query('DELETE FROM categories WHERE id = ?', [id]);
+      if (res?.affectedRows > 0) {
+        deletedFromMysql = true;
+      }
+    } catch (e: any) {
+      console.warn('[MySQL deleteCategory Warning]:', e?.message || e);
+    }
+  }
+
   const initCount = store.categories.length;
   store.categories = store.categories.filter(c => c.id !== id);
   if (store.categories.length !== initCount) {
-    // Reasignación para preservar integridad referencial de productos asociados
-    const fallbackCatId = store.categories[0]?.id || 1;
+    deletedFromLocal = true;
     store.items = store.items.map(item => {
       if (item.category_id === id || item.categoryId === id) {
         return { ...item, category_id: fallbackCatId, categoryId: fallbackCatId };
@@ -1457,21 +1584,11 @@ export async function deleteCategory(id: number): Promise<boolean> {
       return item;
     });
     saveLocalStore(store);
-
-    const pool = getMysqlPool();
-    if (pool) {
-      try {
-        await pool.query('UPDATE products SET category_id = ? WHERE category_id = ?', [fallbackCatId, id]);
-        await pool.query('DELETE FROM categories WHERE id = ?', [id]);
-      } catch (e) {
-        console.warn('[MySQL deleteCategory Warning]:', e);
-      }
-    }
-    invalidateCategoriesCache();
-    invalidateProductsCache();
-    return true;
   }
-  return false;
+
+  invalidateCategoriesCache();
+  invalidateProductsCache();
+  return deletedFromMysql || deletedFromLocal;
 }
 
 // ============================================================================

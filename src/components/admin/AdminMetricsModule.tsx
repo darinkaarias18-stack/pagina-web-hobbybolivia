@@ -839,7 +839,7 @@ export function AdminMetricsModule({
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-8 animate-in fade-in duration-300 w-full max-w-full overflow-hidden min-w-0">
       {/* ================= SECCIÓN 1: $ RENDIMIENTO DE VENTAS COMERCIALES ================= */}
       <div className="space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1">
@@ -953,8 +953,8 @@ export function AdminMetricsModule({
         {/* ================= GRÁFICO DE BARRAS DE RENDIMIENTO ================= */}
         <div className="bg-[#FAF8F5] rounded-3xl p-4 sm:p-6 border border-[#E2DCD3] shadow-sm space-y-5 w-full max-w-full overflow-hidden">
           {/* Cabecera del Gráfico con Controles */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3] w-full max-w-full min-w-0">
+            <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 {chartViewMode === 'HORIZONTAL' ? (
                   <BarChart2 className="w-4 h-4 text-[#D4A359]" />
@@ -976,10 +976,10 @@ export function AdminMetricsModule({
             </div>
 
             {/* Controles: Tabs de Período + Selector Gráfico/Lista (Desplazamiento horizontal fluido en móviles) */}
-            <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-2.5 w-full lg:w-auto max-w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-2.5 w-full lg:w-auto max-w-full min-w-0 overflow-hidden">
               {/* Tabs de Período */}
-              <div className="w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 touch-pan-x">
-                <div className="inline-flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+              <div className="w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 touch-pan-x min-w-0 max-w-full">
+                <div className="inline-flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs max-w-none">
                   <button
                     type="button"
                     onClick={() => setPeriodTab('OVERVIEW')}
@@ -1034,8 +1034,8 @@ export function AdminMetricsModule({
               </div>
 
               {/* View Switcher: Barras Horizontales vs Barras Verticales */}
-              <div className="overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 touch-pan-x">
-                <div className="inline-flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
+              <div className="w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 touch-pan-x min-w-0 max-w-full">
+                <div className="inline-flex items-center gap-1 p-1 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs max-w-none">
                   <button
                     type="button"
                     onClick={() => setChartViewMode('HORIZONTAL')}

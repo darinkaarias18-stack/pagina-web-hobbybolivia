@@ -13,15 +13,29 @@ import {
 import type { Product, QuoteOrder } from '@/lib/types';
 import { AdminMetricsModule } from './AdminMetricsModule';
 
-export function AdminDashboardClient() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<QuoteOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+interface AdminDashboardClientProps {
+  initialProducts?: Product[];
+  initialOrders?: QuoteOrder[];
+  initialExchangeRate?: number;
+  initialAutoUpdate?: boolean;
+  initialLastUpdatedStr?: string;
+}
+
+export function AdminDashboardClient({
+  initialProducts = [],
+  initialOrders = [],
+  initialExchangeRate = 6.96,
+  initialAutoUpdate = true,
+  initialLastUpdatedStr = ''
+}: AdminDashboardClientProps = {}) {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [orders, setOrders] = useState<QuoteOrder[]>(initialOrders);
+  const [loading, setLoading] = useState(initialProducts.length === 0 && initialOrders.length === 0);
 
   // Exchange Rate State
-  const [exchangeRate, setExchangeRate] = useState<number>(6.96);
-  const [autoUpdate, setAutoUpdate] = useState<boolean>(true);
-  const [lastUpdatedStr, setLastUpdatedStr] = useState<string>('');
+  const [exchangeRate, setExchangeRate] = useState<number>(initialExchangeRate);
+  const [autoUpdate, setAutoUpdate] = useState<boolean>(initialAutoUpdate);
+  const [lastUpdatedStr, setLastUpdatedStr] = useState<string>(initialLastUpdatedStr);
   const [isRefreshingRate, setIsRefreshingRate] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -30,9 +44,9 @@ export function AdminDashboardClient() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Fetch Data
-  const fetchData = async () => {
-    setLoading(true);
+  // Fetch Data (Sincronización en segundo plano sin bloquear interfaz si ya hay datos)
+  const fetchData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const [prodRes, rateRes, quotesRes] = await Promise.all([
         fetch('/api/products?includeInactive=true&t=' + Date.now(), { cache: 'no-store' }),
@@ -69,9 +83,11 @@ export function AdminDashboardClient() {
       }
     } catch (err) {
       console.error(err);
-      showToast('Error al sincronizar métricas', 'error');
+      if (!isBackground) {
+        showToast('Error al sincronizar métricas', 'error');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
@@ -112,11 +128,11 @@ export function AdminDashboardClient() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(initialProducts.length > 0);
   }, []);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full max-w-full overflow-hidden">
       {/* Toast Notification */}
       {toast && (
         <div
@@ -131,7 +147,7 @@ export function AdminDashboardClient() {
       )}
 
       {/* Header Top Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2DCD3] w-full max-w-full min-w-0">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#1A1817] tracking-tight">
             Panel de Control Hobby Bolivia
@@ -141,13 +157,13 @@ export function AdminDashboardClient() {
           </p>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
+        <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto min-w-0">
           {/* Quick Currency Status (Adaptable a pantallas móviles) */}
           <button
             type="button"
             onClick={handleRefreshExchangeRate}
             disabled={isRefreshingRate}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none max-w-full"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none max-w-full shrink-0"
             title={`Clic para actualizar el tipo de cambio oficial ahora. Última actualización: ${lastUpdatedStr || 'reciente'}`}
           >
             {isRefreshingRate ? (
@@ -158,7 +174,7 @@ export function AdminDashboardClient() {
             <span className="whitespace-nowrap">
               TC Oficial
               {lastUpdatedStr && (
-                <span className="hidden sm:inline font-normal text-[#8C827A] ml-1">
+                <span className="hidden xl:inline font-normal text-[#8C827A] ml-1">
                   ({lastUpdatedStr})
                 </span>
               )}:

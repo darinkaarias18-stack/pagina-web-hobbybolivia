@@ -1090,7 +1090,7 @@ export function AdminProductsClient() {
             type="button"
             onClick={handleRefreshExchangeRate}
             disabled={isRefreshingRate}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none max-w-full"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none max-w-full shrink-0"
             title={`Clic para actualizar el tipo de cambio oficial ahora. Última actualización: ${lastUpdatedStr || 'reciente'}`}
           >
             {isRefreshingRate ? (
@@ -1101,7 +1101,7 @@ export function AdminProductsClient() {
             <span className="whitespace-nowrap">
               TC Oficial
               {lastUpdatedStr && (
-                <span className="hidden sm:inline font-normal text-[#8C827A] ml-1">
+                <span className="hidden xl:inline font-normal text-[#8C827A] ml-1">
                   ({lastUpdatedStr})
                 </span>
               )}:
