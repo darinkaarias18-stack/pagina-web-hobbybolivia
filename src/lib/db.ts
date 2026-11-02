@@ -283,6 +283,7 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
         specs_line VARCHAR(255) NOT NULL,
         compatible_models TEXT NULL,
         price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        price_usd DECIMAL(10,2) NULL,
         old_price DECIMAL(10,2) NULL,
         stock INT NOT NULL DEFAULT 0,
         badge VARCHAR(100) NULL,
@@ -301,6 +302,7 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
     `);
 
     try {
+      await conn.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_usd DECIMAL(10,2) NULL AFTER price`);
       await conn.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_size_bytes INT UNSIGNED NOT NULL DEFAULT 0 AFTER image_url`);
       await conn.query(`ALTER TABLE products ADD CONSTRAINT chk_products_image_max_1mb CHECK (image_size_bytes <= 1048576)`);
     } catch {
@@ -405,8 +407,14 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
         await conn.query('SET FOREIGN_KEY_CHECKS = 1');
       }
 
+      // Obtener datos fuente desde getLocalStore() o fallback inicial
+      const store = getLocalStore();
+      const seedCats = store.categories && store.categories.length > 0 ? store.categories : initialCategories;
+      const seedProducts = store.items && store.items.length > 0 ? store.items : initialProducts;
+      const seedPolicies = store.policies && store.policies.length > 0 ? store.policies : initialPolicies;
+
       // Insertar Categorías
-      for (const cat of initialCategories) {
+      for (const cat of seedCats) {
         await conn.query(
           `INSERT INTO categories (id, name, slug, description, image_url, display_order, is_active)
            VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -417,28 +425,35 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
             cat.slug,
             cat.description || '',
             cat.image_url || cat.imageUrl || '',
-            cat.order || cat.id,
-            cat.isActive ? 1 : 0
+            cat.order || (cat as any).display_order || cat.id,
+            cat.isActive !== false && (cat as any).is_active !== false ? 1 : 0
           ]
         );
         catInserted++;
       }
 
-      // Insertar Productos (18 productos con imágenes intactas)
-      for (const prod of initialProducts) {
+      // Insertar Productos con price y price_usd exactos
+      for (const prod of seedProducts) {
+        const pUsd = prod.price_usd !== undefined && prod.price_usd !== null
+          ? Number(prod.price_usd)
+          : (prod.priceUsd !== undefined && prod.priceUsd !== null ? Number(prod.priceUsd) : null);
+        const pImg = prod.image_url || prod.imageUrl || (prod.images && prod.images[0]) || '/placeholder.webp';
+        const pActive = prod.is_active !== undefined ? (prod.is_active ? 1 : 0) : (prod.isActive !== undefined ? (prod.isActive ? 1 : 0) : 1);
+
         await conn.query(
           `INSERT INTO products (
             id, sku, name, slug, category_id, scale, material, specs_line,
-            compatible_models, price, old_price, stock, badge, image_url,
+            compatible_models, price, price_usd, old_price, stock, badge, image_url,
             is_active, brand, description
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE
-            name=VALUES(name), price=VALUES(price), stock=VALUES(stock),
-            specs_line=VALUES(specs_line), image_url=VALUES(image_url)`,
+            name=VALUES(name), price=VALUES(price), price_usd=VALUES(price_usd),
+            stock=VALUES(stock), specs_line=VALUES(specs_line), image_url=VALUES(image_url),
+            is_active=VALUES(is_active)`,
           [
             prod.id,
             prod.sku,
-            prod.name,
+            prod.name || prod.title,
             prod.slug,
             prod.category_id || prod.categoryId || 1,
             prod.scale || 'RC Estándar',
@@ -446,11 +461,12 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
             prod.specs_line || '',
             prod.compatible_models || '',
             prod.price || 0,
+            pUsd,
             prod.old_price || null,
-            prod.stock || 0,
+            prod.stock !== undefined ? Number(prod.stock) : (prod.stockQuantity !== undefined ? Number(prod.stockQuantity) : 0),
             prod.badge || null,
-            prod.image_url || (prod.images && prod.images[0]) || '',
-            prod.is_active ? 1 : 0,
+            pImg,
+            pActive,
             prod.brand || 'Hobby Bolivia',
             prod.description || ''
           ]
@@ -459,7 +475,7 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
       }
 
       // Insertar Políticas
-      for (const pol of initialPolicies) {
+      for (const pol of seedPolicies) {
         await conn.query(
           `INSERT INTO policies (id, slug, title, content)
            VALUES (?, ?, ?, ?)
@@ -1078,9 +1094,9 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
       await pool.query(
         `INSERT INTO products (
           id, sku, name, slug, category_id, scale, material, specs_line,
-          compatible_models, price, old_price, stock, badge, image_url,
+          compatible_models, price, price_usd, old_price, stock, badge, image_url,
           is_active, brand, description
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           newProduct.id,
           newProduct.sku,
@@ -1092,6 +1108,7 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
           newProduct.specs_line,
           newProduct.compatible_models,
           newProduct.price,
+          newProduct.price_usd ?? newProduct.priceUsd ?? null,
           newProduct.old_price || null,
           newProduct.stock,
           newProduct.badge || null,
@@ -1154,7 +1171,7 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
     try {
       await pool.query(
         `UPDATE products SET
-          sku = ?, name = ?, price = ?, old_price = ?, stock = ?,
+          sku = ?, name = ?, price = ?, price_usd = ?, old_price = ?, stock = ?,
           specs_line = ?, material = ?, scale = ?, badge = ?,
           image_url = ?, is_active = ?, brand = ?, description = ?
          WHERE id = ?`,
@@ -1162,6 +1179,7 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
           updated.sku,
           updated.name,
           updated.price,
+          updated.price_usd ?? updated.priceUsd ?? null,
           updated.old_price || null,
           updated.stock,
           updated.specs_line,

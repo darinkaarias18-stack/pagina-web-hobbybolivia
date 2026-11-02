@@ -8,10 +8,26 @@ function escapeSql(str: string | null | undefined): string {
 }
 
 function generateSql(): string {
+  const dbJsonPath = path.join(__dirname, '..', '.data', 'db.json');
+  let categories = initialCategories;
+  let products = initialProducts;
+  let policies = initialPolicies;
+
+  if (fs.existsSync(dbJsonPath)) {
+    try {
+      const dbData = JSON.parse(fs.readFileSync(dbJsonPath, 'utf8'));
+      if (dbData.categories && dbData.categories.length > 0) categories = dbData.categories;
+      if (dbData.items && dbData.items.length > 0) products = dbData.items;
+      if (dbData.policies && dbData.policies.length > 0) policies = dbData.policies;
+    } catch {
+      // Usar defaults si falla parse
+    }
+  }
+
   let sql = `-- ============================================================================
 -- BASE DE DATOS MYSQL / MARIADB PARA HOSTING - HOBBY BOLIVIA
--- Compatible con cPanel / phpMyAdmin / MySQL 5.7+ / MariaDB 10.3+
--- Generado con todos los productos, categorías, políticas y administradores
+-- Compatible con cPanel / Plesk / phpMyAdmin / MySQL 5.7+ / MariaDB 10.3+
+-- Sincronizado con todos los ${products.length} productos, ${categories.length} categorías y políticas oficiales
 -- ============================================================================
 
 SET NAMES utf8mb4;
@@ -48,10 +64,12 @@ CREATE TABLE IF NOT EXISTS \`products\` (
   \`specs_line\` VARCHAR(255) NOT NULL,
   \`compatible_models\` TEXT NULL,
   \`price\` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  \`price_usd\` DECIMAL(10,2) NULL,
   \`old_price\` DECIMAL(10,2) NULL,
   \`stock\` INT NOT NULL DEFAULT 0,
   \`badge\` VARCHAR(100) NULL,
   \`image_url\` VARCHAR(500) NOT NULL,
+  \`image_size_bytes\` INT UNSIGNED NOT NULL DEFAULT 0,
   \`is_active\` TINYINT(1) NOT NULL DEFAULT 1,
   \`brand\` VARCHAR(100) DEFAULT 'Hobby Bolivia',
   \`description\` TEXT NULL,
@@ -81,15 +99,18 @@ CREATE TABLE IF NOT EXISTS \`policies\` (
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS \`admin_users\` (
   \`id\` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  \`name\` VARCHAR(255) NOT NULL DEFAULT 'Administrador Hobby Bolivia',
   \`username\` VARCHAR(100) NOT NULL UNIQUE,
   \`email\` VARCHAR(255) NOT NULL,
   \`password_hash\` VARCHAR(255) NOT NULL,
   \`role\` VARCHAR(50) NOT NULL DEFAULT 'ADMIN',
-  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  \`is_active\` TINYINT(1) NOT NULL DEFAULT 1,
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- 5. TABLA: quote_orders (Opcional para pedidos y cotizaciones)
+-- 5. TABLA: quote_orders
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS \`quote_orders\` (
   \`id\` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -100,12 +121,13 @@ CREATE TABLE IF NOT EXISTS \`quote_orders\` (
   \`items_json\` LONGTEXT NOT NULL,
   \`total\` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   \`status\` VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+  \`stock_deducted\` TINYINT(1) NOT NULL DEFAULT 0,
   \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- VACIADO PREVENTIVO PARA IMPORTACIÓN LIMPIA (COMPATIBLE CON MARIADB)
+-- VACIADO PREVENTIVO PARA IMPORTACIÓN LIMPIA
 -- ----------------------------------------------------------------------------
 DELETE FROM \`quote_orders\`;
 DELETE FROM \`products\`;
@@ -114,36 +136,43 @@ DELETE FROM \`policies\`;
 DELETE FROM \`admin_users\`;
 
 -- ----------------------------------------------------------------------------
--- POBLACIÓN: categories
+-- POBLACIÓN: categories (${categories.length} CATEGORÍAS)
 -- ----------------------------------------------------------------------------
 INSERT INTO \`categories\` (\`id\`, \`name\`, \`slug\`, \`description\`, \`image_url\`, \`display_order\`, \`is_active\`) VALUES
 `;
 
-  const catValues = initialCategories.map(c => {
-    return `(${c.id}, ${escapeSql(c.name)}, ${escapeSql(c.slug)}, ${escapeSql(c.description || '')}, ${escapeSql(c.image_url || c.imageUrl || '')}, ${c.order || c.id}, ${c.isActive ? 1 : 0})`;
+  const catValues = categories.map((c: any) => {
+    return `(${c.id}, ${escapeSql(c.name)}, ${escapeSql(c.slug)}, ${escapeSql(c.description || '')}, ${escapeSql(c.image_url || c.imageUrl || '')}, ${c.order || c.display_order || c.id}, ${c.isActive !== false && c.is_active !== false ? 1 : 0})`;
   }).join(',\n');
 
   sql += catValues + ';\n\n';
 
   sql += `-- ----------------------------------------------------------------------------
--- POBLACIÓN: products (18 PRODUCTOS CON IMÁGENES EXACTAS INTACTAS)
+-- POBLACIÓN: products (${products.length} PRODUCTOS CON PRECIOS EN USD Y BS.)
 -- ----------------------------------------------------------------------------
-INSERT INTO \`products\` (\`id\`, \`sku\`, \`name\`, \`slug\`, \`category_id\`, \`scale\`, \`material\`, \`specs_line\`, \`compatible_models\`, \`price\`, \`old_price\`, \`stock\`, \`badge\`, \`image_url\`, \`is_active\`, \`brand\`, \`description\`) VALUES
+INSERT INTO \`products\` (\`id\`, \`sku\`, \`name\`, \`slug\`, \`category_id\`, \`scale\`, \`material\`, \`specs_line\`, \`compatible_models\`, \`price\`, \`price_usd\`, \`old_price\`, \`stock\`, \`badge\`, \`image_url\`, \`image_size_bytes\`, \`is_active\`, \`brand\`, \`description\`) VALUES
 `;
 
-  const prodValues = initialProducts.map(p => {
-    return `(${p.id}, ${escapeSql(p.sku)}, ${escapeSql(p.name)}, ${escapeSql(p.slug)}, ${p.category_id || p.categoryId || 1}, ${escapeSql(p.scale || 'RC Estándar')}, ${escapeSql(p.material || 'Compuesto')}, ${escapeSql(p.specs_line || '')}, ${escapeSql(p.compatible_models || '')}, ${Number(p.price).toFixed(2)}, ${p.old_price ? Number(p.old_price).toFixed(2) : 'NULL'}, ${p.stock || 0}, ${escapeSql(p.badge || null)}, ${escapeSql(p.image_url || (p.images && p.images[0]) || '')}, ${p.is_active ? 1 : 0}, ${escapeSql(p.brand || 'Hobby Bolivia')}, ${escapeSql(p.description || '')})`;
+  const prodValues = products.map((p: any) => {
+    const priceUsd = p.price_usd !== undefined && p.price_usd !== null
+      ? Number(p.price_usd).toFixed(2)
+      : (p.priceUsd !== undefined && p.priceUsd !== null ? Number(p.priceUsd).toFixed(2) : 'NULL');
+    const imageUrl = p.image_url || p.imageUrl || (p.images && p.images[0]) || '/placeholder.webp';
+    const isActive = p.is_active !== undefined ? (p.is_active ? 1 : 0) : (p.isActive !== undefined ? (p.isActive ? 1 : 0) : 1);
+    const stockVal = p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0);
+
+    return `(${p.id}, ${escapeSql(p.sku)}, ${escapeSql(p.name || p.title)}, ${escapeSql(p.slug)}, ${p.category_id || p.categoryId || 1}, ${escapeSql(p.scale || 'RC Estándar')}, ${escapeSql(p.material || 'Compuesto')}, ${escapeSql(p.specs_line || '')}, ${escapeSql(p.compatible_models || '')}, ${Number(p.price).toFixed(2)}, ${priceUsd}, ${p.old_price ? Number(p.old_price).toFixed(2) : 'NULL'}, ${stockVal}, ${escapeSql(p.badge || null)}, ${escapeSql(imageUrl)}, ${p.image_size_bytes || 0}, ${isActive}, ${escapeSql(p.brand || 'Hobby Bolivia')}, ${escapeSql(p.description || '')})`;
   }).join(',\n');
 
   sql += prodValues + ';\n\n';
 
   sql += `-- ----------------------------------------------------------------------------
--- POBLACIÓN: policies (4 POLÍTICAS DE HOBBY BOLIVIA)
+-- POBLACIÓN: policies (${policies.length} POLÍTICAS DE HOBBY BOLIVIA)
 -- ----------------------------------------------------------------------------
 INSERT INTO \`policies\` (\`id\`, \`slug\`, \`title\`, \`content\`) VALUES
 `;
 
-  const polValues = initialPolicies.map(pol => {
+  const polValues = policies.map((pol: any) => {
     return `(${pol.id}, ${escapeSql(pol.slug)}, ${escapeSql(pol.title)}, ${escapeSql(pol.content)})`;
   }).join(',\n');
 
@@ -152,9 +181,9 @@ INSERT INTO \`policies\` (\`id\`, \`slug\`, \`title\`, \`content\`) VALUES
   sql += `-- ----------------------------------------------------------------------------
 -- POBLACIÓN: admin_users (USUARIOS DE ACCESO ADMINISTRATIVO)
 -- ----------------------------------------------------------------------------
-INSERT INTO \`admin_users\` (\`id\`, \`username\`, \`email\`, \`password_hash\`, \`role\`) VALUES
-(1, 'superadmin', 'superadmin@hobbybolivia.com', 'superhobby2026*', 'SUPERADMIN'),
-(2, 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN');
+INSERT INTO \`admin_users\` (\`id\`, \`name\`, \`username\`, \`email\`, \`password_hash\`, \`role\`, \`is_active\`) VALUES
+(1, 'Darinka Arias', 'darinka.arias18@gmail.com', 'darinka.arias18@gmail.com', 'superadmin1234*', 'SUPERADMIN', 1),
+(2, 'Administrador Hobby Bolivia', 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN', 1);
 
 SET FOREIGN_KEY_CHECKS = 1;
 `;
