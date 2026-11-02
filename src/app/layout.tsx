@@ -38,11 +38,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={manrope.variable}>
+    <html lang="es" className={`${manrope.variable} max-w-full overflow-x-hidden`}>
       <head>
         <meta name="theme-color" content="#161311" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
       </head>
-      <body className={`${manrope.className} antialiased min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817]`}>
+      <body className={`${manrope.className} antialiased min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817] max-w-full overflow-x-hidden`}>
         <LanguageProvider>
           <CurrencyProvider>
             <CartProvider>

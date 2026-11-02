@@ -1305,40 +1305,40 @@ export function AdminProductsClient() {
         </div>
 
         {/* Table Container with Mouse Drag & Freeze Columns */}
-        <div className="bg-white rounded-3xl border border-[#E2DCD3] shadow-sm overflow-hidden relative">
+        <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-neutral-200 bg-white shadow-sm touch-pan-x">
           <div
             ref={tableScrollRef}
             onMouseDown={handleTableMouseDown}
             onMouseMove={handleTableMouseMove}
             onMouseUp={handleTableMouseUpOrLeave}
             onMouseLeave={handleTableMouseUpOrLeave}
-            className={`overflow-x-auto ${isDraggingTable ? 'cursor-grabbing select-none' : 'cursor-grab'
+            className={`w-full overflow-x-auto scrollbar-thin ${isDraggingTable ? 'cursor-grabbing select-none' : 'cursor-grab'
               }`}
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: '#D4A359 #FAF8F5'
             }}
           >
-            <table className="w-full text-left border-separate border-spacing-0 text-xs min-w-[1420px]">
+            <table className="w-full text-left border-separate border-spacing-0 text-xs min-w-[1380px]">
               <thead className="bg-[#181615] text-[#FAF8F5] uppercase text-[10px] font-black tracking-wider">
                 <tr>
                   {/* INMOVILIZADO 0: N° / ÍTEM */}
-                  <th className="sticky left-0 z-30 bg-[#181615] text-[#FAF8F5] py-4 px-2 text-center whitespace-nowrap w-[55px] min-w-[55px] max-w-[55px] border-b border-[#E2DCD3]/60">
+                  <th className="md:sticky md:left-0 z-30 bg-[#181615] text-[#FAF8F5] py-4 px-2 text-center whitespace-nowrap w-[55px] min-w-[55px] max-w-[55px] border-b border-[#E2DCD3]/60">
                     N°
                   </th>
 
                   {/* INMOVILIZADO 1: SKU / CÓDIGO */}
-                  <th className="sticky left-[55px] z-30 bg-[#181615] text-[#FAF8F5] py-4 px-3.5 whitespace-nowrap w-[125px] min-w-[125px] max-w-[125px] border-b border-[#E2DCD3]/60 text-left">
+                  <th className="md:sticky md:left-[55px] z-30 bg-[#181615] text-[#FAF8F5] py-4 px-3.5 whitespace-nowrap w-[125px] min-w-[125px] max-w-[125px] border-b border-[#E2DCD3]/60 text-left">
                     SKU / CÓDIGO
                   </th>
 
                   {/* INMOVILIZADO 2: IMAGEN (Nueva columna después de SKU / CÓDIGO) */}
-                  <th className="sticky left-[180px] z-30 bg-[#181615] text-[#FAF8F5] py-4 px-2 text-center whitespace-nowrap w-[75px] min-w-[75px] max-w-[75px] border-b border-[#E2DCD3]/60">
+                  <th className="md:sticky md:left-[180px] z-30 bg-[#181615] text-[#FAF8F5] py-4 px-2 text-center whitespace-nowrap w-[75px] min-w-[75px] max-w-[75px] border-b border-[#E2DCD3]/60">
                     IMAGEN
                   </th>
 
                   {/* INMOVILIZADO 3: NOMBRE DEL PRODUCTO (solo nombre, ancho amplio sin truncar) */}
-                  <th className="sticky left-[255px] z-30 bg-[#181615] text-[#FAF8F5] py-4 px-4 w-[350px] min-w-[320px] max-w-[420px] border-b border-[#E2DCD3]/60 border-r border-[#3A3530] shadow-[6px_0_15px_-4px_rgba(0,0,0,0.35)] text-left">
+                  <th className="md:sticky md:left-[255px] z-30 bg-[#181615] text-[#FAF8F5] py-4 px-4 w-[350px] min-w-[320px] max-w-[420px] border-b border-[#E2DCD3]/60 md:border-r border-[#3A3530] md:shadow-[6px_0_15px_-4px_rgba(0,0,0,0.35)] text-left">
                     NOMBRE DEL PRODUCTO
                   </th>
 
@@ -1391,7 +1391,7 @@ export function AdminProductsClient() {
                           }`}
                       >
                         {/* INMOVILIZADO 0: N° / ÍTEM */}
-                        <td className={`sticky left-0 z-20 w-[55px] min-w-[55px] max-w-[55px] py-4 px-2 text-center font-mono whitespace-nowrap border-b border-[#E2DCD3]/60 transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
+                        <td className={`md:sticky md:left-0 z-20 w-[55px] min-w-[55px] max-w-[55px] py-4 px-2 text-center font-mono whitespace-nowrap border-b border-[#E2DCD3]/60 transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
                           }`}>
                           <span className="font-mono text-[11px] font-bold text-[#8C827A] bg-[#FAF8F5] border border-[#E2DCD3] px-2 py-1 rounded-lg group-hover:border-[#D4A359] group-hover:text-[#1A1817] group-hover:bg-white transition-all shadow-2xs inline-block text-center min-w-[28px]">
                             {index + 1}
@@ -1399,7 +1399,7 @@ export function AdminProductsClient() {
                         </td>
 
                         {/* INMOVILIZADO 1: SKU / CÓDIGO */}
-                        <td className={`sticky left-[55px] z-20 w-[125px] min-w-[125px] max-w-[125px] py-4 px-3.5 font-mono whitespace-nowrap border-b border-[#E2DCD3]/60 transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
+                        <td className={`md:sticky md:left-[55px] z-20 w-[125px] min-w-[125px] max-w-[125px] py-4 px-3.5 font-mono whitespace-nowrap border-b border-[#E2DCD3]/60 transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
                           }`}>
                           <span className="font-mono font-black text-xs text-[#1A1817] bg-[#FAF8F5] px-2.5 py-1.5 rounded-xl border border-[#D5CEC4] group-hover:border-[#D4A359] group-hover:bg-white transition-all inline-flex items-center gap-1.5 tracking-wider shadow-2xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#D4A359] shrink-0" />
@@ -1408,7 +1408,7 @@ export function AdminProductsClient() {
                         </td>
 
                         {/* INMOVILIZADO 2: IMAGEN (Después de SKU / CÓDIGO) */}
-                        <td className={`sticky left-[180px] z-20 w-[75px] min-w-[75px] max-w-[75px] py-3 px-2 text-center border-b border-[#E2DCD3]/60 transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
+                        <td className={`md:sticky md:left-[180px] z-20 w-[75px] min-w-[75px] max-w-[75px] py-3 px-2 text-center border-b border-[#E2DCD3]/60 transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
                           }`}>
                           {p.image_url || p.imageUrl || (p.images && p.images[0]) ? (
                             <div className="w-11 h-11 rounded-xl bg-white p-0.5 border border-[#E2DCD3] flex items-center justify-center mx-auto shadow-2xs group-hover:border-[#D4A359]/60 group-hover:shadow-xs transition-all overflow-hidden">
@@ -1433,7 +1433,7 @@ export function AdminProductsClient() {
                         </td>
 
                         {/* INMOVILIZADO 3: NOMBRE DEL PRODUCTO (solo nombre, visible completo sin truncar) */}
-                        <td className={`sticky left-[255px] z-20 w-[350px] min-w-[320px] max-w-[420px] py-4 px-4 border-b border-[#E2DCD3]/60 border-r border-[#E2DCD3] shadow-[6px_0_15px_-4px_rgba(0,0,0,0.08)] transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
+                        <td className={`md:sticky md:left-[255px] z-20 w-[350px] min-w-[320px] max-w-[420px] py-4 px-4 border-b border-[#E2DCD3]/60 md:border-r border-[#E2DCD3] md:shadow-[6px_0_15px_-4px_rgba(0,0,0,0.08)] transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
                           }`}>
                           <span
                             className="font-black text-xs sm:text-[13px] text-[#1A1817] leading-relaxed group-hover:text-[#D4A359] transition-colors block break-words"

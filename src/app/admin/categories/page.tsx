@@ -527,9 +527,8 @@ export default function AdminCategoriesPage() {
         </div>
       ) : (
         /* ================= VISTA TABLA DETALLADA ================= */
-        <div className="bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+        <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-neutral-200 bg-[#FAF8F5] shadow-sm touch-pan-x">
+          <table className="w-full text-left text-xs min-w-[750px]">
               <thead className="bg-[#211E1C] text-[#FAF8F5] font-black uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 text-center w-16">Orden</th>
@@ -620,7 +619,6 @@ export default function AdminCategoriesPage() {
                 })}
               </tbody>
             </table>
-          </div>
         </div>
       )}
 
@@ -650,7 +648,7 @@ export default function AdminCategoriesPage() {
         </div>
 
         {/* Tabs de Filtro por Categoría */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none pb-2 w-full max-w-full touch-pan-x">
           <button
             type="button"
             onClick={() => setSelectedBottomTab('all')}
@@ -685,9 +683,8 @@ export default function AdminCategoriesPage() {
         </div>
 
         {/* Tabla de Productos Filtrados */}
-        <div className="bg-white rounded-2xl border border-[#E2DCD3] overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+        <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-neutral-200 bg-white shadow-2xs touch-pan-x">
+          <table className="w-full text-left text-xs min-w-[780px]">
               <thead className="bg-[#211E1C] text-[#FAF8F5] font-black uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="py-3 px-3 text-center w-14">N°</th>
@@ -759,7 +756,6 @@ export default function AdminCategoriesPage() {
                 })}
               </tbody>
             </table>
-          </div>
         </div>
       </div>
 

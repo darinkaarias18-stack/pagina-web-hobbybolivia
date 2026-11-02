@@ -453,7 +453,7 @@ export default function AdminQuotesPage() {
 
         {/* Si estamos en vista tabla, mostramos las pestañas de estado */}
         {viewMode === 'table' && (
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap scrollbar-none py-1 w-full max-w-full touch-pan-x">
             <button
               type="button"
               onClick={() => setActiveTab('ALL')}
@@ -783,9 +783,8 @@ export default function AdminQuotesPage() {
         </div>
       ) : (
         /* ================= VISTA TABLA TABULAR ================= */
-        <div className="bg-white rounded-3xl border border-[#E2DCD3] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+        <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-neutral-200 bg-white shadow-sm touch-pan-x">
+          <table className="w-full text-left border-collapse text-xs min-w-[880px]">
               <thead>
                 <tr className="bg-[#211E1C] text-[#FAF8F5] uppercase tracking-wider text-[10px] font-black border-b border-[#2D2622]">
                   <th className="py-3.5 px-4 whitespace-nowrap">ORDEN</th>
@@ -957,7 +956,6 @@ export default function AdminQuotesPage() {
                 })}
               </tbody>
             </table>
-          </div>
         </div>
       )}
 

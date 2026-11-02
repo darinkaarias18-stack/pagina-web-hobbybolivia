@@ -19,7 +19,7 @@ export function BrandsStrip() {
   ];
 
   return (
-    <div className="bg-[#1E1916] border-b border-[#2D2622] py-3.5 overflow-hidden select-none relative">
+    <div className="bg-[#1E1916] border-b border-[#2D2622] py-3.5 overflow-hidden select-none relative w-full max-w-full">
       <div className="w-full max-w-[1320px] mx-auto px-4 flex items-center gap-4 sm:gap-6">
 
         {/* Fixed Title Badge */}

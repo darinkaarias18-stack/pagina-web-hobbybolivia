@@ -33,7 +33,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-[#161311] border-b border-[#2D2622] shadow-lg transition-all">
+    <header className="sticky top-0 z-40 bg-[#161311] border-b border-[#2D2622] shadow-lg transition-all w-full max-w-full overflow-hidden">
       <div className="w-full max-w-[1320px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3.5">
         <div className="flex items-center justify-between gap-2 sm:gap-4 lg:gap-6">
 
@@ -144,7 +144,7 @@ export function Header({ config, favoritesCount = 0 }: HeaderProps) {
 
         {/* Barra de Navegación Móvil Siempre Visible (Acceso directo como en PC) */}
         <div className="lg:hidden mt-2.5 pt-2 border-t border-[#2D2622] flex items-center justify-between gap-2">
-          <nav className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-0.5 text-[11px] font-bold text-[#A89F91] flex-1">
+          <nav className="flex items-center gap-3.5 overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 text-[11px] font-bold text-[#A89F91] flex-1">
             {navLinks.map((link) => (
               <a
                 key={link.label}

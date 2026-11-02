@@ -206,7 +206,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = allNavItems.filter((item) => !item.superadminOnly || userRole === 'SUPERADMIN');
 
   return (
-    <div className="min-h-screen bg-[#F5F2EB] text-[#1A1817] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#F5F2EB] text-[#1A1817] flex flex-col md:flex-row w-full max-w-full overflow-x-hidden">
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-[#161311] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-[#2D2622]">
         <div className="flex items-center gap-2 min-w-0">
@@ -314,7 +314,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 min-h-screen bg-[#F5F2EB] flex flex-col md:pl-64">
+      <main className="flex-1 min-w-0 min-h-screen bg-[#F5F2EB] flex flex-col md:pl-64 w-full max-w-full overflow-x-hidden">
         {/* Top Admin Session Bar (Sticky on Desktop & Tablet) */}
         <div className="hidden md:flex items-center justify-between px-6 py-2.5 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E2DCD3] text-xs sticky top-0 z-30 shadow-2xs">
           <div className="flex items-center gap-2 text-[#5C5650]">

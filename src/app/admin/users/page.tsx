@@ -487,17 +487,18 @@ export default function AdminUsersPage() {
             <p className="font-bold text-sm text-[#1A1817]">No hay usuarios registrados</p>
           </div>
         ) : (
-          <table className="w-full table-fixed text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-[#FAF8F5] border-b border-[#E2DCD3] text-[#8C827A] font-black uppercase tracking-wider text-[10px]">
-                <th className="py-3.5 px-4 w-[24%]">Usuario (Gmail)</th>
-                <th className="py-3.5 px-4 w-[18%]">Nombre Completo</th>
-                <th className="py-3.5 px-4 w-[20%]">Teléfono / WhatsApp</th>
-                <th className="py-3.5 px-4 w-[15%]">Rol Asignado</th>
-                <th className="py-3.5 px-4 w-[10%]">Estado</th>
-                <th className="py-3.5 px-4 text-right w-[13%]">Acciones</th>
-              </tr>
-            </thead>
+          <div className="w-full overflow-x-auto scrollbar-thin rounded-2xl border border-neutral-200 touch-pan-x">
+            <table className="w-full text-left border-collapse text-xs min-w-[780px]">
+              <thead>
+                <tr className="bg-[#FAF8F5] border-b border-[#E2DCD3] text-[#8C827A] font-black uppercase tracking-wider text-[10px]">
+                  <th className="py-3.5 px-4 min-w-[200px]">Usuario (Gmail)</th>
+                  <th className="py-3.5 px-4 min-w-[160px]">Nombre Completo</th>
+                  <th className="py-3.5 px-4 min-w-[170px]">Teléfono / WhatsApp</th>
+                  <th className="py-3.5 px-4 min-w-[160px]">Rol Asignado</th>
+                  <th className="py-3.5 px-4 min-w-[90px]">Estado</th>
+                  <th className="py-3.5 px-4 text-right min-w-[120px]">Acciones</th>
+                </tr>
+              </thead>
             <tbody className="divide-y divide-[#EFEAE2]">
               {users.map((u) => {
                 const isPrimaryMaster = isPrimaryMasterAccount(u);
@@ -647,7 +648,8 @@ export default function AdminUsersPage() {
                 );
               })}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

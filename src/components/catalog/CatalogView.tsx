@@ -448,7 +448,7 @@ export function CatalogView({
   ]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817] overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-[#F5F2EB] text-[#1A1817] overflow-x-hidden w-full max-w-full">
 
       {/* 1. Top Utility Bar (Carbón #161311 & Dorado #D4A359) */}
       {siteConfig?.showTopBar !== false && (

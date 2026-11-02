@@ -297,7 +297,7 @@ export default function AdminSettingsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center flex-wrap gap-2.5">
           <button
             type="button"
             onClick={handleSave}
@@ -578,7 +578,7 @@ export default function AdminSettingsPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[3, 4, 6, 8].map((cols) => (
                     <button
                       key={cols}
