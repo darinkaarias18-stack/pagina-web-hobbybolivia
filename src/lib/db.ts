@@ -184,7 +184,7 @@ const CACHE_TTL = {
   EXCHANGE_RATE: 60 * 1000,  // 60 segundos
   QUOTES: 15 * 1000,         // 15 segundos
   LOCAL_STORE: 30 * 1000,    // 30 segundos
-  USERS: 60 * 1000           // 60 segundos
+  USERS: 0                   // 0 segundos (consistencia inmediata en tiempo real)
 };
 
 function getNow(): number {
@@ -1826,7 +1826,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  if (memoryCache.users && getNow() - memoryCache.users.timestamp < CACHE_TTL.USERS) {
+  if (CACHE_TTL.USERS > 0 && memoryCache.users && getNow() - memoryCache.users.timestamp < CACHE_TTL.USERS) {
     return memoryCache.users.data;
   }
 
@@ -1864,11 +1864,6 @@ export async function getAllUsers(): Promise<User[]> {
 }
 
 export async function getUserById(id: number): Promise<User | null> {
-  if (memoryCache.users) {
-    const cached = memoryCache.users.data.find(u => u.id === id);
-    if (cached) return cached;
-  }
-
   const pool = getMysqlPool();
   if (pool) {
     try {
@@ -1880,6 +1875,8 @@ export async function getUserById(id: number): Promise<User | null> {
           name: r.name || r.username,
           username: r.username,
           email: r.email,
+          phone: r.phone || '',
+          countryCode: r.country_code || '+591',
           password: r.password_hash,
           role: (r.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as UserRole,
           isActive: r.is_active !== undefined ? Boolean(r.is_active) : true,
@@ -1921,20 +1918,28 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
   const pool = getMysqlPool();
   if (pool) {
     try {
-      await pool.query(
-        `INSERT INTO admin_users (id, name, username, email, password_hash, role, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+      const [res]: any = await pool.query(
+        `INSERT INTO admin_users (name, username, email, password_hash, role, is_active)
+         VALUES (?, ?, ?, ?, 'ADMIN', ?)
          ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), password_hash=VALUES(password_hash), role='ADMIN', is_active=VALUES(is_active)`,
-        [newUser.id, newUser.name, newUser.username, newUser.email, newUser.password, newUser.role, newUser.isActive ? 1 : 0]
+        [newUser.name, newUser.username, newUser.email, newUser.password, newUser.isActive ? 1 : 0]
       );
+      if (res && res.insertId) {
+        newUser.id = Number(res.insertId);
+      }
     } catch (e) {
       console.warn('[MySQL createUserRecord Warning]:', e);
     }
   }
 
-  // 2. Almacenamiento local
+  // 2. Almacenamiento local sincronizado
+  store.users = store.users.filter(u => u.id !== newUser.id && u.username !== newUser.username);
   store.users.push(newUser);
   saveLocalStore(store);
+
+  // Invalidación inmediata de caché de usuarios
+  invalidateUsersCache();
+
   return newUser;
 }
 
@@ -1942,9 +1947,35 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
   const store = getLocalStore();
   if (!store.users) store.users = [];
   const index = store.users.findIndex(u => u.id === id);
-  if (index === -1) return null;
 
-  const current = store.users[index];
+  const pool = getMysqlPool();
+  let current: User | null = index !== -1 ? store.users[index] : null;
+
+  if (!current && pool) {
+    try {
+      const [rows]: any = await pool.query('SELECT * FROM admin_users WHERE id = ? LIMIT 1', [id]);
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        current = {
+          id: Number(r.id),
+          name: r.name || r.username,
+          username: r.username,
+          email: r.email,
+          phone: r.phone || '',
+          countryCode: r.country_code || '+591',
+          password: r.password_hash,
+          role: (r.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as UserRole,
+          isActive: r.is_active !== undefined ? Boolean(r.is_active) : true,
+          createdAt: r.created_at || new Date().toISOString()
+        };
+      }
+    } catch (e) {
+      console.warn('[MySQL fetch before updateUserRecord Warning]:', e);
+    }
+  }
+
+  if (!current) return null;
+
   const now = new Date().toISOString();
 
   // Regla estricta: La cuenta de Darinka Arias (id 1) es el único SUPERADMIN MAESTRO y no puede perder su rol ni desactivarse.
@@ -1969,7 +2000,6 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
   };
 
   // 1. MySQL si está disponible
-  const pool = getMysqlPool();
   if (pool) {
     try {
       await pool.query(
@@ -1981,9 +2011,17 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
     }
   }
 
-  // 2. Almacenamiento local
-  store.users[index] = updated;
+  // 2. Almacenamiento local sincronizado
+  if (index !== -1) {
+    store.users[index] = updated;
+  } else {
+    store.users.push(updated);
+  }
   saveLocalStore(store);
+
+  // Invalidación inmediata de caché de usuarios
+  invalidateUsersCache();
+
   return updated;
 }
 
@@ -2020,22 +2058,25 @@ export async function deleteUserRecord(id: number): Promise<boolean> {
 
   // 2. Almacenamiento local
   const store = getLocalStore();
-  if (!store.users) return false;
-
-  const user = store.users.find(u => u.id === id);
-  if (!user) return false;
-
-  if (
-    user.id === 1 ||
-    user.role === 'SUPERADMIN' ||
-    user.email?.toLowerCase() === 'darinka.arias18@gmail.com' ||
-    user.username?.toLowerCase() === 'darinka.arias18@gmail.com'
-  ) {
-    throw new Error("El Superadmin Maestro (Darinka Arias) nunca puede ser eliminado bajo ninguna circunstancia.");
+  if (store.users) {
+    const user = store.users.find(u => u.id === id);
+    if (user) {
+      if (
+        user.id === 1 ||
+        user.role === 'SUPERADMIN' ||
+        user.email?.toLowerCase() === 'darinka.arias18@gmail.com' ||
+        user.username?.toLowerCase() === 'darinka.arias18@gmail.com'
+      ) {
+        throw new Error("El Superadmin Maestro (Darinka Arias) nunca puede ser eliminado bajo ninguna circunstancia.");
+      }
+      store.users = store.users.filter(u => u.id !== id);
+      saveLocalStore(store);
+    }
   }
 
-  store.users = store.users.filter(u => u.id !== id);
-  saveLocalStore(store);
+  // Invalidación inmediata de caché de usuarios
+  invalidateUsersCache();
+
   return true;
 }
 

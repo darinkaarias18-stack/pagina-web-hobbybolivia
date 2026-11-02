@@ -130,7 +130,13 @@ export default function AdminUsersPage() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/users', { cache: 'no-store' });
+      const res = await fetch(`/api/users?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       if (res.status === 401) {
         router.replace('/login?redirect=/admin/users');
         return;
@@ -230,6 +236,11 @@ export default function AdminUsersPage() {
       setNewCountryCode('+591');
       setNewIsActive(true);
 
+      // Actualización optimista instantánea (0ms de latencia visual)
+      if (data.data) {
+        setUsers((prev) => [data.data, ...prev.filter((u) => u.id !== data.data.id)]);
+      }
+
       if (data.emailDispatch) {
         setDispatchedAccess({
           adminName: cleanName,
@@ -243,7 +254,7 @@ export default function AdminUsersPage() {
       showToast(
         `Administrador "${cleanGmail}" creado con éxito. Listo para enviar accesos por WhatsApp.`
       );
-      loadUsers();
+      await loadUsers();
     } catch (err: unknown) {
       setCreateError(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
@@ -341,9 +352,14 @@ export default function AdminUsersPage() {
         throw new Error(data.error || 'Error al actualizar usuario');
       }
 
+      // Actualización optimista inmediata
+      if (data.data) {
+        setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? { ...u, ...data.data } : u)));
+      }
+
       setEditingUser(null);
       showToast(`Usuario "${cleanUsername}" actualizado con éxito.`);
-      loadUsers();
+      await loadUsers();
     } catch (err: unknown) {
       setEditError(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
@@ -376,6 +392,7 @@ export default function AdminUsersPage() {
             ? `Usuario "${user.username}" activado con éxito.`
             : `Usuario "${user.username}" desactivado.`
         );
+        await loadUsers();
       } else {
         const data = await res.json();
         showToast(data.error || 'No se pudo cambiar el estado', 'error');
@@ -389,15 +406,18 @@ export default function AdminUsersPage() {
   // Confirm delete
   const confirmDelete = async () => {
     if (!userToDelete) return;
+    const target = userToDelete;
     setDeleting(true);
     setDeleteError('');
     try {
-      const res = await fetch(`/api/users/${userToDelete.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/users/${target.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Usuario "${userToDelete.username}" eliminado con éxito.`);
+        showToast(`Usuario "${target.username}" eliminado con éxito.`);
+        // Remoción instantánea del estado local (0ms de latencia visual)
+        setUsers((prev) => prev.filter((u) => u.id !== target.id));
         setUserToDelete(null);
-        loadUsers();
+        await loadUsers();
       } else {
         setDeleteError(data.error || 'No se pudo eliminar el usuario.');
       }

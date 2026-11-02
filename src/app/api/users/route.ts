@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllUsers, createUserRecord } from '@/lib/db';
+import { getAllUsers, createUserRecord, invalidateUsersCache } from '@/lib/db';
 import { requireSuperAdmin } from '@/lib/auth';
 import { sendAdminCredentialsEmail } from '@/lib/email';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,12 +29,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: safeUsers
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
   } catch (error: any) {
     console.error("Error in GET /api/users:", error);
     return NextResponse.json(
       { success: false, error: "Error al consultar los usuarios del sistema" },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+        }
+      }
     );
   }
 }

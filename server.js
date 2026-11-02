@@ -27,12 +27,15 @@ app.prepare().then(() => {
     }
   })
     .once('error', (err) => {
-      console.error('Server error:', err);
+      console.error('Server error on listen:', err);
       process.exit(1);
     })
     .listen(port, () => {
       console.log(`> Servidor Hobby Bolivia listo en puerto/socket: ${port}`);
     });
+}).catch((err) => {
+  console.error('CRITICAL: Error preparing Next.js application:', err);
+  process.exit(1);
 });
 
 

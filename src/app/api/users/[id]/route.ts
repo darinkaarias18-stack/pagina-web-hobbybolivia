@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserById, updateUserRecord, deleteUserRecord } from '@/lib/db';
+import { getUserById, updateUserRecord, deleteUserRecord, invalidateUsersCache } from '@/lib/db';
 import { requireSuperAdmin } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
@@ -34,6 +37,10 @@ export async function GET(
         isActive: user.isActive,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
       }
     });
   } catch (error: any) {
@@ -78,6 +85,8 @@ export async function PUT(
       return NextResponse.json({ success: false, error: "Usuario no encontrado para actualizar" }, { status: 404 });
     }
 
+    invalidateUsersCache();
+
     return NextResponse.json({
       success: true,
       message: "Usuario actualizado correctamente",
@@ -91,6 +100,10 @@ export async function PUT(
         role: updated.role,
         isActive: updated.isActive,
         updatedAt: updated.updatedAt
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
       }
     });
   } catch (error: any) {
@@ -126,9 +139,15 @@ export async function DELETE(
         return NextResponse.json({ success: false, error: "Usuario no encontrado" }, { status: 404 });
       }
 
+      invalidateUsersCache();
+
       return NextResponse.json({
         success: true,
         message: "Usuario eliminado correctamente"
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+        }
       });
     } catch (err: any) {
       return NextResponse.json(
