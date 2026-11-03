@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: 'Productos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.',
   keywords: 'aeromodelismo bolivia, radio control, rc bolivia, hobby bolivia, dubro bolivia, great planes, conectores ez, bellcrank, productos rc santa cruz',
   verification: {
-    google: 'HJPhoxp9YR0dtRGa3awwgtZ3DHGjs_vkSG-dV0j1PEM',
+    google: ['google82f8a7888f69d48f', 'HJPhoxp9YR0dtRGa3awwgtZ3DHGjs_vkSG-dV0j1PEM'],
   },
   icons: {
     icon: '/icon.svg',
@@ -43,6 +43,8 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${manrope.variable} max-w-full overflow-x-hidden`}>
       <head>
+        <meta name="google-site-verification" content="google82f8a7888f69d48f" />
+        <meta name="google-site-verification" content="HJPhoxp9YR0dtRGa3awwgtZ3DHGjs_vkSG-dV0j1PEM" />
         <meta name="theme-color" content="#161311" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
       </head>
