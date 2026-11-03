@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   title: 'Hobby Bolivia · Aeromodelismo y radio control',
   description: 'Productos, hélices, servos, combustibles y todo lo que necesitas para armar, reparar y volar.',
   keywords: 'aeromodelismo bolivia, radio control, rc bolivia, hobby bolivia, dubro bolivia, great planes, conectores ez, bellcrank, productos rc santa cruz',
+  verification: {
+    google: 'HJPhoxp9YR0dtRGa3awwgtZ3DHGjs_vkSG-dV0j1PEM',
+  },
   icons: {
     icon: '/icon.svg',
   },
