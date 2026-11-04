@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     // 4. Directorios de destino duales (public/uploads/products y uploads/products) para compatibilidad total en Plesk
     const uploadsPublicDir = path.join(process.cwd(), 'public', 'uploads', 'products');
     const uploadsDirectDir = path.join(process.cwd(), 'uploads', 'products');
-    
+
     if (!fs.existsSync(uploadsPublicDir)) {
       fs.mkdirSync(uploadsPublicDir, { recursive: true });
     }
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     // Si la imagen ya viene convertida a WebP desde el navegador del cliente y pesa <= 250 KB,
     // se guarda directamente en 0ms sin consumir CPU del servidor.
     const isAlreadyWebp = file.type === 'image/webp' || (rawBuffer.length > 12 && rawBuffer.toString('utf8', 8, 12) === 'WEBP');
-    
+
     if (isAlreadyWebp && rawBuffer.length <= MAX_COMPRESSED_SIZE) {
       await saveToDisk(filename, rawBuffer);
       const publicUrl = `/uploads/products/${filename}`;

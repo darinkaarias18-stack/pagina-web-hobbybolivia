@@ -103,9 +103,9 @@ export async function getExchangeRateConfig(forceRefresh = false): Promise<Excha
             exchangeRate: live.rate,
             source: live.source,
             lastChecked: new Date().toISOString()
-          }).catch(() => {});
+          }).catch(() => { });
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
     return current;
   }
