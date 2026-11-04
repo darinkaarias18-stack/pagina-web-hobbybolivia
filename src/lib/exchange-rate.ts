@@ -26,7 +26,7 @@ export async function fetchLiveExchangeRate(): Promise<{ rate: number; source: s
   // 1. Intentar API Primaria (Open ExchangeRate API)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
     const res = await fetch(PRIMARY_API_URL, {
       signal: controller.signal,
@@ -52,7 +52,7 @@ export async function fetchLiveExchangeRate(): Promise<{ rate: number; source: s
   // 2. Intentar API de Respaldo
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
     const res = await fetch(FALLBACK_API_URL, {
       signal: controller.signal,
@@ -80,7 +80,7 @@ export async function fetchLiveExchangeRate(): Promise<{ rate: number; source: s
 
 /**
  * Obtiene la configuración de tipo de cambio activa.
- * Si autoUpdate está activado y la caché ha expirado (> 24 hrs), revalida automáticamente con la API.
+ * Responde inmediatamente con la tasa en base de datos para no bloquear la carga de la página.
  */
 export async function getExchangeRateConfig(forceRefresh = false): Promise<ExchangeRateConfig> {
   const current = await getExchangeRateDb();
@@ -93,12 +93,24 @@ export async function getExchangeRateConfig(forceRefresh = false): Promise<Excha
   const lastCheckedTime = current.lastChecked ? new Date(current.lastChecked).getTime() : 0;
   const isCacheExpired = Date.now() - lastCheckedTime > CACHE_DURATION_MS;
 
-  // Si la caché está vigente y no se fuerza actualización, retornar datos actuales
-  if (!isCacheExpired && !forceRefresh) {
+  // Si la tasa en DB es válida y no se fuerza una actualización manual explícita, devolver de inmediato
+  if (!forceRefresh) {
+    if (isCacheExpired) {
+      // Revalidación asíncrona en segundo plano sin retrasar al usuario
+      fetchLiveExchangeRate().then(live => {
+        if (live) {
+          saveExchangeRateDb({
+            exchangeRate: live.rate,
+            source: live.source,
+            lastChecked: new Date().toISOString()
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
     return current;
   }
 
-  // Si autoUpdate está activo o se solicita forceRefresh, consultar API externa
+  // Si se solicita forceRefresh explícito desde el panel
   const live = await fetchLiveExchangeRate();
   if (live) {
     const updated = await saveExchangeRateDb({
@@ -109,7 +121,6 @@ export async function getExchangeRateConfig(forceRefresh = false): Promise<Excha
     return updated;
   }
 
-  // Si la API no respondió pero la caché expiró, mantener la tasa existente
   return current;
 }
 

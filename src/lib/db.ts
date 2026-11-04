@@ -1032,13 +1032,6 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
       if (rows && rows.length > 0) {
         const mapped = rows.map(mapMysqlRowToProduct);
         memoryCache.productsAll = { data: mapped, timestamp: getNow() };
-        try {
-          const store = getLocalStore();
-          if (store.items.length !== mapped.length) {
-            store.items = mapped;
-            saveLocalStore(store);
-          }
-        } catch { }
         return mapped;
       }
     } catch (e) {

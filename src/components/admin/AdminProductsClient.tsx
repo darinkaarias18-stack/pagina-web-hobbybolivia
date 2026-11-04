@@ -457,6 +457,10 @@ export function AdminProductsClient() {
       return;
     }
 
+    // 0ms Vista previa instantánea para feedback visual inmediato
+    const instantPreview = URL.createObjectURL(file);
+    setFormData(prev => ({ ...prev, image_url: instantPreview }));
+
     setIsUploadingImage(true);
     try {
       // 3. Pre-procesamiento de compresión interna automática (máx 1000px y <= 250 KB)
@@ -474,7 +478,7 @@ export function AdminProductsClient() {
       const data = await res.json();
       if (data.success && data.url) {
         const finalKb = data.optimizedSize ? Math.round(data.optimizedSize / 1024) : Math.round(processedFile.size / 1024);
-        // Regla de base de datos: guardamos la ruta relativa de texto (ej. /uploads/products/xxx.webp), nunca BLOB
+        // Guardamos la URL pública definitiva del servidor
         setFormData(prev => ({ ...prev, image_url: data.url }));
         showToast(`Foto optimizada a WebP: ${finalKb} KB (≤ 250 KB)`);
       } else {
@@ -1429,6 +1433,8 @@ export function AdminProductsClient() {
                               <img
                                 src={p.image_url || p.imageUrl || (p.images && p.images[0]) || ''}
                                 alt={p.name || p.title}
+                                loading="lazy"
+                                decoding="async"
                                 className="max-h-full max-w-full object-contain pointer-events-none select-none"
                                 onError={(e) => {
                                   (e.target as HTMLElement).style.display = 'none';
