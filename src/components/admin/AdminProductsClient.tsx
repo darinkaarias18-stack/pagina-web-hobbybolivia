@@ -1166,12 +1166,12 @@ export function AdminProductsClient() {
 
         <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
           {/* Quick Currency Status (Ajuste Manual y Automático de TC) */}
-          <div className="inline-flex items-center gap-1 bg-[#FAF8F5] p-1 rounded-full border border-[#E2DCD3] shadow-xs shrink-0 max-w-full">
+          <div className="inline-flex items-center gap-1.5 bg-[#FAF8F5] p-1 rounded-full border border-[#E2DCD3] shadow-xs shrink-0 max-w-full">
             <button
               type="button"
               onClick={() => {
                 setCustomRateInput(exchangeRate.toFixed(2));
-                setRateMode(autoUpdate ? 'auto' : 'manual');
+                setRateMode('manual');
                 setIsRateModalOpen(true);
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs transition-all cursor-pointer group select-none"
@@ -1181,10 +1181,26 @@ export function AdminProductsClient() {
               <span className="whitespace-nowrap">
                 TC: <strong className="font-mono text-[#1A1817]">Bs. {exchangeRate.toFixed(2)}</strong>
               </span>
-              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold shrink-0">
+              <span className={`text-[9.5px] px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${
+                autoUpdate ? 'bg-[#211E1C] text-[#D4A359]' : 'bg-emerald-600 text-white'
+              }`}>
                 {autoUpdate ? 'Auto' : 'Manual'}
               </span>
-              <Edit2 className="w-3 h-3 text-[#8C827A] group-hover:text-[#D4A359] transition-colors" />
+            </button>
+
+            {/* Botón explícito para Poner TC Manual */}
+            <button
+              type="button"
+              onClick={() => {
+                setCustomRateInput(exchangeRate.toFixed(2));
+                setRateMode('manual');
+                setIsRateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-[#D4A359] hover:text-[#161311] text-[11px] font-black transition-all cursor-pointer shadow-2xs group"
+              title="Poner manualmente el valor de tipo de cambio de USD a Bs."
+            >
+              <Edit2 className="w-3 h-3 text-[#D4A359] group-hover:text-[#161311] transition-colors" />
+              <span className="whitespace-nowrap">Poner TC Manual</span>
             </button>
 
             <button
@@ -2072,10 +2088,10 @@ export function AdminProductsClient() {
                 </div>
                 <div>
                   <h3 className="font-black text-sm text-[#1A1817] uppercase tracking-wide">
-                    Tipo de Cambio (USD / Bs.)
+                    Poner Tipo de Cambio Manual
                   </h3>
                   <p className="text-[11px] text-[#8C827A] font-semibold">
-                    Cálculo del total en Bs. para el carrito y catálogo
+                    Valor en Bolivianos por cada 1 USD para catálogo y pedidos
                   </p>
                 </div>
               </div>
@@ -2091,7 +2107,7 @@ export function AdminProductsClient() {
             <form onSubmit={handleSaveCustomRate} className="space-y-4">
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider text-[#1A1817] mb-1.5">
-                  Tasa de Cambio (Bs. por 1 USD) *
+                  Valor Manual (Bs. por 1 USD) *
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#8C827A]">
@@ -2107,6 +2123,23 @@ export function AdminProductsClient() {
                     placeholder="12.10"
                     className="w-full pl-11 pr-4 py-2.5 bg-white border border-[#E2DCD3] rounded-xl text-sm font-mono font-black text-[#1A1817] focus:border-[#D4A359] outline-none shadow-2xs"
                   />
+                </div>
+                {/* Valores rápidos sugeridos */}
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <span className="text-[10px] text-[#8C827A] font-bold">Valores rápidos:</span>
+                  {[6.96, 12.10, 12.50, 13.00].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => {
+                        setCustomRateInput(val.toFixed(2));
+                        setRateMode('manual');
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-white hover:bg-[#D4A359]/20 border border-[#E2DCD3] text-[10px] font-mono font-bold text-[#1A1817] cursor-pointer transition-colors"
+                    >
+                      Bs. {val.toFixed(2)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -2145,12 +2178,12 @@ export function AdminProductsClient() {
               {/* Vista previa de conversión en vivo */}
               <div className="p-3 bg-white rounded-xl border border-[#E2DCD3] space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] block">
-                  Simulación de conversión en carrito
+                  Simulación de conversión en catálogo
                 </span>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#5C5650] font-medium">$10.00 USD</span>
+                  <span className="text-[#5C5650] font-medium">$8.60 USD (Hélice)</span>
                   <span className="font-mono font-bold text-[#1A1817]">
-                    Bs. {((parseFloat(customRateInput) || 0) * 10).toFixed(2)}
+                    Bs. {((parseFloat(customRateInput) || 0) * 8.6).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">

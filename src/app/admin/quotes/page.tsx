@@ -121,7 +121,7 @@ export default function AdminQuotesPage() {
           setExchangeRate(Number(d.data.exchangeRate) || 12.10);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Manejador del cambio de estado con lógica de descuento/reversión de stock

@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import type { QuoteOrder, Product, OrderStatus } from '@/lib/types';
 import { useCurrency } from '@/context/CurrencyContext';
+import { getOrderAmounts } from '@/lib/order-utils';
 
 interface AdminMetricsModuleProps {
   orders: QuoteOrder[];
@@ -57,6 +58,7 @@ interface PeriodicItem {
   subLabel?: string;
   orderCount: number;
   totalBob: number;
+  totalUsd: number;
   rawKey: string;
 }
 
@@ -84,44 +86,57 @@ export function AdminMetricsModule({
 
   // 2. RESUMEN DE VENTAS ACUMULADAS, DESPACHADOS, ENTREGADOS
   const salesSummary = useMemo(() => {
-    const totalAccumulatedSalesBob = validOrders.reduce(
-      (sum, o) => sum + (Number(o.total) || 0),
-      0
-    );
-    const totalAccumulatedSalesUsd =
-      exchangeRate > 0 ? totalAccumulatedSalesBob / exchangeRate : 0;
+    let totalAccumulatedSalesBob = 0;
+    let totalAccumulatedSalesUsd = 0;
+    for (const o of validOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      totalAccumulatedSalesBob += amt.bob;
+      totalAccumulatedSalesUsd += amt.usd;
+    }
 
     const dispatchedOrders = validOrders.filter(
       (o) => o.status === 'DESPACHADO'
     );
-    const dispatchedAmountBob = dispatchedOrders.reduce(
-      (sum, o) => sum + (Number(o.total) || 0),
-      0
-    );
+    let dispatchedAmountBob = 0;
+    let dispatchedAmountUsd = 0;
+    for (const o of dispatchedOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      dispatchedAmountBob += amt.bob;
+      dispatchedAmountUsd += amt.usd;
+    }
 
     const deliveredOrders = validOrders.filter(
       (o) => o.status === 'DELIVERED'
     );
-    const deliveredAmountBob = deliveredOrders.reduce(
-      (sum, o) => sum + (Number(o.total) || 0),
-      0
-    );
+    let deliveredAmountBob = 0;
+    let deliveredAmountUsd = 0;
+    for (const o of deliveredOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      deliveredAmountBob += amt.bob;
+      deliveredAmountUsd += amt.usd;
+    }
 
     const inPrepOrders = validOrders.filter(
       (o) => o.status === 'IN_PREPARATION' || o.status === 'CONFIRMADO' || o.status === 'PAGADO'
     );
-    const inPrepAmountBob = inPrepOrders.reduce(
-      (sum, o) => sum + (Number(o.total) || 0),
-      0
-    );
+    let inPrepAmountBob = 0;
+    let inPrepAmountUsd = 0;
+    for (const o of inPrepOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      inPrepAmountBob += amt.bob;
+      inPrepAmountUsd += amt.usd;
+    }
 
     const pendingOrders = validOrders.filter(
       (o) => o.status === 'PENDING' || o.status === 'PEDIDO'
     );
-    const pendingAmountBob = pendingOrders.reduce(
-      (sum, o) => sum + (Number(o.total) || 0),
-      0
-    );
+    let pendingAmountBob = 0;
+    let pendingAmountUsd = 0;
+    for (const o of pendingOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      pendingAmountBob += amt.bob;
+      pendingAmountUsd += amt.usd;
+    }
 
     const toDispatchOrders = validOrders.filter(
       (o) =>
@@ -131,14 +146,21 @@ export function AdminMetricsModule({
         o.status === 'PENDING' ||
         o.status === 'PEDIDO'
     );
-    const toDispatchAmountBob = toDispatchOrders.reduce(
-      (sum, o) => sum + (Number(o.total) || 0),
-      0
-    );
+    let toDispatchAmountBob = 0;
+    let toDispatchAmountUsd = 0;
+    for (const o of toDispatchOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      toDispatchAmountBob += amt.bob;
+      toDispatchAmountUsd += amt.usd;
+    }
 
-    const averageTicket =
+    const averageTicketBob =
       validOrders.length > 0
         ? totalAccumulatedSalesBob / validOrders.length
+        : 0;
+    const averageTicketUsd =
+      validOrders.length > 0
+        ? totalAccumulatedSalesUsd / validOrders.length
         : 0;
 
     const deliverySuccessRate =
@@ -155,16 +177,23 @@ export function AdminMetricsModule({
       totalAccumulatedSalesUsd,
       dispatchedCount: dispatchedOrders.length,
       dispatchedAmountBob,
+      dispatchedAmountUsd,
       deliveredCount: deliveredOrders.length,
       deliveredAmountBob,
+      deliveredAmountUsd,
       inPrepCount: inPrepOrders.length,
       inPrepAmountBob,
+      inPrepAmountUsd,
       pendingCount: pendingOrders.length,
       pendingAmountBob,
+      pendingAmountUsd,
       toDispatchCount: toDispatchOrders.length,
       toDispatchAmountBob,
+      toDispatchAmountUsd,
       totalOrdersCount: validOrders.length,
-      averageTicket,
+      averageTicket: averageTicketBob,
+      averageTicketBob,
+      averageTicketUsd,
       deliverySuccessRate
     };
   }, [validOrders, exchangeRate]);
@@ -178,7 +207,13 @@ export function AdminMetricsModule({
     const todayOrders = validOrders.filter(
       (o) => o.createdAt && new Date(o.createdAt).toDateString() === todayStr
     );
-    const todayTotalBob = todayOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    let todayTotalBob = 0;
+    let todayTotalUsd = 0;
+    for (const o of todayOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      todayTotalBob += amt.bob;
+      todayTotalUsd += amt.usd;
+    }
     const todayCount = todayOrders.length;
 
     // 2. ESTA SEMANA (Lunes a Domingo)
@@ -196,7 +231,13 @@ export function AdminMetricsModule({
       const d = new Date(o.createdAt);
       return d >= thisMonday && d <= thisSunday;
     });
-    const thisWeekTotalBob = thisWeekOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    let thisWeekTotalBob = 0;
+    let thisWeekTotalUsd = 0;
+    for (const o of thisWeekOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      thisWeekTotalBob += amt.bob;
+      thisWeekTotalUsd += amt.usd;
+    }
     const thisWeekCount = thisWeekOrders.length;
 
     // 3. MES ACTUAL (ej. OCTUBRE / NOVIEMBRE)
@@ -207,9 +248,16 @@ export function AdminMetricsModule({
       const d = new Date(o.createdAt);
       return d.getFullYear() === currentYear && d.getMonth() === currentMonthIndex;
     });
-    const thisMonthTotalBob = thisMonthOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    let thisMonthTotalBob = 0;
+    let thisMonthTotalUsd = 0;
+    for (const o of thisMonthOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      thisMonthTotalBob += amt.bob;
+      thisMonthTotalUsd += amt.usd;
+    }
     const thisMonthCount = thisMonthOrders.length;
-    const thisMonthAverageTicket = thisMonthCount > 0 ? thisMonthTotalBob / thisMonthCount : 0;
+    const thisMonthAverageTicketBob = thisMonthCount > 0 ? thisMonthTotalBob / thisMonthCount : 0;
+    const thisMonthAverageTicketUsd = thisMonthCount > 0 ? thisMonthTotalUsd / thisMonthCount : 0;
     const monthName = now
       .toLocaleDateString('es-BO', { month: 'long' })
       .toUpperCase();
@@ -220,7 +268,13 @@ export function AdminMetricsModule({
       const d = new Date(o.createdAt);
       return d.getFullYear() === currentYear;
     });
-    const thisYearTotalBob = thisYearOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    let thisYearTotalBob = 0;
+    let thisYearTotalUsd = 0;
+    for (const o of thisYearOrders) {
+      const amt = getOrderAmounts(o, exchangeRate);
+      thisYearTotalBob += amt.bob;
+      thisYearTotalUsd += amt.usd;
+    }
     const thisYearCount = thisYearOrders.length;
 
     // 5. CATÁLOGO ACTIVO
@@ -231,20 +285,25 @@ export function AdminMetricsModule({
 
     return {
       todayTotalBob,
+      todayTotalUsd,
       todayCount,
       thisWeekTotalBob,
+      thisWeekTotalUsd,
       thisWeekCount,
       thisMonthTotalBob,
+      thisMonthTotalUsd,
       thisMonthCount,
-      thisMonthAverageTicket,
+      thisMonthAverageTicketBob,
+      thisMonthAverageTicketUsd,
       monthName,
       thisYearTotalBob,
+      thisYearTotalUsd,
       thisYearCount,
       currentYear,
       activeProductsCount,
       totalProductsCount
     };
-  }, [validOrders, products]);
+  }, [validOrders, products, exchangeRate]);
 
   // 3. REPORTE DE CLIENTES QUE COMPRARON MÁS
   const topCustomers = useMemo(() => {
@@ -256,6 +315,7 @@ export function AdminMetricsModule({
         city: string;
         orderCount: number;
         totalSpentBob: number;
+        totalSpentUsd: number;
         itemsCount: number;
         lastOrderDate: string;
       }
@@ -266,7 +326,7 @@ export function AdminMetricsModule({
         .toLowerCase()
         .trim();
       const existing = map.get(key);
-      const orderTotal = Number(ord.total) || 0;
+      const amt = getOrderAmounts(ord, exchangeRate);
       const orderItemsCount = (ord.items || []).reduce(
         (sum, it) => sum + (Number(it.quantity) || 1),
         0
@@ -275,7 +335,8 @@ export function AdminMetricsModule({
 
       if (existing) {
         existing.orderCount += 1;
-        existing.totalSpentBob += orderTotal;
+        existing.totalSpentBob += amt.bob;
+        existing.totalSpentUsd += amt.usd;
         existing.itemsCount += orderItemsCount;
         if (ordDate && (!existing.lastOrderDate || ordDate > existing.lastOrderDate)) {
           existing.lastOrderDate = ordDate;
@@ -286,7 +347,8 @@ export function AdminMetricsModule({
           phone: ord.customerPhone || 'Sin teléfono',
           city: ord.deliveryCity || 'La Paz',
           orderCount: 1,
-          totalSpentBob: orderTotal,
+          totalSpentBob: amt.bob,
+          totalSpentUsd: amt.usd,
           itemsCount: orderItemsCount,
           lastOrderDate: ordDate
         });
@@ -296,7 +358,7 @@ export function AdminMetricsModule({
     const list = Array.from(map.values());
     list.sort((a, b) => b.totalSpentBob - a.totalSpentBob);
     return list;
-  }, [validOrders]);
+  }, [validOrders, exchangeRate]);
 
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return topCustomers;
@@ -311,14 +373,20 @@ export function AdminMetricsModule({
 
   // 4.1 Mapeo de ventas acumuladas por producto
   const productSalesMap = useMemo(() => {
-    const map = new Map<string, { totalUnitsSold: number; totalRevenueBob: number; orderCount: number }>();
+    const map = new Map<string, { totalUnitsSold: number; totalRevenueBob: number; totalRevenueUsd: number; orderCount: number }>();
 
     for (const ord of validOrders) {
       for (const it of ord.items || []) {
         const prod = it.item || (it as any);
         const qty = Number(it.quantity) || 1;
-        const unitPrice = Number(prod?.price) || 0;
-        const lineRevenue = unitPrice * qty;
+        const itemUsd = Number(prod?.priceUsd ?? prod?.price_usd);
+        const itemBob = Number(prod?.price);
+        const rate = exchangeRate > 0 ? exchangeRate : 12.10;
+        const finalUsd = !isNaN(itemUsd) && itemUsd > 0 ? itemUsd : (!isNaN(itemBob) ? itemBob / rate : 0);
+        const finalBob = !isNaN(itemBob) && itemBob > 0 ? itemBob : (!isNaN(itemUsd) ? itemUsd * rate : 0);
+        const lineRevenueBob = finalBob * qty;
+        const lineRevenueUsd = finalUsd * qty;
+
         const prodSku = (prod?.sku ? String(prod.sku).trim() : '').toUpperCase();
         const prodName = (prod?.name || prod?.title || '').trim().toLowerCase();
 
@@ -328,15 +396,16 @@ export function AdminMetricsModule({
         const existing = map.get(key);
         if (existing) {
           existing.totalUnitsSold += qty;
-          existing.totalRevenueBob += lineRevenue;
+          existing.totalRevenueBob += lineRevenueBob;
+          existing.totalRevenueUsd += lineRevenueUsd;
           existing.orderCount += 1;
         } else {
-          map.set(key, { totalUnitsSold: qty, totalRevenueBob: lineRevenue, orderCount: 1 });
+          map.set(key, { totalUnitsSold: qty, totalRevenueBob: lineRevenueBob, totalRevenueUsd: lineRevenueUsd, orderCount: 1 });
         }
       }
     }
     return map;
-  }, [validOrders]);
+  }, [validOrders, exchangeRate]);
 
   // 4.2 Top Productos Más Vendidos
   const topProducts = useMemo(() => {
@@ -349,6 +418,7 @@ export function AdminMetricsModule({
       categoryName: string;
       totalUnitsSold: number;
       totalRevenueBob: number;
+      totalRevenueUsd: number;
       currentStock: number;
     }[] = [];
 
@@ -372,6 +442,7 @@ export function AdminMetricsModule({
           categoryName: prod.category?.name || 'Productos y Accesorios',
           totalUnitsSold: unitsSold,
           totalRevenueBob: sales?.totalRevenueBob || 0,
+          totalRevenueUsd: sales?.totalRevenueUsd || 0,
           currentStock: stockNow
         });
       }
@@ -393,7 +464,9 @@ export function AdminMetricsModule({
       totalUnitsSold: number;
       currentStock: number;
       price: number;
+      priceUsd: number;
       immobilizedCapitalBob: number;
+      immobilizedCapitalUsd: number;
       isZeroSales: boolean;
     }[] = [];
 
@@ -403,7 +476,11 @@ export function AdminMetricsModule({
       const sales = productSalesMap.get(prodSku) || productSalesMap.get(prodName);
       const unitsSold = sales?.totalUnitsSold || 0;
       const stockNow = Number(prod.stock !== undefined ? prod.stock : prod.stockQuantity) || 0;
-      const priceNow = Number(prod.price) || 0;
+      const rate = exchangeRate > 0 ? exchangeRate : 12.10;
+      const itemUsd = Number(prod.priceUsd ?? prod.price_usd);
+      const itemBob = Number(prod.price);
+      const finalUsd = !isNaN(itemUsd) && itemUsd > 0 ? itemUsd : (!isNaN(itemBob) ? itemBob / rate : 0);
+      const finalBob = !isNaN(itemBob) && itemBob > 0 ? itemBob : (!isNaN(itemUsd) ? itemUsd * rate : 0);
 
       // Criterio de stock estancado: productos con stock disponible retenido en almacén (stock > 0) y ventas nulas o muy bajas (<= 2)
       if (stockNow > 0 && unitsSold <= 2) {
@@ -419,8 +496,10 @@ export function AdminMetricsModule({
           categoryName: prod.category?.name || 'Productos y Accesorios',
           totalUnitsSold: unitsSold,
           currentStock: stockNow,
-          price: priceNow,
-          immobilizedCapitalBob: stockNow * priceNow,
+          price: finalBob,
+          priceUsd: finalUsd,
+          immobilizedCapitalBob: stockNow * finalBob,
+          immobilizedCapitalUsd: stockNow * finalUsd,
           isZeroSales: unitsSold === 0
         });
       }
@@ -435,10 +514,14 @@ export function AdminMetricsModule({
     });
 
     return list;
-  }, [products, productSalesMap]);
+  }, [products, productSalesMap, exchangeRate]);
 
   const totalImmobilizedCapitalBob = useMemo(() => {
     return stagnantProducts.reduce((sum, p) => sum + p.immobilizedCapitalBob, 0);
+  }, [stagnantProducts]);
+
+  const totalImmobilizedCapitalUsd = useMemo(() => {
+    return stagnantProducts.reduce((sum, p) => sum + p.immobilizedCapitalUsd, 0);
   }, [stagnantProducts]);
 
   const filteredProductsReport = useMemo(() => {
@@ -474,6 +557,7 @@ export function AdminMetricsModule({
       productImage: string;
       quantity: number;
       lineTotalBob: number;
+      lineTotalUsd: number;
       orderCode: string;
       orderDate: string;
     }[] = [];
@@ -482,8 +566,11 @@ export function AdminMetricsModule({
       for (const it of ord.items || []) {
         const prod = it.item || (it as any);
         const qty = Number(it.quantity) || 1;
-        const unitPrice = Number(prod?.price) || 0;
-        const lineTotal = unitPrice * qty;
+        const itemUsd = Number(prod?.priceUsd ?? prod?.price_usd);
+        const itemBob = Number(prod?.price);
+        const rate = exchangeRate > 0 ? exchangeRate : 12.10;
+        const finalUsd = !isNaN(itemUsd) && itemUsd > 0 ? itemUsd : (!isNaN(itemBob) ? itemBob / rate : 0);
+        const finalBob = !isNaN(itemBob) && itemBob > 0 ? itemBob : (!isNaN(itemUsd) ? itemUsd * rate : 0);
 
         list.push({
           customerName: ord.customerName || 'Cliente Hobby Bolivia',
@@ -496,7 +583,8 @@ export function AdminMetricsModule({
             prod?.imageUrl ||
             '/placeholder.webp',
           quantity: qty,
-          lineTotalBob: lineTotal,
+          lineTotalBob: finalBob * qty,
+          lineTotalUsd: finalUsd * qty,
           orderCode: ord.orderCode,
           orderDate: ord.createdAt ? String(ord.createdAt) : ''
         });
@@ -506,7 +594,7 @@ export function AdminMetricsModule({
     // Ordenar de mayor cantidad a menor
     list.sort((a, b) => b.quantity - a.quantity);
     return list;
-  }, [validOrders]);
+  }, [validOrders, exchangeRate]);
 
   const topSinglePurchase = largestIndividualPurchases[0] || null;
 
@@ -519,7 +607,9 @@ export function AdminMetricsModule({
 
     for (const ord of validOrders) {
       const d = ord.createdAt ? new Date(ord.createdAt) : new Date();
-      const amount = Number(ord.total) || 0;
+      const amounts = getOrderAmounts(ord, exchangeRate);
+      const amountBob = amounts.bob;
+      const amountUsd = amounts.usd;
 
       // 6.1 Por Día
       const dayKey = d.toISOString().slice(0, 10);
@@ -533,20 +623,22 @@ export function AdminMetricsModule({
       const dayEntry = byDay.get(dayKey);
       if (dayEntry) {
         dayEntry.orderCount += 1;
-        dayEntry.totalBob += amount;
+        dayEntry.totalBob += amountBob;
+        dayEntry.totalUsd += amountUsd;
       } else {
         byDay.set(dayKey, {
           label: dayLabel,
           shortLabel: shortDay,
           subLabel: subDay,
           orderCount: 1,
-          totalBob: amount,
+          totalBob: amountBob,
+          totalUsd: amountUsd,
           rawKey: dayKey
         });
       }
 
       // 6.2 Por Semana (Lunes a Domingo)
-      const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay(); // 1 (Lunes) .. 7 (Domingo)
+      const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
       const monday = new Date(d);
       monday.setDate(d.getDate() - (dayOfWeek - 1));
       monday.setHours(0, 0, 0, 0);
@@ -569,14 +661,16 @@ export function AdminMetricsModule({
       const weekEntry = byWeek.get(weekKey);
       if (weekEntry) {
         weekEntry.orderCount += 1;
-        weekEntry.totalBob += amount;
+        weekEntry.totalBob += amountBob;
+        weekEntry.totalUsd += amountUsd;
       } else {
         byWeek.set(weekKey, {
           label: weekLabel,
           shortLabel: shortWeek,
           subLabel: subWeek,
           orderCount: 1,
-          totalBob: amount,
+          totalBob: amountBob,
+          totalUsd: amountUsd,
           rawKey: weekKey
         });
       }
@@ -595,14 +689,16 @@ export function AdminMetricsModule({
       const monthEntry = byMonth.get(monthKey);
       if (monthEntry) {
         monthEntry.orderCount += 1;
-        monthEntry.totalBob += amount;
+        monthEntry.totalBob += amountBob;
+        monthEntry.totalUsd += amountUsd;
       } else {
         byMonth.set(monthKey, {
           label: formattedMonthLabel,
           shortLabel: shortMonth,
           subLabel: subMonth,
           orderCount: 1,
-          totalBob: amount,
+          totalBob: amountBob,
+          totalUsd: amountUsd,
           rawKey: monthKey
         });
       }
@@ -613,14 +709,16 @@ export function AdminMetricsModule({
       const yearEntry = byYear.get(yearKey);
       if (yearEntry) {
         yearEntry.orderCount += 1;
-        yearEntry.totalBob += amount;
+        yearEntry.totalBob += amountBob;
+        yearEntry.totalUsd += amountUsd;
       } else {
         byYear.set(yearKey, {
           label: yearLabel,
           shortLabel: yearKey,
           subLabel: 'Gestión',
           orderCount: 1,
-          totalBob: amount,
+          totalBob: amountBob,
+          totalUsd: amountUsd,
           rawKey: yearKey
         });
       }
@@ -638,7 +736,7 @@ export function AdminMetricsModule({
       byMonth: sortDesc(byMonth),
       byYear: sortDesc(byYear)
     };
-  }, [validOrders]);
+  }, [validOrders, exchangeRate]);
 
   // Ítems de la Comparativa General de KPIs (Ventas del Día, Esta Semana, Mes Actual, Año Actual)
   const overviewItems: PeriodicItem[] = useMemo(() => [
@@ -648,6 +746,7 @@ export function AdminMetricsModule({
       subLabel: 'Ventas del Día',
       orderCount: performanceMetrics.todayCount,
       totalBob: performanceMetrics.todayTotalBob,
+      totalUsd: performanceMetrics.todayTotalUsd,
       rawKey: '1-today'
     },
     {
@@ -656,6 +755,7 @@ export function AdminMetricsModule({
       subLabel: 'Lun - Dom',
       orderCount: performanceMetrics.thisWeekCount,
       totalBob: performanceMetrics.thisWeekTotalBob,
+      totalUsd: performanceMetrics.thisWeekTotalUsd,
       rawKey: '2-week'
     },
     {
@@ -664,6 +764,7 @@ export function AdminMetricsModule({
       subLabel: 'Mes en Curso',
       orderCount: performanceMetrics.thisMonthCount,
       totalBob: performanceMetrics.thisMonthTotalBob,
+      totalUsd: performanceMetrics.thisMonthTotalUsd,
       rawKey: '3-month'
     },
     {
@@ -672,6 +773,7 @@ export function AdminMetricsModule({
       subLabel: 'Acumulado',
       orderCount: performanceMetrics.thisYearCount,
       totalBob: performanceMetrics.thisYearTotalBob,
+      totalUsd: performanceMetrics.thisYearTotalUsd,
       rawKey: '4-year'
     }
   ], [performanceMetrics]);
@@ -706,19 +808,28 @@ export function AdminMetricsModule({
     return max > 0 ? max * 1.25 : 1000;
   }, [chartItems]);
 
+  const maxChartUsd = useMemo(() => {
+    const max = Math.max(...chartItems.map((i) => i.totalUsd), 0);
+    return max > 0 ? max * 1.25 : 100;
+  }, [chartItems]);
+
   // Valor máximo para barras proporcionales en vista de lista
   const maxPeriodTotal = useMemo(() => {
     return Math.max(...activePeriodData.items.map((i) => i.totalBob), 1);
   }, [activePeriodData]);
 
-  const formatPrice = (num: number) => {
-    const val = Number(num) || 0;
+  const formatPrice = (bobAmount: number, usdAmount?: number) => {
+    const effectiveRate = exchangeRate > 0 ? exchangeRate : 12.10;
     if (isBsMode) {
+      const val = Number(bobAmount) || 0;
       return `Bs. ${val.toLocaleString('es-BO', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       })}`;
     }
+    const val = usdAmount !== undefined && !isNaN(Number(usdAmount))
+      ? Number(usdAmount)
+      : (Number(bobAmount) || 0) / effectiveRate;
     return `$${val.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -867,7 +978,7 @@ export function AdminMetricsModule({
             </div>
             <div className="space-y-2">
               <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
-                {formatBs(performanceMetrics.todayTotalBob)}
+                {formatBs(performanceMetrics.todayTotalBob, performanceMetrics.todayTotalUsd)}
               </p>
               <div className="flex items-center justify-between text-xs pt-1">
                 <span className="text-[#8C827A] font-medium">Hoy</span>
@@ -890,7 +1001,7 @@ export function AdminMetricsModule({
             </div>
             <div className="space-y-2">
               <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
-                {formatBs(performanceMetrics.thisWeekTotalBob)}
+                {formatBs(performanceMetrics.thisWeekTotalBob, performanceMetrics.thisWeekTotalUsd)}
               </p>
               <div className="flex items-center justify-between text-xs pt-1">
                 <span className="text-[#8C827A] font-medium">Lun - Dom</span>
@@ -913,11 +1024,11 @@ export function AdminMetricsModule({
             </div>
             <div className="space-y-2">
               <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
-                {formatBs(performanceMetrics.thisMonthTotalBob)}
+                {formatBs(performanceMetrics.thisMonthTotalBob, performanceMetrics.thisMonthTotalUsd)}
               </p>
               <div className="flex items-center justify-between text-xs pt-1">
                 <span className="text-[#8C827A] font-medium text-[11px]">
-                  Ticket prom: {formatBs(performanceMetrics.thisMonthAverageTicket)}
+                  Ticket prom: {formatBs(performanceMetrics.thisMonthAverageTicketBob, performanceMetrics.thisMonthAverageTicketUsd)}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">
                   {performanceMetrics.thisMonthCount} pedidos
@@ -938,7 +1049,7 @@ export function AdminMetricsModule({
             </div>
             <div className="space-y-2">
               <p className="text-2xl sm:text-3xl font-black text-[#1A1817] font-mono tracking-tight">
-                {formatBs(performanceMetrics.thisYearTotalBob)}
+                {formatBs(performanceMetrics.thisYearTotalBob, performanceMetrics.thisYearTotalUsd)}
               </p>
               <div className="flex items-center justify-between text-xs pt-1">
                 <span className="text-[#8C827A] font-medium">Acumulado {performanceMetrics.currentYear}</span>
@@ -1101,10 +1212,10 @@ export function AdminMetricsModule({
 
                       <div className="text-right shrink-0 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-2 sm:gap-0">
                         <span className="font-mono font-black text-sm sm:text-base text-[#1A1817]">
-                          {formatBs(item.totalBob)}
+                          {formatBs(item.totalBob, item.totalUsd)}
                         </span>
                         <span className="font-mono text-[11px] text-[#8C827A]">
-                          {formatUsd(exchangeRate > 0 ? item.totalBob / exchangeRate : 0)}
+                          {isBsMode ? formatUsd(item.totalUsd) : `Bs. ${Number(item.totalBob).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         </span>
                       </div>
                     </div>
@@ -1114,7 +1225,7 @@ export function AdminMetricsModule({
                       <div
                         className={`h-full rounded-lg bg-gradient-to-r ${colorStyle.gradient} transition-all duration-700 ease-out flex items-center justify-end px-3 shadow-xs ${colorStyle.shadow}`}
                         style={{ width: `${barWidthPercent}%` }}
-                        title={`${item.label} · ${formatBs(item.totalBob)} (${barWidthPercent}%)`}
+                        title={`${item.label} · ${formatBs(item.totalBob, item.totalUsd)} (${barWidthPercent}%)`}
                       >
                         {barWidthPercent >= 16 && (
                           <span className="text-[11px] font-mono font-black text-white drop-shadow-xs">
@@ -1140,27 +1251,27 @@ export function AdminMetricsModule({
                 <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-12 pt-6 pl-14 sm:pl-18">
                   <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
                     <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
-                      {formatBs(maxChartBob)}
+                      {formatBs(maxChartBob, maxChartUsd)}
                     </span>
                   </div>
                   <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
                     <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
-                      {formatBs(maxChartBob * 0.75)}
+                      {formatBs(maxChartBob * 0.75, maxChartUsd * 0.75)}
                     </span>
                   </div>
                   <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
                     <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
-                      {formatBs(maxChartBob * 0.5)}
+                      {formatBs(maxChartBob * 0.5, maxChartUsd * 0.5)}
                     </span>
                   </div>
                   <div className="border-b border-dashed border-[#E2DCD3] w-full relative">
                     <span className="text-[10px] font-mono text-[#8C827A] -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
-                      {formatBs(maxChartBob * 0.25)}
+                      {formatBs(maxChartBob * 0.25, maxChartUsd * 0.25)}
                     </span>
                   </div>
                   <div className="border-b-2 border-[#1A1817] w-full relative">
                     <span className="text-[10px] font-mono text-[#1A1817] font-bold -translate-y-2.5 absolute left-[-56px] sm:left-[-72px] w-12 sm:w-16 text-right">
-                      $0 USD
+                      {isBsMode ? 'Bs. 0.00' : '$0 USD'}
                     </span>
                   </div>
                 </div>
@@ -1181,7 +1292,7 @@ export function AdminMetricsModule({
                           {/* Floating Info on Top */}
                           <div className="mb-2 text-center transition-transform group-hover:-translate-y-1 z-10">
                             <span className="font-mono font-black text-xs sm:text-sm text-[#1A1817] block whitespace-nowrap">
-                              {formatBs(item.totalBob)}
+                              {formatBs(item.totalBob, item.totalUsd)}
                             </span>
                             <span className={`inline-block px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap shadow-2xs ${colorStyle.badge}`}>
                               {item.orderCount} {item.orderCount === 1 ? 'pedido' : 'pedidos'}
@@ -1192,7 +1303,7 @@ export function AdminMetricsModule({
                           <div
                             className="w-full max-w-[56px] sm:max-w-[74px] bg-[#FAF8F5] border border-[#E2DCD3] rounded-t-2xl relative overflow-hidden flex items-end justify-center shadow-2xs group-hover:border-[#D4A359] group-hover:shadow-md transition-all cursor-pointer"
                             style={{ height: '100%' }}
-                            title={`${item.label} · ${formatBs(item.totalBob)} en ${item.orderCount} pedido(s)`}
+                            title={`${item.label} · ${formatBs(item.totalBob, item.totalUsd)} en ${item.orderCount} pedido(s)`}
                           >
                             {/* Barra Rellena con Gradiente de Color */}
                             <div
@@ -1236,7 +1347,7 @@ export function AdminMetricsModule({
             <CreditCard className="w-3.5 h-3.5" />
           </div>
           <span>
-            Total Facturado Histórico: <strong className="text-white font-mono font-black">{formatBs(salesSummary.totalAccumulatedSalesBob)}</strong> en <strong className="text-emerald-300">{salesSummary.totalOrdersCount} pedidos</strong> procesados con éxito.
+            Total Facturado Histórico: <strong className="text-white font-mono font-black">{formatBs(salesSummary.totalAccumulatedSalesBob, salesSummary.totalAccumulatedSalesUsd)}</strong> en <strong className="text-emerald-300">{salesSummary.totalOrdersCount} pedidos</strong> procesados con éxito.
           </span>
         </div>
 
@@ -1399,7 +1510,7 @@ export function AdminMetricsModule({
                     {topSinglePurchase.quantity} unidades
                   </span>
                   <span className="font-mono font-black text-xs text-[#FAF8F5]">
-                    {formatBs(topSinglePurchase.lineTotalBob)}
+                    {formatBs(topSinglePurchase.lineTotalBob, topSinglePurchase.lineTotalUsd)}
                   </span>
                 </div>
               </div>
@@ -1479,7 +1590,7 @@ export function AdminMetricsModule({
 
                     <div className="text-right shrink-0">
                       <span className="font-mono font-black text-xs text-[#1A1817] block">
-                        {formatBs(cust.totalSpentBob)}
+                        {formatBs(cust.totalSpentBob, cust.totalSpentUsd)}
                       </span>
                       <span className="text-[10px] font-bold text-[#8C827A]">
                         {cust.orderCount} {cust.orderCount === 1 ? 'pedido' : 'pedidos'} ({cust.itemsCount} unid.)
@@ -1544,7 +1655,7 @@ export function AdminMetricsModule({
                     Alerta de Baja Rotación: {stagnantProducts.length} productos sin ventas o con rotación mínima.
                   </p>
                   <p className="text-[11px] text-amber-800">
-                    Capital inmovilizado en almacén: <strong className="font-mono font-black">{formatBs(totalImmobilizedCapitalBob)}</strong>. Considera aplicar promociones o liquidaciones para liberar inventario.
+                    Capital inmovilizado en almacén: <strong className="font-mono font-black">{formatBs(totalImmobilizedCapitalBob, totalImmobilizedCapitalUsd)}</strong>. Considera aplicar promociones o liquidaciones para liberar inventario.
                   </p>
                 </div>
               </div>
@@ -1609,7 +1720,7 @@ export function AdminMetricsModule({
                           {prod.totalUnitsSold} vendidas
                         </span>
                         <span className="font-mono font-semibold text-[11px] text-[#5C5650] block mt-1">
-                          {formatBs(prod.totalRevenueBob)}
+                          {formatBs(prod.totalRevenueBob, prod.totalRevenueUsd)}
                         </span>
                       </div>
                     </div>
@@ -1652,7 +1763,7 @@ export function AdminMetricsModule({
                           <div className="flex items-center gap-2 text-[10px] text-[#5C5650] pt-0.5">
                             <span>Stock retenido: <strong className="text-amber-800 font-bold">{prod.currentStock} unid.</strong></span>
                             <span>·</span>
-                            <span>Precio: <strong className="font-mono">{formatBs(prod.price)}</strong></span>
+                            <span>Precio: <strong className="font-mono">{formatBs(prod.price, prod.priceUsd)}</strong></span>
                           </div>
                         </div>
                       </div>
@@ -1665,7 +1776,7 @@ export function AdminMetricsModule({
                         <div className="mt-1">
                           <span className="text-[10px] text-[#8C827A] block leading-none">Inmovilizado:</span>
                           <span className="font-mono font-black text-xs text-[#1A1817]">
-                            {formatBs(prod.immobilizedCapitalBob)}
+                            {formatBs(prod.immobilizedCapitalBob, prod.immobilizedCapitalUsd)}
                           </span>
                         </div>
                       </div>
