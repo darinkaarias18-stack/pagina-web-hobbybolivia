@@ -2288,23 +2288,34 @@ export async function deleteQuoteOrder(idOrCode: number | string): Promise<boole
   const pool = getMysqlPool();
 
   const codeStr = String(idOrCode).trim();
-  const numericId = !isNaN(Number(idOrCode)) ? Number(idOrCode) : Number(codeStr.replace(/[^0-9]/g, ''));
+  let numericId = 0;
+  if (typeof idOrCode === 'number' && !isNaN(idOrCode)) {
+    numericId = idOrCode;
+  } else if (!isNaN(Number(codeStr))) {
+    numericId = Number(codeStr);
+  } else {
+    // Si viene en formato "HB-0003" o "HB-20261104-003", extraer el número final
+    const match = codeStr.match(/(\d+)$/);
+    if (match) {
+      numericId = parseInt(match[1], 10);
+    }
+  }
 
+  // 1. Borrar en MySQL de forma directa por ID
   if (pool) {
     try {
       if (numericId > 0) {
-        await pool.query('DELETE FROM quote_orders WHERE id = ? OR order_code = ?', [numericId, codeStr]);
-      } else {
-        await pool.query('DELETE FROM quote_orders WHERE order_code = ?', [codeStr]);
+        await pool.query('DELETE FROM quote_orders WHERE id = ?', [numericId]);
       }
     } catch (e) {
       console.warn('[MySQL deleteQuoteOrder Warning]:', e);
     }
   }
 
+  // 2. Borrar de store local
   if (store.quotes) {
     store.quotes = store.quotes.filter(
-      q => q.orderCode !== codeStr &&
+      q => q.orderCode?.toLowerCase() !== codeStr.toLowerCase() &&
         q.id !== Number(idOrCode) &&
         (numericId <= 0 || q.id !== numericId)
     );

@@ -102,24 +102,26 @@ export async function DELETE(request: NextRequest) {
     if (authCheck instanceof NextResponse) return authCheck;
 
     const { searchParams } = new URL(request.url);
-    let orderCode = searchParams.get('orderCode') || searchParams.get('id');
+    const idParam = searchParams.get('id');
+    const codeParam = searchParams.get('orderCode');
+    let orderIdentifier = (idParam && idParam !== 'undefined') ? idParam : codeParam;
 
-    if (!orderCode) {
+    if (!orderIdentifier) {
       const body = await request.json().catch(() => ({}));
-      orderCode = body?.orderCode || body?.id;
+      orderIdentifier = body?.id || body?.orderCode;
     }
 
-    if (!orderCode) {
+    if (!orderIdentifier) {
       return NextResponse.json(
         { success: false, error: 'Código o ID de pedido requerido para eliminar' },
         { status: 400 }
       );
     }
 
-    await deleteQuoteOrder(orderCode);
+    await deleteQuoteOrder(orderIdentifier);
     return NextResponse.json({
       success: true,
-      message: `Pedido ${orderCode} eliminado con éxito`
+      message: `Pedido ${orderIdentifier} eliminado con éxito`
     });
   } catch (error: any) {
     console.error('Error in DELETE /api/quotes:', error);

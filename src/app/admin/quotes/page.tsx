@@ -40,6 +40,7 @@ type ViewMode = 'kanban' | 'table';
 
 export default function AdminQuotesPage() {
   const { isBsMode } = useCurrency();
+  const [exchangeRate, setExchangeRate] = useState<number>(12.10);
   const [orders, setOrders] = useState<QuoteOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,14 +68,15 @@ export default function AdminQuotesPage() {
   const handleDeleteOrder = async () => {
     if (!orderToDelete) return;
     const code = orderToDelete.orderCode;
+    const ordId = orderToDelete.id;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/quotes?orderCode=${encodeURIComponent(code)}`, {
+      const res = await fetch(`/api/quotes?orderCode=${encodeURIComponent(code)}&id=${encodeURIComponent(ordId || '')}`, {
         method: 'DELETE'
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setOrders(prev => prev.filter(o => o.orderCode !== code));
+        setOrders(prev => prev.filter(o => o.orderCode !== code && (ordId ? o.id !== ordId : true)));
         showToast(`Pedido #${code} eliminado con éxito`);
         setOrderToDelete(null);
       } else {
@@ -112,6 +114,14 @@ export default function AdminQuotesPage() {
 
   useEffect(() => {
     loadOrders();
+    fetch('/api/exchange-rate?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.data?.exchangeRate) {
+          setExchangeRate(Number(d.data.exchangeRate) || 12.10);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Manejador del cambio de estado con lógica de descuento/reversión de stock
@@ -313,21 +323,64 @@ export default function AdminQuotesPage() {
     return { text, color, hours: diffHours };
   };
 
-  const formatPrice = (amount: number) => {
-    const val = Number(amount) || 0;
+  const getItemUnitPriceUsd = (prod: any): number => {
+    const directUsd = Number(prod?.priceUsd ?? prod?.price_usd);
+    if (!isNaN(directUsd) && directUsd > 0) return directUsd;
+    const bob = Number(prod?.price) || 0;
+    if (bob > 0 && exchangeRate > 0) return Number((bob / exchangeRate).toFixed(2));
+    return 0;
+  };
+
+  const getItemUnitPriceBob = (prod: any): number => {
+    const bob = Number(prod?.price);
+    if (!isNaN(bob) && bob > 0) return bob;
+    const directUsd = Number(prod?.priceUsd ?? prod?.price_usd) || 0;
+    if (directUsd > 0 && exchangeRate > 0) return Number((directUsd * exchangeRate).toFixed(2));
+    return 0;
+  };
+
+  const getOrderTotals = (ord: QuoteOrder) => {
+    let sumUsd = 0;
+    let sumBob = 0;
+
+    (ord.items || []).forEach((it) => {
+      const prod = it.item || (it as any);
+      const qty = Number(it.quantity) || 1;
+      const unitUsd = getItemUnitPriceUsd(prod);
+      const unitBob = getItemUnitPriceBob(prod);
+      sumUsd += unitUsd * qty;
+      sumBob += unitBob * qty;
+    });
+
+    if (sumUsd === 0 && sumBob === 0) {
+      const raw = Number(ord.total) || 0;
+      sumBob = raw;
+      sumUsd = exchangeRate > 0 ? Number((raw / exchangeRate).toFixed(2)) : raw;
+    }
+
+    return {
+      usd: Number(sumUsd.toFixed(2)),
+      bob: Number(sumBob.toFixed(2))
+    };
+  };
+
+  const formatPrice = (amountUsd: number, amountBob?: number) => {
     if (isBsMode) {
-      return `Bs. ${val.toLocaleString('es-BO', {
+      const b = amountBob !== undefined ? amountBob : (amountUsd * exchangeRate);
+      return `Bs. ${Number(b).toLocaleString('es-BO', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       })}`;
     }
-    return `$${val.toLocaleString('en-US', {
+    return `$${Number(amountUsd).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })} USD`;
   };
 
-  const formatBs = formatPrice;
+  const formatBs = (amount: number) => {
+    return formatPrice(amount);
+  };
 
   const renderStatusBadge = (status?: string) => {
     const norm = normalizeStatus(status);
@@ -554,7 +607,8 @@ export default function AdminQuotesPage() {
         /* ================= VISTA TABLERO KANBAN INTERACTIVO ================= */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4.5 items-start overflow-x-auto pb-6">
           {kanbanColumns.map((col) => {
-            const totalColBob = col.orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+            const totalColBob = col.orders.reduce((sum, o) => sum + getOrderTotals(o).bob, 0);
+            const totalColUsd = col.orders.reduce((sum, o) => sum + getOrderTotals(o).usd, 0);
             const isDropTarget = dragOverColumnId === col.id;
 
             return (
@@ -606,7 +660,7 @@ export default function AdminQuotesPage() {
                   <div className="flex items-center justify-between mt-1 text-[10px] text-[#8C827A] font-semibold">
                     <span>{col.subtitle}</span>
                     <span className="font-mono font-bold text-[#1A1817]">
-                      {formatBs(totalColBob)}
+                      ${totalColUsd.toFixed(2)} USD
                     </span>
                   </div>
                 </div>
@@ -733,9 +787,19 @@ export default function AdminQuotesPage() {
                             <span className="text-[10px] font-black uppercase text-[#8C827A]">
                               Total:
                             </span>
-                            <span className="font-mono font-black text-sm text-[#1A1817]">
-                              {formatBs(ord.total)}
-                            </span>
+                            {(() => {
+                              const ordTotals = getOrderTotals(ord);
+                              return (
+                                <div className="text-right">
+                                  <span className="font-mono font-black text-xs text-[#1A1817] block">
+                                    ${ordTotals.usd.toFixed(2)} USD
+                                  </span>
+                                  <span className="font-mono text-[9.5px] font-bold text-[#8C827A] block">
+                                    Bs. {ordTotals.bob.toFixed(2)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           {/* Fila 5: Selector Rápido de Estado */}
@@ -920,14 +984,21 @@ export default function AdminQuotesPage() {
                       </div>
                     </td>
 
-                    {/* 5. TOTAL (BS.) */}
+                    {/* 5. TOTAL (USD) */}
                     <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
-                      <span className="font-mono font-black text-sm text-[#1A1817] block">
-                        {formatBs(ord.total)}
-                      </span>
-                      <span className="text-[10px] text-[#8C827A] font-medium block">
-                        Efectivo / QR
-                      </span>
+                      {(() => {
+                        const rowTotals = getOrderTotals(ord);
+                        return (
+                          <>
+                            <span className="font-mono font-black text-sm text-[#1A1817] block">
+                              ${rowTotals.usd.toFixed(2)} USD
+                            </span>
+                            <span className="text-[10px] text-[#8C827A] font-semibold block">
+                              Bs. {rowTotals.bob.toFixed(2)}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
 
                     {/* 6. ESTADO (GESTIONAR) */}
@@ -1075,9 +1146,11 @@ export default function AdminQuotesPage() {
                       prod?.image_url ||
                       prod?.imageUrl ||
                       '/placeholder.webp';
-                    const unitPrice = Number(prod?.price) || 0;
                     const qty = Number(it.quantity) || 1;
-                    const lineTotal = unitPrice * qty;
+                    const unitUsd = getItemUnitPriceUsd(prod);
+                    const unitBob = getItemUnitPriceBob(prod);
+                    const lineTotalUsd = unitUsd * qty;
+                    const lineTotalBob = unitBob * qty;
 
                     return (
                       <div
@@ -1099,9 +1172,14 @@ export default function AdminQuotesPage() {
                             <p className="font-black text-xs text-[#1A1817] truncate" title={prodName}>
                               {prodName}
                             </p>
-                            <span className="text-[11px] text-[#8C827A]">
-                              {formatBs(unitPrice)} c/u
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[11px] font-extrabold text-[#1A1817]">
+                                ${unitUsd.toFixed(2)} <span className="text-[9.5px] font-normal text-[#5C5650]">USD c/u</span>
+                              </span>
+                              <span className="text-[10px] font-medium text-[#8C827A]">
+                                (Bs. {unitBob.toFixed(2)})
+                              </span>
+                            </div>
                           </div>
                         </div>
 
@@ -1110,7 +1188,10 @@ export default function AdminQuotesPage() {
                             x{qty}
                           </span>
                           <span className="font-mono font-black text-xs text-[#1A1817] block mt-1">
-                            {formatBs(lineTotal)}
+                            ${lineTotalUsd.toFixed(2)} USD
+                          </span>
+                          <span className="font-mono text-[9.5px] font-medium text-[#8C827A] block">
+                            Bs. {lineTotalBob.toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -1120,14 +1201,24 @@ export default function AdminQuotesPage() {
               </div>
 
               {/* Total Final */}
-              <div className="pt-3 border-t border-[#E2DCD3] flex items-center justify-between">
-                <span className="text-xs font-black uppercase text-[#5C5650]">
-                  Total a Cobrar:
-                </span>
-                <span className="text-xl font-black text-[#1A1817] font-mono">
-                  {formatBs(detailOrder.total)}
-                </span>
-              </div>
+              {(() => {
+                const detailTotals = getOrderTotals(detailOrder);
+                return (
+                  <div className="pt-3 border-t border-[#E2DCD3] flex items-center justify-between">
+                    <span className="text-xs font-black uppercase text-[#5C5650]">
+                      Total a Cobrar:
+                    </span>
+                    <div className="text-right">
+                      <span className="text-xl font-black text-[#1A1817] font-mono block">
+                        ${detailTotals.usd.toFixed(2)} USD
+                      </span>
+                      <span className="text-xs font-bold text-[#8C827A] font-mono block">
+                        Bs. {detailTotals.bob.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Modal Footer */}
@@ -1326,8 +1417,9 @@ export default function AdminQuotesPage() {
                           prod?.sku ||
                           (prod?.id ? `HB-${String(prod.id).padStart(4, '0')}` : `HB-${String(i + 1).padStart(4, '0')}`);
                         const qty = Number(it.quantity) || 1;
-                        const price = Number(prod?.price) || 0;
-                        const lineTotal = price * qty;
+                        const unitUsd = getItemUnitPriceUsd(prod);
+                        const unitBob = getItemUnitPriceBob(prod);
+                        const lineTotalUsd = unitUsd * qty;
                         const prodImg =
                           prod?.image_url ||
                           prod?.imageUrl ||
@@ -1358,10 +1450,10 @@ export default function AdminQuotesPage() {
                               </span>
                             </td>
                             <td className="py-3 px-3 text-right font-mono font-semibold text-[#5C5650] whitespace-nowrap">
-                              {formatBs(price)}
+                              ${unitUsd.toFixed(2)} USD
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-black text-[#1A1817] text-xs whitespace-nowrap">
-                              {formatBs(lineTotal)}
+                              ${lineTotalUsd.toFixed(2)} USD
                             </td>
                           </tr>
                         );
@@ -1384,9 +1476,19 @@ export default function AdminQuotesPage() {
                     <span className="font-black uppercase tracking-wider text-xs text-[#5C5650]">
                       Total a Pagar:
                     </span>
-                    <span className="text-xl sm:text-2xl font-black text-[#1A1817] font-mono">
-                      {formatBs(printOrder.total)}
-                    </span>
+                    {(() => {
+                      const printTotals = getOrderTotals(printOrder);
+                      return (
+                        <div className="text-right">
+                          <span className="text-xl sm:text-2xl font-black text-[#1A1817] font-mono block">
+                            ${printTotals.usd.toFixed(2)} USD
+                          </span>
+                          <span className="text-xs font-bold text-[#8C827A] font-mono block">
+                            Bs. {printTotals.bob.toFixed(2)}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

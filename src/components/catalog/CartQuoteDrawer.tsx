@@ -244,7 +244,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
           deliveryAddress,
           customerNotes,
           items: cartItems,
-          total: totalBob
+          total: isCatalogUsd ? totalUsd : totalBob
         })
       });
 
