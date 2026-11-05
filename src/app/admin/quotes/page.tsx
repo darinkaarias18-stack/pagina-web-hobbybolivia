@@ -364,6 +364,45 @@ export default function AdminQuotesPage() {
     };
   };
 
+  // Generador de mensajes contextuales de WhatsApp según el estado del pedido
+  const getWhatsAppMessageForOrder = (ord: QuoteOrder) => {
+    const status = normalizeStatus(ord.status);
+    const clientName = ord.customerName ? ord.customerName.trim() : 'Estimado cliente';
+    const code = ord.orderCode || 'HB-ORDEN';
+    const totals = getOrderTotals(ord);
+    const city = ord.deliveryCity ? ord.deliveryCity.trim() : 'Bolivia';
+
+    switch (status) {
+      case 'PEDIDO':
+        return `¡Hola ${clientName}! 👋 Te saludamos de *Hobby Bolivia* 🛩️.\n\nHemos recibido con éxito tu *Pedido #${code}* con destino a *${city}* por un total de *$${totals.usd.toFixed(2)} USD (Bs. ${totals.bob.toFixed(2)})*.\n\nEstamos revisando el stock de tus artículos para coordinar contigo los detalles de pago y despacho. ¿Tienes alguna consulta o requerimiento especial sobre tu pedido?`;
+
+      case 'PENDING':
+        return `¡Hola ${clientName}! 👋 Te contactamos de *Hobby Bolivia* 🛩️ respecto a tu *Pedido #${code}* con destino a *${city}*.\n\nTu orden se encuentra *Pendiente de Pago* por un total de:\n• Total USD: *$${totals.usd.toFixed(2)} USD*\n• Total Bs: *Bs. ${totals.bob.toFixed(2)}*\n\nPuedes realizar el pago mediante QR Simple Bolivia o transferencia bancaria. Por favor envíanos tu comprobante por este medio para proceder con la preparación inmediata de tu paquete.`;
+
+      case 'PAGADO':
+        return `¡Hola ${clientName}! 👋 Te confirmamos que hemos recibido correctamente el *PAGO* de tu *Pedido #${code}* en *Hobby Bolivia* ✅.\n\n• Monto: *$${totals.usd.toFixed(2)} USD (Bs. ${totals.bob.toFixed(2)})*\n• Destino: *${city}*\n\nTu paquete ya está pasando al área de empaque con la debida protección para su despacho. Te notificaremos en cuanto sea entregado a la empresa de transporte. ¡Muchas gracias por tu compra!`;
+
+      case 'DESPACHADO':
+        return `¡Hola ${clientName}! 👋 Te informamos que tu *Pedido #${code}* de *Hobby Bolivia* ya ha sido *DESPACHADO* con destino a *${city}* 📦✈️.\n\nEn breve te compartiremos la guía/comprobante de envío para que puedas hacerle seguimiento a tu paquete. ¡Muchas gracias por tu confianza y que disfrutes tu compra!`;
+
+      case 'CANCELADO':
+        return `¡Hola ${clientName}! 👋 Te escribimos de *Hobby Bolivia* para comunicarte que tu *Pedido #${code}* ha sido marcado como *CANCELADO*.\n\nSi deseas reactivar tu pedido, cambiar algún artículo o necesitas asesoramiento técnico, avísanos con gusto para asistirte.`;
+
+      default:
+        return `¡Hola ${clientName}! 👋 Te saludamos de *Hobby Bolivia* 🛩️ para coordinar los detalles de tu *Pedido #${code}*.`;
+    }
+  };
+
+  const getWhatsAppUrlForOrder = (ord: QuoteOrder) => {
+    let cleanPhone = (ord.customerPhone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone) return '#';
+    if (cleanPhone.length === 8) {
+      cleanPhone = `591${cleanPhone}`;
+    }
+    const message = getWhatsAppMessageForOrder(ord);
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  };
+
   const formatPrice = (amountUsd: number, amountBob?: number) => {
     if (isBsMode) {
       const b = amountBob !== undefined ? amountBob : (amountUsd * exchangeRate);
@@ -752,13 +791,14 @@ export default function AdminQuotesPage() {
                             </p>
                             <div className="flex items-center justify-between gap-2">
                               <a
-                                href={`https://wa.me/${(ord.customerPhone || '').replace(/[^0-9]/g, '')}`}
+                                href={getWhatsAppUrlForOrder(ord)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#5C5650] hover:text-[#3E7B44] transition-colors"
+                                className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#5C5650] hover:text-[#25D366] transition-colors group cursor-pointer"
+                                title={`Enviar WhatsApp a ${ord.customerName || 'cliente'} sobre estado: ${normalizeStatus(ord.status)}`}
                               >
-                                <Phone className="w-3 h-3 text-[#3E7B44] shrink-0" />
-                                <span>{ord.customerPhone || 'S/N'}</span>
+                                <Phone className="w-3 h-3 text-[#3E7B44] group-hover:text-[#25D366] group-hover:scale-110 transition-transform shrink-0" />
+                                <span className="group-hover:underline">{ord.customerPhone || 'S/N'}</span>
                               </a>
                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#8C827A]">
                                 <MapPin className="w-3 h-3 text-[#D4A359] shrink-0" />
@@ -972,14 +1012,14 @@ export default function AdminQuotesPage() {
                           {ord.customerName}
                         </p>
                         <a
-                          href={`https://wa.me/${(ord.customerPhone || '').replace(/[^0-9]/g, '')}`}
+                          href={getWhatsAppUrlForOrder(ord)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-[#5C5650] hover:text-[#3E7B44] transition-colors"
-                          title="Contactar al cliente por WhatsApp"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#5C5650] hover:text-[#25D366] transition-colors group cursor-pointer"
+                          title={`Enviar WhatsApp a ${ord.customerName || 'cliente'} sobre estado: ${currentMappedValue}`}
                         >
-                          <Phone className="w-3 h-3 text-[#3E7B44] shrink-0" />
-                          <span>{ord.customerPhone}</span>
+                          <Phone className="w-3 h-3 text-[#3E7B44] group-hover:text-[#25D366] group-hover:scale-110 transition-transform shrink-0" />
+                          <span className="group-hover:underline">{ord.customerPhone}</span>
                         </a>
                       </div>
                     </td>
@@ -1118,7 +1158,16 @@ export default function AdminQuotesPage() {
                     Comprador:
                   </span>
                   <p className="font-black text-[#1A1817] text-sm">{detailOrder.customerName}</p>
-                  <p className="font-mono font-bold text-[#5C5650]">{detailOrder.customerPhone}</p>
+                  <a
+                    href={getWhatsAppUrlForOrder(detailOrder)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-mono font-bold text-xs text-[#5C5650] hover:text-[#25D366] transition-colors group cursor-pointer"
+                    title={`Enviar WhatsApp a ${detailOrder.customerName || 'cliente'} sobre estado: ${normalizeStatus(detailOrder.status)}`}
+                  >
+                    <Phone className="w-3.5 h-3.5 text-[#3E7B44] group-hover:text-[#25D366] group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="group-hover:underline">{detailOrder.customerPhone || 'Sin teléfono'}</span>
+                  </a>
                 </div>
 
                 <div className="bg-white p-4 rounded-2xl border border-[#E2DCD3] space-y-1">
