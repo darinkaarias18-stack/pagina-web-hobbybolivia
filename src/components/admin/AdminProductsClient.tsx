@@ -605,15 +605,15 @@ export function AdminProductsClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           exchangeRate: parsed,
-          autoUpdate: rateMode === 'auto',
-          source: rateMode === 'auto' ? 'API Oficial' : 'Manual (Administrador)'
+          autoUpdate: false,
+          source: 'Manual (Administrador)'
         })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         const newRate = Number(data.data?.exchangeRate) || parsed;
         setExchangeRate(newRate);
-        setAutoUpdate(rateMode === 'auto');
+        setAutoUpdate(false);
 
         const now = new Date();
         const fullTimestamp = `${now.toLocaleDateString('es-BO', {
@@ -2070,7 +2070,7 @@ export function AdminProductsClient() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#FAF8F5] rounded-3xl max-w-md w-full border border-[#E2DCD3] shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150"
+            className="bg-[#FAF8F5] rounded-3xl max-w-sm w-full border border-[#E2DCD3] shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-150"
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
               <div className="flex items-center gap-2.5">
@@ -2109,77 +2109,12 @@ export function AdminProductsClient() {
                     step="0.01"
                     min="1"
                     required
+                    autoFocus
                     value={customRateInput}
                     onChange={(e) => setCustomRateInput(e.target.value)}
                     placeholder="12.10"
-                    className="w-full pl-11 pr-4 py-2.5 bg-white border border-[#E2DCD3] rounded-xl text-sm font-mono font-black text-[#1A1817] focus:border-[#D4A359] outline-none shadow-2xs"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-[#E2DCD3] rounded-xl text-base font-mono font-black text-[#1A1817] focus:border-[#D4A359] outline-none shadow-2xs"
                   />
-                </div>
-                {/* Valores rápidos sugeridos */}
-                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                  <span className="text-[10px] text-[#8C827A] font-bold">Valores rápidos:</span>
-                  {[6.96, 12.10, 12.50, 13.00].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => {
-                        setCustomRateInput(val.toFixed(2));
-                        setRateMode('manual');
-                      }}
-                      className="px-2 py-0.5 rounded-lg bg-white hover:bg-[#D4A359]/20 border border-[#E2DCD3] text-[10px] font-mono font-bold text-[#1A1817] cursor-pointer transition-colors"
-                    >
-                      Bs. {val.toFixed(2)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-[#1A1817] mb-2">
-                  Modo de Actualización
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRateMode('manual')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${rateMode === 'manual'
-                        ? 'border-[#D4A359] bg-white ring-2 ring-[#D4A359]/30'
-                        : 'border-[#E2DCD3] bg-[#F5F2EB] hover:bg-white text-[#5C5650]'
-                      }`}
-                  >
-                    <span className="block text-xs font-black text-[#1A1817]">Manual Fijo</span>
-                    <span className="block text-[10px] text-[#8C827A] mt-0.5">Usa tu valor sin cambiar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRateMode('auto')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${rateMode === 'auto'
-                        ? 'border-[#D4A359] bg-white ring-2 ring-[#D4A359]/30'
-                        : 'border-[#E2DCD3] bg-[#F5F2EB] hover:bg-white text-[#5C5650]'
-                      }`}
-                  >
-                    <span className="block text-xs font-black text-[#1A1817]">Automático</span>
-                    <span className="block text-[10px] text-[#8C827A] mt-0.5">Sincroniza con API oficial</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Vista previa de conversión en vivo */}
-              <div className="p-3 bg-white rounded-xl border border-[#E2DCD3] space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] block">
-                  Simulación de conversión en catálogo
-                </span>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#5C5650] font-medium">$8.60 USD (Hélice)</span>
-                  <span className="font-mono font-bold text-[#1A1817]">
-                    Bs. {((parseFloat(customRateInput) || 0) * 8.6).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#5C5650] font-medium">$50.00 USD</span>
-                  <span className="font-mono font-bold text-[#1A1817]">
-                    Bs. {((parseFloat(customRateInput) || 0) * 50).toFixed(2)}
-                  </span>
                 </div>
               </div>
 
@@ -2188,14 +2123,14 @@ export function AdminProductsClient() {
                   type="button"
                   disabled={isSavingRate}
                   onClick={() => setIsRateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#E2DCD3] bg-white text-xs font-bold text-[#5C5650] hover:bg-[#F5F2EB] transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-[#E2DCD3] bg-white text-xs font-bold text-[#5C5650] hover:bg-[#F5F2EB] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingRate}
-                  className="px-5 py-2 rounded-xl bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-5 py-2.5 rounded-xl bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   {isSavingRate ? (
                     <>
@@ -2203,7 +2138,7 @@ export function AdminProductsClient() {
                       <span>Guardando...</span>
                     </>
                   ) : (
-                    <span>Guardar Tipo de Cambio</span>
+                    <span>Guardar y Aplicar</span>
                   )}
                 </button>
               </div>
