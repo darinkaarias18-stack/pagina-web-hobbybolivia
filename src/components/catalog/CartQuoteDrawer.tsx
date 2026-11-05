@@ -740,12 +740,9 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                           USD
                         </span>
                       </div>
-                      <div className="text-xs sm:text-sm font-bold text-[#FAF8F5] mt-0.5 flex items-center justify-end gap-1.5">
+                      <div className="text-xs sm:text-sm font-bold text-[#FAF8F5] mt-0.5 flex items-center justify-end">
                         <span>
                           Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-[9.5px] text-[#D4A359] font-bold bg-[#211E1C] px-1.5 py-0.5 rounded border border-[#3E3834]">
-                          TC: {exchangeRate.toFixed(2)}
                         </span>
                       </div>
                     </>
@@ -814,8 +811,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                     <span className="text-xs font-black uppercase text-[#8C827A]">USD</span>
                   </div>
                   <span className="text-xs font-bold text-[#8C827A] block">
-                    Equivalente: <strong className="text-[#161311]">Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>{' '}
-                    <span className="text-[10px] text-[#A89F91]">(TC: {exchangeRate.toFixed(2)})</span>
+                    Equivalente: <strong className="text-[#161311]">Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                   </span>
                 </>
               ) : (
