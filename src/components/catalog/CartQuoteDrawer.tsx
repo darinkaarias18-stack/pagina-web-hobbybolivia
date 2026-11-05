@@ -142,11 +142,18 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
       if (e.key === 'hb_rate_sync' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          if (parsed?.exchangeRate) {
-            setExchangeRate(Number(parsed.exchangeRate));
+          const r = Number(parsed?.rate || parsed?.exchangeRate);
+          if (r > 0) {
+            setExchangeRate(r);
           }
         } catch {
           // ignore
+        }
+      }
+      if (e.key === 'hb_cached_rate' && e.newValue) {
+        const r = parseFloat(e.newValue);
+        if (r > 0) {
+          setExchangeRate(r);
         }
       }
     };
@@ -181,6 +188,9 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
     return curr === 'USD';
   };
 
+  // Helper para el tipo de cambio activo configurado en /admin/products (manual o fallback)
+  const activeRate = exchangeRate > 0 ? exchangeRate : 12.10;
+
   // Helper para obtener el precio unitario en USD
   const getItemUsdPrice = (item: any): number => {
     if (item.priceUsd !== undefined && item.priceUsd !== null && Number(item.priceUsd) > 0) {
@@ -189,29 +199,27 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
     if (item.price_usd !== undefined && item.price_usd !== null && Number(item.price_usd) > 0) {
       return Number(item.price_usd);
     }
-    const currentRate = exchangeRate > 0 ? exchangeRate : 12.1028;
     if (item.price && Number(item.price) > 0) {
-      return Number(item.price) / currentRate;
+      return Number(item.price) / activeRate;
     }
     return 0;
   };
 
-  // Helper para obtener el precio unitario en BOB respetando el precio ingresado sin cálculos
+  // Helper para obtener el precio unitario en BOB según la conversión con el TC manual
   const getItemBobPrice = (item: any): number => {
+    const usd = getItemUsdPrice(item);
+    if (usd > 0) {
+      return Number((usd * activeRate).toFixed(2));
+    }
     if (item.price !== undefined && item.price !== null && Number(item.price) > 0) {
       return Number(item.price);
     }
-    const usd = getItemUsdPrice(item);
-    const currentRate = exchangeRate > 0 ? exchangeRate : 12.1028;
-    if (usd > 0) {
-      return usd * currentRate;
-    }
     return 0;
   };
 
-  // Totales calculados en USD y en Bs.
+  // Totales calculados: Total en Dólares y Total en Bolivianos (convertido estrictamente con el TC manual)
   const totalUsd = cartItems.reduce((acc, ci) => acc + getItemUsdPrice(ci.item) * ci.quantity, 0);
-  const totalBob = cartItems.reduce((acc, ci) => acc + getItemBobPrice(ci.item) * ci.quantity, 0);
+  const totalBob = Number((totalUsd * activeRate).toFixed(2));
 
   const handleGoToCatalog = () => {
     closeDrawer();
@@ -283,12 +291,8 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
       });
 
       message += `------------------------------------\n`;
-      if (isCatalogUsd) {
-        message += `*TOTAL A PAGAR:* $ ${totalUsd.toFixed(2)} USD\n`;
-        message += `*TOTAL EN BOLIVIANOS:* Bs. ${totalBob.toFixed(2)} (Tipo de cambio oficial: 1 USD = Bs. ${exchangeRate.toFixed(2)})\n`;
-      } else {
-        message += `*TOTAL A PAGAR:* Bs. ${totalBob.toFixed(2)}\n`;
-      }
+      message += `*TOTAL EN DÓLARES:* $ ${totalUsd.toFixed(2)} USD\n`;
+      message += `*TOTAL EN BOLIVIANOS:* Bs. ${totalBob.toFixed(2)}\n`;
       message += `*MÉTODO DE PAGO:* QR Simple Bolivia / Transferencia / Efectivo\n`;
       message += `------------------------------------\n`;
       message += `Adjunto mi comprobante de pago o consulta para verificación y despacho.`;
@@ -717,41 +721,41 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
             )}
           </div>
 
-          {/* Sticky Sidebar Footer: TOTAL A PAGAR & Finalizar Pedido */}
+          {/* Sticky Sidebar Footer: DOS TOTALES & Finalizar Pedido */}
           {cartItems.length > 0 && !orderCompleted && (
-            <footer className="shrink-0 border-t border-[#2D2622] bg-[#161311] text-[#FAF8F5] p-4 sm:p-5 space-y-3 shadow-2xl">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#FAF8F5] block">
-                    TOTAL A PAGAR:
+            <footer className="shrink-0 border-t border-[#2D2622] bg-[#161311] text-[#FAF8F5] p-4 sm:p-5 space-y-3.5 shadow-2xl">
+              {/* Contenedor de dos totales: Total en dólares y Total en bolivianos */}
+              <div className="p-3.5 rounded-2xl bg-[#211E1C] border border-[#2D2622] space-y-2.5">
+                {/* Total en Dólares */}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#FAF8F5]">
+                    Total en dólares:
                   </span>
-                  <span className="text-[10px] sm:text-[10.5px] text-[#D4A359] font-bold line-clamp-1">
-                    Las instrucciones de compra se coordinarán por WhatsApp
-                  </span>
-                </div>
-                <div className="text-right shrink-0">
-                  {isCatalogUsd ? (
-                    <>
-                      <div className="flex items-baseline justify-end gap-1.5">
-                        <span className="text-2xl sm:text-3xl font-black text-[#D4A359] tracking-tight">
-                          ${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-xs sm:text-sm font-black uppercase text-[#D4A359]/90 tracking-wide">
-                          USD
-                        </span>
-                      </div>
-                      <div className="text-xs sm:text-sm font-bold text-[#FAF8F5] mt-0.5 flex items-center justify-end">
-                        <span>
-                          Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-xl sm:text-2xl font-black text-[#D4A359]">
-                      Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-xl sm:text-2xl font-black text-[#D4A359] tracking-tight font-mono">
+                      ${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                  )}
+                    <span className="text-xs font-black uppercase text-[#D4A359]/90 tracking-wider">
+                      USD
+                    </span>
+                  </div>
                 </div>
+
+                <div className="h-px bg-[#2D2622]" />
+
+                {/* Total en Bolivianos */}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#FAF8F5]">
+                    Total en bolivianos:
+                  </span>
+                  <span className="text-xl sm:text-2xl font-black text-[#FAF8F5] tracking-tight font-mono">
+                    Bs. {totalBob.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-[10px] sm:text-[11px] text-[#D4A359] font-bold text-center">
+                Las instrucciones de compra se coordinarán por WhatsApp
               </div>
 
               <button

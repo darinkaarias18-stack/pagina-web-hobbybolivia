@@ -578,6 +578,16 @@ export function AdminProductsClient() {
           })
           .catch(() => { });
 
+        if (typeof window !== 'undefined') {
+          try {
+            const channel = new BroadcastChannel('hb_catalog_channel');
+            channel.postMessage({ type: 'RATE_UPDATED', exchangeRate: newRate });
+            channel.close();
+          } catch { }
+          localStorage.setItem('hb_rate_sync', JSON.stringify({ rate: newRate, exchangeRate: newRate, timestamp: Date.now() }));
+          localStorage.setItem('hb_cached_rate', String(newRate));
+        }
+
         showToast(`Tipo de cambio actualizado: 1 USD = Bs. ${newRate.toFixed(2)} (${fullTimestamp})`);
       } else {
         showToast(json.error || 'No se pudo actualizar el tipo de cambio', 'error');
@@ -633,7 +643,8 @@ export function AdminProductsClient() {
             channel.postMessage({ type: 'RATE_UPDATED', exchangeRate: newRate });
             channel.close();
           } catch { }
-          localStorage.setItem('hb_rate_sync', JSON.stringify({ rate: newRate, timestamp: Date.now() }));
+          localStorage.setItem('hb_rate_sync', JSON.stringify({ rate: newRate, exchangeRate: newRate, timestamp: Date.now() }));
+          localStorage.setItem('hb_cached_rate', String(newRate));
         }
 
         showToast(`Tipo de cambio guardado: 1 USD = Bs. ${newRate.toFixed(2)}`);
