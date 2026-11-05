@@ -632,7 +632,7 @@ export function AdminProductsClient() {
             const channel = new BroadcastChannel('hb_catalog_channel');
             channel.postMessage({ type: 'RATE_UPDATED', exchangeRate: newRate });
             channel.close();
-          } catch {}
+          } catch { }
           localStorage.setItem('hb_rate_sync', JSON.stringify({ rate: newRate, timestamp: Date.now() }));
         }
 
@@ -642,7 +642,7 @@ export function AdminProductsClient() {
         fetch('/api/products?includeInactive=true&t=' + Date.now(), { cache: 'no-store' })
           .then(r => r.json())
           .then(d => { if (d.success) setProducts(d.data); })
-          .catch(() => {});
+          .catch(() => { });
       } else {
         showToast(data.error || 'Error al guardar el tipo de cambio', 'error');
       }
@@ -1164,55 +1164,46 @@ export function AdminProductsClient() {
           </h1>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
-          {/* Quick Currency Status (Ajuste Manual y Automático de TC) */}
-          <div className="inline-flex items-center gap-1.5 bg-[#FAF8F5] p-1 rounded-full border border-[#E2DCD3] shadow-xs shrink-0 max-w-full">
+        <div className="flex items-center flex-wrap gap-2.5 w-full sm:w-auto">
+          {/* 1. Botón Separado: TC Automático */}
+          <div className="inline-flex items-center gap-1 bg-[#FAF8F5] p-1 rounded-full border border-[#E2DCD3] shadow-xs shrink-0 max-w-full">
             <button
               type="button"
-              onClick={() => {
-                setCustomRateInput(exchangeRate.toFixed(2));
-                setRateMode('manual');
-                setIsRateModalOpen(true);
-              }}
+              onClick={handleRefreshExchangeRate}
+              disabled={isRefreshingRate}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs transition-all cursor-pointer group select-none"
-              title="Ajustar tipo de cambio manual o automático"
+              title={`Tipo de cambio automático. Clic para sincronizar con API oficial. Última actualización: ${lastUpdatedStr || 'reciente'}`}
             >
               <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A359] shrink-0 group-hover:scale-110 transition-transform" />
               <span className="whitespace-nowrap">
                 TC: <strong className="font-mono text-[#1A1817]">Bs. {exchangeRate.toFixed(2)}</strong>
               </span>
-              <span className={`text-[9.5px] px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${
-                autoUpdate ? 'bg-[#211E1C] text-[#D4A359]' : 'bg-emerald-600 text-white'
-              }`}>
-                {autoUpdate ? 'Auto' : 'Manual'}
+              <span className={`text-[9.5px] px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${autoUpdate ? 'bg-[#211E1C] text-[#D4A359]' : 'bg-[#E2DCD3] text-[#5C5650]'}`}>
+                {autoUpdate ? 'Auto' : 'Off'}
               </span>
-            </button>
-
-            {/* Botón explícito para Poner TC Manual */}
-            <button
-              type="button"
-              onClick={() => {
-                setCustomRateInput(exchangeRate.toFixed(2));
-                setRateMode('manual');
-                setIsRateModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-[#D4A359] hover:text-[#161311] text-[11px] font-black transition-all cursor-pointer shadow-2xs group"
-              title="Poner manualmente el valor de tipo de cambio de USD a Bs."
-            >
-              <Edit2 className="w-3 h-3 text-[#D4A359] group-hover:text-[#161311] transition-colors" />
-              <span className="whitespace-nowrap">Poner TC Manual</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleRefreshExchangeRate}
-              disabled={isRefreshingRate}
-              className="p-1.5 rounded-full hover:bg-white text-[#8C827A] hover:text-[#D4A359] transition-all cursor-pointer disabled:opacity-50"
-              title={`Clic para consultar API oficial. Última actualización: ${lastUpdatedStr || 'reciente'}`}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingRate ? 'animate-spin text-[#D4A359]' : 'hover:rotate-180 transition-transform duration-500'}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-[#8C827A] group-hover:text-[#D4A359] ml-0.5 ${isRefreshingRate ? 'animate-spin text-[#D4A359]' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
             </button>
           </div>
+
+          {/* 2. Botón Separado: TC Manual */}
+          <button
+            type="button"
+            onClick={() => {
+              setCustomRateInput(exchangeRate.toFixed(2));
+              setRateMode('manual');
+              setIsRateModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#211E1C] hover:bg-[#D4A359] text-[#D4A359] hover:text-[#161311] border border-[#211E1C] hover:border-[#D4A359] text-[11px] sm:text-xs font-black transition-all cursor-pointer shadow-xs active:scale-[0.98] shrink-0 select-none group"
+            title="Poner manualmente el valor de tipo de cambio de USD a Bs."
+          >
+            <Edit2 className="w-3.5 h-3.5 text-[#D4A359] group-hover:text-[#161311] transition-colors" />
+            <span className="whitespace-nowrap">TC Manual</span>
+            {!autoUpdate && (
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-mono font-bold shrink-0">
+                Activo
+              </span>
+            )}
+          </button>
 
           <Link
             href="/"
@@ -2151,11 +2142,10 @@ export function AdminProductsClient() {
                   <button
                     type="button"
                     onClick={() => setRateMode('manual')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      rateMode === 'manual'
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${rateMode === 'manual'
                         ? 'border-[#D4A359] bg-white ring-2 ring-[#D4A359]/30'
                         : 'border-[#E2DCD3] bg-[#F5F2EB] hover:bg-white text-[#5C5650]'
-                    }`}
+                      }`}
                   >
                     <span className="block text-xs font-black text-[#1A1817]">Manual Fijo</span>
                     <span className="block text-[10px] text-[#8C827A] mt-0.5">Usa tu valor sin cambiar</span>
@@ -2163,11 +2153,10 @@ export function AdminProductsClient() {
                   <button
                     type="button"
                     onClick={() => setRateMode('auto')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      rateMode === 'auto'
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${rateMode === 'auto'
                         ? 'border-[#D4A359] bg-white ring-2 ring-[#D4A359]/30'
                         : 'border-[#E2DCD3] bg-[#F5F2EB] hover:bg-white text-[#5C5650]'
-                    }`}
+                      }`}
                   >
                     <span className="block text-xs font-black text-[#1A1817]">Automático</span>
                     <span className="block text-[10px] text-[#8C827A] mt-0.5">Sincroniza con API oficial</span>
