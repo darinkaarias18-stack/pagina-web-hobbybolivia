@@ -29,7 +29,8 @@ import {
   Table as TableIcon,
   ArrowRight,
   ArrowLeft,
-  GripVertical
+  GripVertical,
+  Trash2
 } from 'lucide-react';
 import type { QuoteOrder, OrderStatus } from '@/lib/types';
 import { useCurrency } from '@/context/CurrencyContext';
@@ -55,10 +56,36 @@ export default function AdminQuotesPage() {
   // Modales
   const [detailOrder, setDetailOrder] = useState<QuoteOrder | null>(null);
   const [printOrder, setPrintOrder] = useState<QuoteOrder | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<QuoteOrder | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    const code = orderToDelete.orderCode;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/quotes?orderCode=${encodeURIComponent(code)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setOrders(prev => prev.filter(o => o.orderCode !== code));
+        showToast(`Pedido #${code} eliminado con éxito`);
+        setOrderToDelete(null);
+      } else {
+        showToast(data.error || 'No se pudo eliminar el pedido', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Error al conectar con el servidor', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const loadOrders = async (isManualRefresh = false) => {
@@ -750,6 +777,14 @@ export default function AdminQuotesPage() {
                                 >
                                   <Printer className="w-3.5 h-3.5" />
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setOrderToDelete(ord)}
+                                  className="p-1.5 rounded-lg bg-[#FAF8F5] hover:bg-red-600 text-[#5C5650] hover:text-white border border-[#E2DCD3] hover:border-red-600 transition-colors cursor-pointer group"
+                                  title="Eliminar pedido"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-600 group-hover:text-white transition-colors" />
+                                </button>
                               </div>
 
                               {col.nextStatus && (
@@ -948,6 +983,14 @@ export default function AdminQuotesPage() {
                           title="Imprimir Nota de Pedido / Despacho Oficial"
                         >
                           <Printer className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOrderToDelete(ord)}
+                          className="p-2 rounded-xl bg-[#FAF8F5] hover:bg-red-600 text-[#5C5650] hover:text-white border border-[#E2DCD3] hover:border-red-600 transition-colors cursor-pointer shadow-2xs group"
+                          title="Eliminar pedido"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600 group-hover:text-white transition-colors" />
                         </button>
                       </div>
                     </td>
@@ -1383,6 +1426,66 @@ export default function AdminQuotesPage() {
               >
                 <Printer className="w-4 h-4 text-[#161311]" />
                 <span>Imprimir Nota de Pedido</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE PEDIDO */}
+      {orderToDelete && (
+        <div
+          onClick={() => !isDeleting && setOrderToDelete(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/75 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#FAF8F5] rounded-3xl max-w-md w-full shadow-2xl border border-[#E2DCD3] overflow-hidden animate-in zoom-in-95 duration-150 p-6 space-y-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-red-100 border border-red-200 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-[#1A1817] uppercase tracking-wide">
+                  Eliminar Pedido
+                </h3>
+                <span className="font-mono text-xs font-bold text-[#D4A359] bg-[#211E1C] px-2 py-0.5 rounded">
+                  #{orderToDelete.orderCode}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#5C5650] leading-relaxed">
+              ¿Estás seguro de que deseas eliminar permanentemente el pedido de <strong className="text-[#1A1817]">{orderToDelete.customerName}</strong> por un total de <strong className="text-[#1A1817]">${Number(orderToDelete.total || 0).toFixed(2)} USD</strong>? Esta acción lo borrará del sistema.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setOrderToDelete(null)}
+                className="px-4 py-2 rounded-xl border border-[#E2DCD3] bg-white text-xs font-bold text-[#5C5650] hover:bg-[#F5F2EB] transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteOrder}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Sí, eliminar pedido</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

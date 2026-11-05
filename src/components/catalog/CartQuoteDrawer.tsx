@@ -14,7 +14,8 @@ import {
   QrCode,
   Maximize2,
   ChevronDown,
-  Plane
+  Plane,
+  Plus
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -257,7 +258,9 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
       message += `*Cliente:* ${customerName}\n`;
       message += `*Teléfono / WhatsApp:* ${fullCustomerPhone}\n`;
       message += `*Ciudad de Envío:* ${deliveryCity}\n`;
-      message += `*Dirección para el Pedido:* ${deliveryAddress}\n`;
+      if (deliveryAddress && deliveryAddress.trim()) {
+        message += `*Dirección:* ${deliveryAddress.trim()}\n`;
+      }
       if (customerNotes.trim()) {
         message += `*Notas:* ${customerNotes}\n`;
       }
@@ -444,9 +447,6 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                         Productos Seleccionados ({cartItems.length})
                       </h3>
                     </div>
-                    <span className="text-[10px] font-bold text-[#D4A359] bg-[#211E1C] px-2.5 py-0.5 rounded-full border border-[#D4A359]/30">
-                      {isCatalogUsd ? `Precios en USD · TC: Bs. ${exchangeRate.toFixed(2)}` : `Precios en Bs.`}
-                    </span>
                   </div>
 
                   <div className="space-y-2.5">
@@ -548,10 +548,22 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                         </div>
                       );
                     })}
+
+                    {/* BOTÓN: AGREGAR MÁS PRODUCTOS */}
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={closeDrawer}
+                        className="w-full py-2.5 px-4 rounded-xl border border-dashed border-[#D4A359]/70 hover:border-[#D4A359] bg-[#FAF8F5] hover:bg-white text-xs font-black uppercase tracking-wider text-[#1A1817] hover:text-[#D4A359] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs group"
+                      >
+                        <Plus className="w-4 h-4 text-[#D4A359] group-hover:scale-110 transition-transform" />
+                        <span>Agregar más productos</span>
+                      </button>
+                    </div>
                   </div>
                 </section>
 
-                {/* 2. FORMULARIO: DIRECCIÓN PARA EL PEDIDO */}
+                {/* 2. FORMULARIO: DATOS DEL COMPRADOR */}
                 <section className="p-4 sm:p-5 bg-[#FAF8F5] rounded-3xl border border-[#E2DCD3] shadow-xs">
                   <form id="checkout-form" onSubmit={handleCheckout} className="space-y-3.5">
                     <div className="flex items-center gap-2 pb-2.5 border-b border-[#E2DCD3]">
@@ -560,7 +572,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                       </div>
                       <div>
                         <h3 className="text-xs font-black uppercase tracking-wider text-[#1A1817]">
-                          DIRECCIÓN PARA EL PEDIDO
+                          DATOS DEL COMPRADOR
                         </h3>
                         <p className="text-[10.5px] text-[#8C827A] font-semibold">
                           Datos del comprador y ciudad de despacho en Bolivia
@@ -644,20 +656,6 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                           <option value="Pando">Pando (Cobija)</option>
                         </select>
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#5C5650] mb-1">
-                        Dirección para el Pedido *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej. Av. Arce #123 o 'Retiro en Terminal de Flotas'"
-                        value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        className="w-full text-xs p-2.5 bg-[#F5F2EB] focus:bg-white border border-[#E2DCD3] rounded-xl text-[#1A1817] focus:border-[#D4A359] outline-none font-medium transition-colors"
-                      />
                     </div>
 
                     <div>

@@ -2283,6 +2283,38 @@ export async function updateQuoteOrderStatus(idOrCode: number | string, status: 
   return targetOrder;
 }
 
+export async function deleteQuoteOrder(idOrCode: number | string): Promise<boolean> {
+  const store = getLocalStore();
+  const pool = getMysqlPool();
+
+  const codeStr = String(idOrCode).trim();
+  const numericId = !isNaN(Number(idOrCode)) ? Number(idOrCode) : Number(codeStr.replace(/[^0-9]/g, ''));
+
+  if (pool) {
+    try {
+      if (numericId > 0) {
+        await pool.query('DELETE FROM quote_orders WHERE id = ? OR order_code = ?', [numericId, codeStr]);
+      } else {
+        await pool.query('DELETE FROM quote_orders WHERE order_code = ?', [codeStr]);
+      }
+    } catch (e) {
+      console.warn('[MySQL deleteQuoteOrder Warning]:', e);
+    }
+  }
+
+  if (store.quotes) {
+    store.quotes = store.quotes.filter(
+      q => q.orderCode !== codeStr &&
+        q.id !== Number(idOrCode) &&
+        (numericId <= 0 || q.id !== numericId)
+    );
+    saveLocalStore(store);
+  }
+
+  invalidateQuotesCache();
+  return true;
+}
+
 export async function getClaimRecords(): Promise<ClaimRecord[]> {
   const store = getLocalStore();
   return store.claims || [];

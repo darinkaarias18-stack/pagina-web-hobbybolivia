@@ -6,7 +6,7 @@ import {
   convertBobToUsd,
   CACHE_DURATION_MS
 } from '@/lib/exchange-rate';
-import { requireSuperAdmin } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { revalidateCatalog } from '@/lib/revalidate';
 
 export async function GET(request: NextRequest) {
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const authCheck = await requireSuperAdmin(request);
+    const authCheck = await requireAdmin(request);
     if (authCheck instanceof NextResponse) return authCheck;
 
     const body = await request.json();

@@ -289,6 +289,10 @@ export function AdminProductsClient() {
   const [autoUpdate, setAutoUpdate] = useState<boolean>(true);
   const [lastUpdatedStr, setLastUpdatedStr] = useState<string>('');
   const [isRefreshingRate, setIsRefreshingRate] = useState<boolean>(false);
+  const [isRateModalOpen, setIsRateModalOpen] = useState(false);
+  const [customRateInput, setCustomRateInput] = useState<string>('');
+  const [rateMode, setRateMode] = useState<'manual' | 'auto'>('auto');
+  const [isSavingRate, setIsSavingRate] = useState(false);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -583,6 +587,70 @@ export function AdminProductsClient() {
       showToast('Error al actualizar el tipo de cambio', 'error');
     } finally {
       setIsRefreshingRate(false);
+    }
+  };
+
+  const handleSaveCustomRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = parseFloat(customRateInput);
+    if (isNaN(parsed) || parsed <= 0) {
+      showToast('Por favor introduce un tipo de cambio válido mayor a 0', 'error');
+      return;
+    }
+
+    setIsSavingRate(true);
+    try {
+      const res = await fetch('/api/exchange-rate', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exchangeRate: parsed,
+          autoUpdate: rateMode === 'auto',
+          source: rateMode === 'auto' ? 'API Oficial' : 'Manual (Administrador)'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const newRate = Number(data.data?.exchangeRate) || parsed;
+        setExchangeRate(newRate);
+        setAutoUpdate(rateMode === 'auto');
+
+        const now = new Date();
+        const fullTimestamp = `${now.toLocaleDateString('es-BO', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        })} ${now.toLocaleTimeString('es-BO', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        })}`;
+        setLastUpdatedStr(fullTimestamp);
+
+        if (typeof window !== 'undefined') {
+          try {
+            const channel = new BroadcastChannel('hb_catalog_channel');
+            channel.postMessage({ type: 'RATE_UPDATED', exchangeRate: newRate });
+            channel.close();
+          } catch {}
+          localStorage.setItem('hb_rate_sync', JSON.stringify({ rate: newRate, timestamp: Date.now() }));
+        }
+
+        showToast(`Tipo de cambio guardado: 1 USD = Bs. ${newRate.toFixed(2)}`);
+        setIsRateModalOpen(false);
+
+        fetch('/api/products?includeInactive=true&t=' + Date.now(), { cache: 'no-store' })
+          .then(r => r.json())
+          .then(d => { if (d.success) setProducts(d.data); })
+          .catch(() => {});
+      } else {
+        showToast(data.error || 'Error al guardar el tipo de cambio', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error de conexión al guardar el tipo de cambio', 'error');
+    } finally {
+      setIsSavingRate(false);
     }
   };
 
@@ -1097,38 +1165,38 @@ export function AdminProductsClient() {
         </div>
 
         <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
-          {/* Quick Currency Status (Adaptable a pantallas móviles) */}
-          <button
-            type="button"
-            onClick={handleRefreshExchangeRate}
-            disabled={isRefreshingRate}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FAF8F5] hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs border border-[#E2DCD3] hover:border-[#D4A359] shadow-xs transition-all cursor-pointer group disabled:opacity-70 disabled:cursor-not-allowed select-none max-w-full shrink-0"
-            title={`Clic para actualizar el tipo de cambio oficial ahora. Última actualización: ${lastUpdatedStr || 'reciente'}`}
-          >
-            {isRefreshingRate ? (
-              <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A359] animate-spin shrink-0" />
-            ) : (
+          {/* Quick Currency Status (Ajuste Manual y Automático de TC) */}
+          <div className="inline-flex items-center gap-1 bg-[#FAF8F5] p-1 rounded-full border border-[#E2DCD3] shadow-xs shrink-0 max-w-full">
+            <button
+              type="button"
+              onClick={() => {
+                setCustomRateInput(exchangeRate.toFixed(2));
+                setRateMode(autoUpdate ? 'auto' : 'manual');
+                setIsRateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white active:scale-[0.98] text-[#1A1817] font-bold text-[11px] sm:text-xs transition-all cursor-pointer group select-none"
+              title="Ajustar tipo de cambio manual o automático"
+            >
               <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A359] shrink-0 group-hover:scale-110 transition-transform" />
-            )}
-            <span className="whitespace-nowrap">
-              TC Oficial
-              {lastUpdatedStr && (
-                <span className="hidden xl:inline font-normal text-[#8C827A] ml-1">
-                  ({lastUpdatedStr})
-                </span>
-              )}:
-            </span>
-            <span className="font-mono font-black text-[#1A1817] whitespace-nowrap">
-              Bs. {exchangeRate.toFixed(2)}
-            </span>
-            <span className="text-[9.5px] sm:text-[10px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold shrink-0">
-              {autoUpdate ? 'Auto' : 'Manual'}
-            </span>
-            <RefreshCw
-              className={`w-3.5 h-3.5 text-[#8C827A] group-hover:text-[#D4A359] transition-colors shrink-0 ${isRefreshingRate ? 'animate-spin text-[#D4A359]' : 'group-hover:rotate-180 transition-transform duration-500'
-                }`}
-            />
-          </button>
+              <span className="whitespace-nowrap">
+                TC: <strong className="font-mono text-[#1A1817]">Bs. {exchangeRate.toFixed(2)}</strong>
+              </span>
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-[#211E1C] text-[#D4A359] font-mono font-bold shrink-0">
+                {autoUpdate ? 'Auto' : 'Manual'}
+              </span>
+              <Edit2 className="w-3 h-3 text-[#8C827A] group-hover:text-[#D4A359] transition-colors" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRefreshExchangeRate}
+              disabled={isRefreshingRate}
+              className="p-1.5 rounded-full hover:bg-white text-[#8C827A] hover:text-[#D4A359] transition-all cursor-pointer disabled:opacity-50"
+              title={`Clic para consultar API oficial. Última actualización: ${lastUpdatedStr || 'reciente'}`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingRate ? 'animate-spin text-[#D4A359]' : 'hover:rotate-180 transition-transform duration-500'}`} />
+            </button>
+          </div>
 
           <Link
             href="/"
@@ -1983,6 +2051,141 @@ export function AdminProductsClient() {
                 Sí, Eliminar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIGURACIÓN TIPO DE CAMBIO MANUAL */}
+      {isRateModalOpen && (
+        <div
+          onClick={() => !isSavingRate && setIsRateModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#161311]/75 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#FAF8F5] rounded-3xl max-w-md w-full border border-[#E2DCD3] shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#211E1C] border border-[#D4A359]/40 flex items-center justify-center text-[#D4A359]">
+                  <Coins className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-[#1A1817] uppercase tracking-wide">
+                    Tipo de Cambio (USD / Bs.)
+                  </h3>
+                  <p className="text-[11px] text-[#8C827A] font-semibold">
+                    Cálculo del total en Bs. para el carrito y catálogo
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRateModalOpen(false)}
+                className="p-1 rounded-lg text-[#8C827A] hover:text-[#1A1817] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomRate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-[#1A1817] mb-1.5">
+                  Tasa de Cambio (Bs. por 1 USD) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#8C827A]">
+                    Bs.
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    value={customRateInput}
+                    onChange={(e) => setCustomRateInput(e.target.value)}
+                    placeholder="12.10"
+                    className="w-full pl-11 pr-4 py-2.5 bg-white border border-[#E2DCD3] rounded-xl text-sm font-mono font-black text-[#1A1817] focus:border-[#D4A359] outline-none shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-[#1A1817] mb-2">
+                  Modo de Actualización
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRateMode('manual')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      rateMode === 'manual'
+                        ? 'border-[#D4A359] bg-white ring-2 ring-[#D4A359]/30'
+                        : 'border-[#E2DCD3] bg-[#F5F2EB] hover:bg-white text-[#5C5650]'
+                    }`}
+                  >
+                    <span className="block text-xs font-black text-[#1A1817]">Manual Fijo</span>
+                    <span className="block text-[10px] text-[#8C827A] mt-0.5">Usa tu valor sin cambiar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRateMode('auto')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      rateMode === 'auto'
+                        ? 'border-[#D4A359] bg-white ring-2 ring-[#D4A359]/30'
+                        : 'border-[#E2DCD3] bg-[#F5F2EB] hover:bg-white text-[#5C5650]'
+                    }`}
+                  >
+                    <span className="block text-xs font-black text-[#1A1817]">Automático</span>
+                    <span className="block text-[10px] text-[#8C827A] mt-0.5">Sincroniza con API oficial</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Vista previa de conversión en vivo */}
+              <div className="p-3 bg-white rounded-xl border border-[#E2DCD3] space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] block">
+                  Simulación de conversión en carrito
+                </span>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#5C5650] font-medium">$10.00 USD</span>
+                  <span className="font-mono font-bold text-[#1A1817]">
+                    Bs. {((parseFloat(customRateInput) || 0) * 10).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#5C5650] font-medium">$50.00 USD</span>
+                  <span className="font-mono font-bold text-[#1A1817]">
+                    Bs. {((parseFloat(customRateInput) || 0) * 50).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  disabled={isSavingRate}
+                  onClick={() => setIsRateModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#E2DCD3] bg-white text-xs font-bold text-[#5C5650] hover:bg-[#F5F2EB] transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingRate}
+                  className="px-5 py-2 rounded-xl bg-[#211E1C] hover:bg-[#D4A359] text-white hover:text-[#161311] text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                >
+                  {isSavingRate ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>Guardar Tipo de Cambio</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getQuoteOrders, createQuoteOrder, updateQuoteOrderStatus } from '@/lib/db';
+import { getQuoteOrders, createQuoteOrder, updateQuoteOrderStatus, deleteQuoteOrder } from '@/lib/db';
 import type { OrderStatus } from '@/lib/types';
 import { requireAdmin } from '@/lib/auth';
 import { sanitizeText } from '@/lib/utils';
@@ -93,5 +93,39 @@ export async function PUT(request: NextRequest) {
     console.error("Error in PUT /api/quotes:", error);
     const message = error?.message || "Error al actualizar el estado del pedido";
     return NextResponse.json({ success: false, error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
+
+    const { searchParams } = new URL(request.url);
+    let orderCode = searchParams.get('orderCode') || searchParams.get('id');
+
+    if (!orderCode) {
+      const body = await request.json().catch(() => ({}));
+      orderCode = body?.orderCode || body?.id;
+    }
+
+    if (!orderCode) {
+      return NextResponse.json(
+        { success: false, error: 'Código o ID de pedido requerido para eliminar' },
+        { status: 400 }
+      );
+    }
+
+    await deleteQuoteOrder(orderCode);
+    return NextResponse.json({
+      success: true,
+      message: `Pedido ${orderCode} eliminado con éxito`
+    });
+  } catch (error: any) {
+    console.error('Error in DELETE /api/quotes:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Error al eliminar el pedido' },
+      { status: 500 }
+    );
   }
 }
