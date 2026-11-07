@@ -200,6 +200,7 @@ export function CatalogView({
   const { totalCount, openDrawer } = useCart();
 
   // Category Pills Carousel Controls
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -523,29 +524,58 @@ export function CatalogView({
             </p>
           </div>
 
-          {/* Buscador Simple con Lupa */}
+          {/* Buscador Destacado con Lupa Vibrante */}
           <div id="buscador-catalogo" className="mb-8 max-w-2xl mx-auto px-4">
-            <div className="relative flex items-center">
-              <div className="absolute left-4.5 flex items-center pointer-events-none text-[#D4A359]">
-                <Search className="w-5 h-5" />
-              </div>
-              <input
-                type="text"
-                placeholder={t('catalog.search_placeholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 bg-white text-[#1A1817] placeholder-[#8C827A] text-xs sm:text-sm font-medium rounded-full border border-[#E2DCD3] shadow-xs hover:border-[#D4A359] focus:border-[#D4A359] focus:ring-4 focus:ring-[#D4A359]/15 outline-none transition-all"
+            <div className="relative group">
+              {/* Resplandor ambiental suave de fondo */}
+              <div
+                className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#F85606]/20 via-[#D4A359]/30 to-[#F85606]/20 blur-md opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 group-focus-within:from-[#F85606]/35 group-focus-within:via-[#D4A359]/45 group-focus-within:to-[#F85606]/35 transition-all duration-300 pointer-events-none"
+                aria-hidden="true"
               />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3.5 p-1.5 rounded-full text-[#8C827A] hover:text-[#1A1817] hover:bg-[#F5F2EB] transition-colors cursor-pointer"
-                  title="Limpiar búsqueda"
+
+              {/* Borde exterior con degradado de marca y sombra profunda */}
+              <div className="relative p-[2px] rounded-full bg-gradient-to-r from-[#F85606] via-[#D4A359] to-[#F85606] shadow-md shadow-[#F85606]/10 group-hover:shadow-lg group-hover:shadow-[#F85606]/20 group-focus-within:shadow-xl group-focus-within:shadow-[#F85606]/25 transition-all duration-300">
+                {/* Contenedor interior blanco */}
+                <div
+                  onClick={() => searchInputRef.current?.focus()}
+                  className="flex items-center bg-white rounded-full p-1.5 sm:p-2 cursor-text transition-colors"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+                  {/* Lupa con cápsula de color vibrante y efecto glow */}
+                  <div
+                    className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[#F85606] via-[#FF6600] to-[#D4A359] text-white shadow-md shadow-[#F85606]/35 shrink-0 group-hover:scale-105 group-focus-within:scale-105 group-focus-within:shadow-[#F85606]/50 transition-all duration-300"
+                    aria-hidden="true"
+                  >
+                    <Search className="w-5 h-5 stroke-[2.4]" />
+                  </div>
+
+                  {/* Input de búsqueda */}
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder={t('catalog.search_placeholder')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent px-3.5 sm:px-4 py-2 text-[#1A1817] placeholder-[#8C827A] text-xs sm:text-sm md:text-base font-medium outline-none cursor-text"
+                  />
+
+                  {/* Botón para limpiar búsqueda */}
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchQuery('');
+                        searchInputRef.current?.focus();
+                      }}
+                      className="flex items-center justify-center w-8 h-8 mr-1 rounded-full text-[#8C827A] hover:text-white hover:bg-[#F85606] active:scale-95 transition-all duration-200 cursor-pointer shrink-0"
+                      title="Limpiar búsqueda"
+                      aria-label="Limpiar búsqueda"
+                    >
+                      <X className="w-4 h-4 stroke-[2.4]" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
