@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
 
   /* Bundle Optimization: Tree-shaking & Package Imports */
   experimental: {
+    agentUpgrade: "security",
     optimizePackageImports: ["lucide-react", "clsx", "tailwind-merge"],
   },
 
