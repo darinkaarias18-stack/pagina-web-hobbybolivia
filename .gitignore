@@ -39,6 +39,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# public media assets tracking
+!public/products/
+!public/products/**
+!public/uploads/
+!public/uploads/**
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
