@@ -11,6 +11,7 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/nodemailer": "^8.0.2",
+    "archiver": "^8.0.0",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.9",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@types/archiver": "^8.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
