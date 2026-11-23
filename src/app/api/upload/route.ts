@@ -110,32 +110,12 @@ export async function POST(request: NextRequest) {
 
     const filename = `${Date.now()}-${baseName}.webp`;
 
-    // 6. Optimización Veloz:
-    // Si la imagen ya viene convertida a WebP desde el navegador del cliente y pesa <= 250 KB,
-    // se guarda directamente en 0ms sin consumir CPU del servidor.
-    const isAlreadyWebp = file.type === 'image/webp' || (rawBuffer.length > 12 && rawBuffer.toString('utf8', 8, 12) === 'WEBP');
-
-    if (isAlreadyWebp && rawBuffer.length <= MAX_COMPRESSED_SIZE) {
-      await saveToDisk(filename, rawBuffer);
-      const publicUrl = `/uploads/products/${filename}`;
-      return NextResponse.json({
-        success: true,
-        url: publicUrl,
-        filename,
-        originalSize: file.size,
-        optimizedSize: rawBuffer.length,
-        mimeType: 'image/webp'
-      });
-    }
-
-    // Si no es WebP o supera los 250 KB, compresión rápida con Sharp (effort: 1 para ejecución ultra rápida <30ms)
+    // 6. Compresión automática con Sharp (ancho máximo 1000px, formato .webp, calidad 80)
     try {
       const optimizedWebpBuffer = await sharp(rawBuffer)
         .rotate()
         .resize({
           width: 1000,
-          height: 1000,
-          fit: 'inside',
           withoutEnlargement: true
         })
         .webp({ quality: 80, effort: 1 })
@@ -153,7 +133,7 @@ export async function POST(request: NextRequest) {
         mimeType: 'image/webp'
       });
     } catch (sharpErr) {
-      console.warn('[Sharp fast fallback]:', sharpErr);
+      console.warn('[Sharp compression error, fallback]:', sharpErr);
       // Fallback seguro: guardar buffer directo si falla sharp
       await saveToDisk(filename, rawBuffer);
       return NextResponse.json({

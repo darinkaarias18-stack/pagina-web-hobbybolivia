@@ -917,7 +917,14 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
     const pool = getMysqlPool();
     if (pool) {
       try {
-        const [rows]: any = await pool.query('SELECT * FROM products WHERE is_active = 1 ORDER BY id ASC');
+        const [rows]: any = await pool.query(`
+          SELECT id, sku, name, slug, category_id, scale, material, specs_line, compatible_models, 
+                 price, price_usd, old_price, stock, badge, image_url, image_size_bytes, is_active, 
+                 brand, description, created_at, updated_at 
+          FROM products 
+          WHERE is_active = 1 
+          ORDER BY id ASC
+        `);
         if (rows && rows.length > 0) {
           const mapped = rows.map(mapMysqlRowToProduct);
           baseList = mapped;
@@ -1024,7 +1031,12 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
   if (pool) {
     try {
       const [rows]: any = await pool.query(`
-        SELECT p.*, c.name AS category_name, c.slug AS category_slug, c.display_order AS category_order, c.is_active AS category_is_active
+        SELECT p.id, p.sku, p.name, p.slug, p.category_id, p.scale, p.material, p.specs_line, 
+               p.compatible_models, p.price, p.price_usd, p.old_price, p.stock, p.badge, 
+               p.image_url, p.image_size_bytes, p.is_active, p.brand, p.description, 
+               p.created_at, p.updated_at, 
+               c.name AS category_name, c.slug AS category_slug, c.display_order AS category_order, 
+               c.is_active AS category_is_active
         FROM products p
         LEFT JOIN categories c ON c.id = p.category_id
         ORDER BY p.id ASC

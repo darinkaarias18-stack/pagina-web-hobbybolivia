@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Package,
   Layers,
@@ -279,10 +280,12 @@ function getCategoryBadgeStyle(catId: number, name: string) {
 }
 
 export function AdminProductsClient() {
+  const router = useRouter();
   const { isBsMode } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageVersions, setImageVersions] = useState<Record<number, number>>({});
 
   // Exchange Rate State in Dashboard
   const [exchangeRate, setExchangeRate] = useState<number>(6.96);
@@ -945,7 +948,33 @@ export function AdminProductsClient() {
         if (data.success) {
           showToast("Producto actualizado exitosamente");
           setIsModalOpen(false);
-          fetchData();
+
+          // a) Actualización inmediata del estado local de React sin esperar recargas
+          const updatedProd = data.data || { ...editingProduct, ...payload };
+          const nowTs = Date.now();
+
+          setProducts((prev) =>
+            prev.map((p) =>
+              p.id === editingProduct.id
+                ? {
+                    ...p,
+                    ...updatedProd,
+                    image_url: updatedProd.imageUrl || updatedProd.image_url || payload.image_url,
+                    imageUrl: updatedProd.imageUrl || updatedProd.image_url || payload.image_url,
+                    images: [updatedProd.imageUrl || updatedProd.image_url || payload.image_url]
+                  }
+                : p
+            )
+          );
+
+          // b) Parámetro de versión en memoria para romper la caché del navegador en la fila
+          setImageVersions((prev) => ({
+            ...prev,
+            [editingProduct.id]: nowTs
+          }));
+
+          // c) Sincronización silenciosa en background con Next.js router
+          router.refresh();
         } else {
           showToast(data.error || "Error al actualizar", "error");
         }
@@ -959,7 +988,16 @@ export function AdminProductsClient() {
         if (data.success) {
           showToast("Producto creado exitosamente");
           setIsModalOpen(false);
-          fetchData();
+          if (data.data) {
+            setProducts((prev) => [data.data, ...prev]);
+            setImageVersions((prev) => ({
+              ...prev,
+              [data.data.id]: Date.now()
+            }));
+          } else {
+            fetchData();
+          }
+          router.refresh();
         } else {
           showToast(data.error || "Error al crear", "error");
         }
@@ -981,8 +1019,10 @@ export function AdminProductsClient() {
       const data = await res.json();
       if (data.success) {
         showToast("Producto eliminado del inventario");
+        const deletedId = productToDelete.id;
         setProductToDelete(null);
-        fetchData();
+        setProducts((prev) => prev.filter((p) => p.id !== deletedId));
+        router.refresh();
       } else {
         showToast(data.error || "No se pudo eliminar el producto", "error");
       }
@@ -1517,9 +1557,14 @@ export function AdminProductsClient() {
                             <div className="w-11 h-11 rounded-xl bg-white p-0.5 border border-[#E2DCD3] flex items-center justify-center mx-auto shadow-2xs group-hover:border-[#D4A359]/60 group-hover:shadow-xs transition-all overflow-hidden">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={p.image_url || p.imageUrl || (p.images && p.images[0]) || ''}
+                                src={(() => {
+                                  const raw = p.image_url || p.imageUrl || (p.images && p.images[0]) || '';
+                                  const v = imageVersions[p.id];
+                                  if (!raw) return '';
+                                  return v ? `${raw}${raw.includes('?') ? '&' : '?'}v=${v}` : raw;
+                                })()}
                                 alt={p.name || p.title}
-                                loading="lazy"
+                                loading={index < 10 ? 'eager' : 'lazy'}
                                 decoding="async"
                                 className="max-h-full max-w-full object-contain pointer-events-none select-none"
                                 onError={(e) => {

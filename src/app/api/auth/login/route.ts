@@ -110,8 +110,49 @@ export async function POST(request: NextRequest) {
       isActive?: boolean;
     } | null = null;
 
-    // 1. Validación prioritaria y estricta contra la Base de Datos (MySQL admin_users / DB)
-    const dbUser = await getUserByUsername(cleanUsername);
+    // 1. Consulta optimizada en Prisma con select específico (mínimos campos requeridos para autenticar)
+    let dbUser: any = null;
+    try {
+      const prismaPkg = '@prisma/client';
+      const { PrismaClient } = eval('require')(prismaPkg);
+      const prisma = new PrismaClient();
+      const pUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: cleanUsername },
+            { email: cleanUsername },
+          ],
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          passwordHash: true,
+          role: true,
+          name: true,
+          isActive: true,
+        },
+      });
+      await prisma.$disconnect();
+
+      if (pUser) {
+        dbUser = {
+          id: pUser.id,
+          username: pUser.username,
+          name: pUser.name,
+          email: pUser.email,
+          password: pUser.passwordHash,
+          role: (pUser.role === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as 'SUPERADMIN' | 'ADMIN',
+          isActive: pUser.isActive,
+        };
+      }
+    } catch {
+      // Fallback a db.ts
+    }
+
+    if (!dbUser) {
+      dbUser = await getUserByUsername(cleanUsername);
+    }
     if (dbUser && dbUser.password) {
       const storedPass = dbUser.password;
       const isPasswordValid =

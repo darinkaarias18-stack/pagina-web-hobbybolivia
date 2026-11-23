@@ -8,7 +8,7 @@ import Link from 'next/link';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get('redirect') || '/admin';
+  const redirectPath = searchParams.get('redirect') || '/admin/products';
   const reason = searchParams.get('reason');
 
   const [username, setUsername] = useState('');
@@ -21,14 +21,17 @@ function LoginForm() {
       : ''
   );
 
-  // Al entrar a /login, cerrar cualquier sesión previa para exigir usuario y contraseña siempre
+  // Al entrar a /login, prefetch de /admin/products y cerrar sesión previa de forma limpia
   useEffect(() => {
+    router.prefetch('/admin/products');
+    router.prefetch('/admin');
+
     localStorage.removeItem('hb_admin_logged');
     localStorage.removeItem('hb_user_role');
     localStorage.removeItem('hb_user_username');
     localStorage.removeItem('hb_user_name');
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => { });
-  }, []);
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +56,9 @@ function LoginForm() {
       localStorage.setItem('hb_user_username', data.user.username);
       localStorage.setItem('hb_user_name', data.user.name);
 
-      const target = redirectPath.startsWith('/admin') ? redirectPath : '/admin';
-      window.location.href = target;
+      // Redirección directa inmediata con router.push sin dobles recargas
+      const target = redirectPath.startsWith('/admin') ? redirectPath : '/admin/products';
+      router.push(target);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error inesperado al iniciar sesión');
       setLoading(false);

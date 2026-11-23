@@ -8,16 +8,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('includeInactive') === 'true';
-
-    if (includeInactive) {
-      const allProducts = await getAllProductsAdmin();
-      return NextResponse.json({
-        success: true,
-        total: allProducts.length,
-        data: allProducts
-      });
-    }
-
     const q = searchParams.get('q') || undefined;
     const category = searchParams.get('category') || undefined;
     const scale = searchParams.get('scale') || undefined;
@@ -27,6 +17,128 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined;
     const sort = searchParams.get('sort') || undefined;
 
+    // 1. Consulta optimizada en Prisma usando select específico (catálogo público y admin)
+    try {
+      const prismaPkg = '@prisma/client';
+      const { PrismaClient } = eval('require')(prismaPkg);
+      const prisma = new PrismaClient();
+      const whereClause: any = {};
+      if (!includeInactive) {
+        whereClause.isActive = true;
+      }
+      if (inStock) {
+        whereClause.stock = { gt: 0 };
+      }
+      if (category && category !== 'all') {
+        whereClause.category = {
+          name: category,
+        };
+      }
+      if (minPrice !== undefined || maxPrice !== undefined) {
+        whereClause.price = {};
+        if (minPrice !== undefined) whereClause.price.gte = minPrice;
+        if (maxPrice !== undefined) whereClause.price.lte = maxPrice;
+      }
+
+      const prismaProducts = await prisma.product.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          slug: true,
+          categoryId: true,
+          scale: true,
+          material: true,
+          specsLine: true,
+          compatibleModels: true,
+          price: true,
+          priceUsd: true,
+          oldPrice: true,
+          stock: true,
+          badge: true,
+          imageUrl: true,
+          imageSizeBytes: true,
+          isActive: true,
+          brand: true,
+          description: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+        orderBy: { id: 'asc' },
+      });
+      await prisma.$disconnect();
+
+      if (prismaProducts && prismaProducts.length > 0) {
+        let mapped = prismaProducts.map((p: any) => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          title: p.name,
+          slug: p.slug,
+          category_id: p.categoryId,
+          categoryId: p.categoryId,
+          category: p.category,
+          category_name: p.category?.name,
+          category_slug: p.category?.slug,
+          scale: p.scale || 'RC Estándar',
+          material: p.material || 'Compuesto',
+          specs_line: p.specsLine,
+          specsLine: p.specsLine,
+          compatible_models: p.compatibleModels,
+          compatibleModels: p.compatibleModels,
+          price: Number(p.price),
+          price_usd: p.priceUsd ? Number(p.priceUsd) : undefined,
+          priceUsd: p.priceUsd ? Number(p.priceUsd) : undefined,
+          old_price: p.oldPrice ? Number(p.oldPrice) : undefined,
+          oldPrice: p.oldPrice ? Number(p.oldPrice) : undefined,
+          stock: p.stock,
+          stockQuantity: p.stock,
+          badge: p.badge,
+          imageUrl: p.imageUrl,
+          image_url: p.imageUrl,
+          image: p.imageUrl,
+          images: p.imageUrl ? [p.imageUrl] : [],
+          is_active: p.isActive,
+          isActive: p.isActive,
+          brand: p.brand || 'Hobby Bolivia',
+          description: p.description,
+        }));
+
+        if (q && q.trim()) {
+          const lowerQ = q.trim().toLowerCase();
+          mapped = mapped.filter(
+            (p: any) =>
+              p.name.toLowerCase().includes(lowerQ) ||
+              p.sku.toLowerCase().includes(lowerQ) ||
+              (p.brand && p.brand.toLowerCase().includes(lowerQ))
+          );
+        }
+
+        return NextResponse.json({
+          success: true,
+          total: mapped.length,
+          data: mapped,
+        });
+      }
+    } catch {
+      // Fallback transparente a lib/db
+    }
+
+    if (includeInactive) {
+      const allProducts = await getAllProductsAdmin();
+      return NextResponse.json({
+        success: true,
+        total: allProducts.length,
+        data: allProducts,
+      });
+    }
+
     const products = await getProducts({
       q,
       category,
@@ -35,13 +147,13 @@ export async function GET(request: NextRequest) {
       inStock,
       minPrice,
       maxPrice,
-      sort
+      sort,
     });
 
     return NextResponse.json({
       success: true,
       total: products.length,
-      data: products
+      data: products,
     });
   } catch (error) {
     console.error("Error in GET /api/products:", error);
