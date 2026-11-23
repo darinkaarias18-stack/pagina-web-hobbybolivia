@@ -31,7 +31,8 @@ function LoginForm() {
     localStorage.removeItem('hb_user_username');
     localStorage.removeItem('hb_user_name');
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => { });
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
