@@ -43,7 +43,7 @@ export function ProductCard({
     setTimeout(() => setJustAdded(false), 700);
   };
 
-  const rawImage = product.image_url || (product.images && product.images[0]) || product.imageUrl;
+  const rawImage = product.image || product.image_url || (product.images && product.images[0]) || product.imageUrl;
   const isInvalidImage = !rawImage || rawImage.trim() === '' || rawImage.includes('d0721149ad-dubq3570tn-t');
   const isPlaceholder = isInvalidImage || imgFailed;
   const imageSource = isPlaceholder ? '/placeholder.webp' : rawImage.trim();

@@ -872,7 +872,10 @@ export function AdminProductsClient() {
       old_price: String(product.old_price || (product as any).oldPrice || ''),
       stock: String(product.stock !== undefined ? product.stock : (product.stockQuantity || '')),
       badge: product.badge || '',
-      image_url: product.image_url || (product.images && product.images[0]) || '',
+      image_url: (() => {
+        const raw = product.image_url || product.imageUrl || product.image || (product.images && product.images[0]) || '';
+        return raw.startsWith('blob:') ? '' : raw;
+      })(),
       brand: product.brand || 'Dubro',
       description: product.description || ''
     });
@@ -906,6 +909,10 @@ export function AdminProductsClient() {
       showToast("El nombre del producto es obligatorio", "error");
       return;
     }
+    if (isUploadingImage) {
+      showToast("Por favor espera a que la imagen termine de optimizarse y subirse", "error");
+      return;
+    }
     const parsedUsd = parseFloat(usdPriceInput);
     if (isNaN(parsedUsd) || parsedUsd <= 0) {
       showToast("Ingresa un precio válido en USD", "error");
@@ -914,6 +921,15 @@ export function AdminProductsClient() {
 
     const rate = exchangeRate > 0 ? exchangeRate : 11.84;
     const calculatedBob = Math.round(parsedUsd * rate * 100) / 100;
+
+    const safeImageUrl = (() => {
+      const current = formData.image_url ? formData.image_url.trim() : '';
+      if (!current || current.startsWith('blob:')) {
+        const prev = editingProduct?.image_url || (editingProduct as any)?.imageUrl || '';
+        return prev && !prev.startsWith('blob:') ? prev : '/images/placeholder.webp';
+      }
+      return current;
+    })();
 
     const payload = {
       sku: formData.sku.trim(),
@@ -931,8 +947,8 @@ export function AdminProductsClient() {
       old_price: formData.old_price ? parseFloat(formData.old_price) : null,
       stock: parseInt(formData.stock || '0', 10),
       badge: formData.badge || null,
-      image_url: formData.image_url || '/images/placeholder.webp',
-      images: [formData.image_url || '/images/placeholder.webp'],
+      image_url: safeImageUrl,
+      images: [safeImageUrl],
       brand: formData.brand.trim() || 'Dubro',
       description: formData.description.trim()
     };
@@ -1553,14 +1569,17 @@ export function AdminProductsClient() {
                         {/* INMOVILIZADO 2: IMAGEN (Después de SKU / CÓDIGO) */}
                         <td className={`md:sticky md:left-[180px] z-20 w-[75px] min-w-[75px] max-w-[75px] py-3 px-2 text-center border-b border-[#E2DCD3]/60 transition-colors ${!isVisible ? 'bg-[#FAF8F5] group-hover:bg-[#F3EFEA]' : 'bg-white group-hover:bg-[#FAF8F5]'
                           }`}>
-                          {p.image_url || p.imageUrl || (p.images && p.images[0]) ? (
+                          {p.image_url || p.imageUrl || p.image || (p.images && p.images[0]) ? (
                             <div className="w-11 h-11 rounded-xl bg-white p-0.5 border border-[#E2DCD3] flex items-center justify-center mx-auto shadow-2xs group-hover:border-[#D4A359]/60 group-hover:shadow-xs transition-all overflow-hidden">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={(() => {
-                                  const raw = p.image_url || p.imageUrl || (p.images && p.images[0]) || '';
+                                  const raw = p.image_url || p.imageUrl || p.image || (p.images && p.images[0]) || '';
+                                  if (!raw || raw.startsWith('blob:')) return '/images/placeholder.webp';
+                                  if (raw.startsWith('data:') || raw.includes('placeholder')) {
+                                    return raw;
+                                  }
                                   const v = imageVersions[p.id];
-                                  if (!raw) return '';
                                   return v ? `${raw}${raw.includes('?') ? '&' : '?'}v=${v}` : raw;
                                 })()}
                                 alt={p.name || p.title}
@@ -1568,7 +1587,12 @@ export function AdminProductsClient() {
                                 decoding="async"
                                 className="max-h-full max-w-full object-contain pointer-events-none select-none"
                                 onError={(e) => {
-                                  (e.target as HTMLElement).style.display = 'none';
+                                  const target = e.target as HTMLImageElement;
+                                  if (!target.src.includes('placeholder')) {
+                                    target.src = '/images/placeholder.webp';
+                                  } else {
+                                    target.style.display = 'none';
+                                  }
                                 }}
                               />
                             </div>

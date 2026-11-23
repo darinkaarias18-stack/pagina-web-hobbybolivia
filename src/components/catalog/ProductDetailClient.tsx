@@ -43,7 +43,7 @@ export function ProductDetailClient({
 }: ProductDetailClientProps) {
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const rawInitialImage = product.image_url || (product.images && product.images[0]) || product.imageUrl;
+  const rawInitialImage = product.image || product.image_url || (product.images && product.images[0]) || product.imageUrl;
   const isInvalidInitialImage = !rawInitialImage || rawInitialImage.trim() === '' || rawInitialImage.includes('d0721149ad-dubq3570tn-t');
   const [selectedImage, setSelectedImage] = useState<string>(
     isInvalidInitialImage ? '/placeholder.webp' : rawInitialImage.trim()

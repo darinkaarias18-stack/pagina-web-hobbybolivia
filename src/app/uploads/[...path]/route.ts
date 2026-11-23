@@ -31,9 +31,55 @@ export async function GET(
     const candidate1 = path.join(process.cwd(), 'public', 'uploads', relativePath);
     const candidate2 = path.join(process.cwd(), 'uploads', relativePath);
 
-    const targetFile = fs.existsSync(candidate1) ? candidate1 : (fs.existsSync(candidate2) ? candidate2 : null);
+    let targetFile = fs.existsSync(candidate1) ? candidate1 : (fs.existsSync(candidate2) ? candidate2 : null);
 
+    // Si el archivo físico aún no existe en disco local:
     if (!targetFile) {
+      // 1. Fallback por SKU en public/products (ej: 1795303639560-aib9891.webp -> AIB9891.webp)
+      const fileName = path.basename(relativePath);
+      const cleaned = fileName.replace(/^\d+-/, '').replace(/\.[^/.]+$/, '').toLowerCase();
+      const prodDir = path.join(process.cwd(), 'public', 'products');
+      if (fs.existsSync(prodDir)) {
+        const pFiles = fs.readdirSync(prodDir);
+        const match = pFiles.find(f => {
+          const nameOnly = path.parse(f).name.toLowerCase();
+          return nameOnly === cleaned || nameOnly === cleaned.split('-')[0];
+        });
+        if (match) {
+          targetFile = path.join(prodDir, match);
+        }
+      }
+
+      // 2. Si no está en public/products, sincronizar desde el servidor oficial de producción (Plesk)
+      if (!targetFile) {
+        try {
+          const prodUrl = `https://hobbybolivia.com/uploads/${safeSegments.join('/')}`;
+          const resp = await fetch(prodUrl, { signal: AbortSignal.timeout(5000) });
+          if (resp.ok) {
+            const buffer = Buffer.from(await resp.arrayBuffer());
+            try {
+              await fs.promises.mkdir(path.dirname(candidate1), { recursive: true });
+              await fs.promises.writeFile(candidate1, buffer);
+              targetFile = candidate1;
+            } catch {
+              // Si no se puede escribir en disco, retornar directamente el buffer obtenido
+              const ext = path.extname(candidate1).toLowerCase();
+              const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+              return new NextResponse(buffer, {
+                headers: {
+                  'Content-Type': contentType,
+                  'Cache-Control': 'public, max-age=31536000, immutable',
+                }
+              });
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('[Uploads Route]: No se pudo descargar imagen remota:', fetchErr);
+        }
+      }
+    }
+
+    if (!targetFile || !fs.existsSync(targetFile)) {
       return new NextResponse('File Not Found', { status: 404 });
     }
 

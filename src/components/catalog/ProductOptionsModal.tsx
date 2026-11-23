@@ -31,7 +31,7 @@ export function ProductOptionsModal() {
     closeOptionsModal();
   };
 
-  const rawImage = (item.images && item.images[0]) || item.image_url || item.imageUrl;
+  const rawImage = item.image || (item.images && item.images[0]) || item.image_url || item.imageUrl;
   const isInvalid = !rawImage || rawImage.trim() === '' || rawImage.includes('d0721149ad-dubq3570tn-t');
   const imageSrc = isInvalid ? '/placeholder.webp' : rawImage.trim();
 

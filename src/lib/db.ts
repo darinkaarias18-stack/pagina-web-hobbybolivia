@@ -892,9 +892,11 @@ function mapMysqlRowToProduct(row: any): Product {
     stock: Number(row.stock),
     stockQuantity: Number(row.stock),
     badge: row.badge || undefined,
-    image_url: row.image_url,
+    image: row.image_url,
     imageUrl: row.image_url,
-    images: [row.image_url],
+    image_url: row.image_url,
+    thumbnail: row.image_url,
+    images: row.image_url ? [row.image_url] : [],
     is_active: Boolean(row.is_active),
     isActive: Boolean(row.is_active),
     brand: row.brand || 'Hobby Bolivia',
@@ -1202,8 +1204,10 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
     stock: data.stock !== undefined ? Number(data.stock) : 10,
     stockQuantity: data.stock !== undefined ? Number(data.stock) : 10,
     badge: data.badge,
+    image: imageUrl,
     image_url: imageUrl,
     imageUrl,
+    thumbnail: imageUrl,
     images: [imageUrl],
     is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
     isActive: data.is_active !== undefined ? Boolean(data.is_active) : true,
@@ -1265,7 +1269,10 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
   const store = getLocalStore();
   const index = store.items.findIndex(p => p.id === id);
 
-  const candidateImage = data.image_url || data.imageUrl || (data.images && data.images[0]);
+  let candidateImage = data.image_url || data.imageUrl || data.image || (data.images && data.images[0]);
+  if (candidateImage && candidateImage.startsWith('blob:')) {
+    candidateImage = undefined;
+  }
   if (candidateImage) {
     assertCatalogImageUnder1MB(candidateImage);
   }
@@ -1333,8 +1340,11 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
       material: data.material || current.material,
       scale: data.scale || current.scale,
       badge: data.badge !== undefined ? data.badge : current.badge,
-      image_url: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.image_url,
-      imageUrl: data.image_url || data.imageUrl || (data.images && data.images[0]) || current.imageUrl,
+      image: candidateImage || current.image || current.imageUrl || current.image_url,
+      image_url: candidateImage || current.image_url || current.imageUrl,
+      imageUrl: candidateImage || current.imageUrl || current.image_url,
+      thumbnail: candidateImage || current.thumbnail || current.imageUrl || current.image_url,
+      images: [candidateImage || current.image_url || current.imageUrl || '/placeholder.webp'],
       is_active: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.is_active),
       isActive: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive),
       updated_at: new Date().toISOString()

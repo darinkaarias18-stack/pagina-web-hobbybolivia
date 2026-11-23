@@ -456,7 +456,7 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
                   <div className="space-y-2.5">
                     {cartItems.map((ci, index) => {
                       const item = ci.item;
-                      const rawItemImg = item.image_url || (item.images && item.images[0]) || item.imageUrl;
+                      const rawItemImg = item.image || item.image_url || (item.images && item.images[0]) || item.imageUrl;
                       const itemImg = !rawItemImg || rawItemImg.includes('d0721149ad-dubq3570tn-t') ? '/placeholder.webp' : rawItemImg;
                       const itemUsd = getItemUsdPrice(item);
                       const itemBob = getItemBobPrice(item);

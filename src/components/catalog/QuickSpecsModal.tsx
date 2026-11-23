@@ -61,7 +61,7 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96, currenc
     setZoomPos({ x, y });
   };
 
-  const rawImg = product.image_url || (product.images && product.images[0]) || product.imageUrl;
+  const rawImg = product.image || product.image_url || (product.images && product.images[0]) || product.imageUrl;
   const isInvalidImg = !rawImg || rawImg.trim() === '' || rawImg.includes('d0721149ad-dubq3570tn-t');
   const isPlaceholder = isInvalidImg || imgFailed;
   const imgSrc = isPlaceholder ? '/placeholder.webp' : rawImg.trim();
