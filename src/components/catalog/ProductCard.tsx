@@ -126,6 +126,9 @@ export function ProductCard({
           >
             {name}
           </h3>
+          <span className="mt-1 inline-block text-[11px] font-medium text-neutral-500">
+            Stock: {product.stock ?? product.stockQuantity ?? 0} unid.
+          </span>
         </div>
 
         {/* 3. Zona Inferior: Precio y Botones de Acción (sin línea divisoria) */}

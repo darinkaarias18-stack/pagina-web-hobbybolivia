@@ -184,7 +184,7 @@ export function ProductDetailClient({
                   </span>
                 )}
                 <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#3E7B44] text-white shadow-xs">
-                  ✓ En Stock Disponible
+                  ✓ En Stock Disponible ({product.stock ?? product.stockQuantity ?? 0} unid.)
                 </span>
               </div>
 

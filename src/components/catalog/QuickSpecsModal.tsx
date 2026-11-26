@@ -162,6 +162,10 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96, currenc
                 <ShieldCheck className="w-4 h-4 text-[#D4A359] shrink-0 mt-0.5" />
                 <span><strong>{t('modal.compatibility')}</strong> {product.compatible_models || 'Modelos RC generales'}</span>
               </div>
+              <div className="flex items-center gap-2">
+                <Box className="w-4 h-4 text-[#D4A359] shrink-0" />
+                <span><strong>Stock disponible:</strong> {product.stock ?? product.stockQuantity ?? 0} unid.</span>
+              </div>
             </div>
 
             {/* Description */}
@@ -186,7 +190,7 @@ export function QuickSpecsModal({ product, onClose, exchangeRate = 6.96, currenc
                 <span className="px-2 text-xs font-bold text-[#1A1817]">{qty}</span>
                 <button
                   type="button"
-                  onClick={() => setQty(qty + 1)}
+                  onClick={() => setQty(Math.min(Math.max(1, Number(product.stock ?? product.stockQuantity ?? 1)), qty + 1))}
                   className="px-2 text-sm font-bold text-[#5C5650] hover:text-[#1A1817] cursor-pointer"
                 >
                   +

@@ -69,6 +69,7 @@ export function CatalogBackupExportModule() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printSearch, setPrintSearch] = useState('');
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [photoStats, setPhotoStats] = useState<{ fotosReales: number; sinFoto: number } | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -97,6 +98,16 @@ export function CatalogBackupExportModule() {
       const rateData = await rateRes.json();
       if (rateData.success && rateData.data?.usdToBobRate) {
         setExchangeRate(Number(rateData.data.usdToBobRate));
+      }
+
+      // 4. Cargar conteo exacto de fotografías reales vs. en preparación desde disco + MySQL
+      const statsRes = await fetch('/api/admin/backup/images?stats=1', { cache: 'no-store' });
+      const statsData = await statsRes.json();
+      if (statsData.success) {
+        setPhotoStats({
+          fotosReales: Number(statsData.fotosReales) || 0,
+          sinFoto: Number(statsData.sinFoto) || 0,
+        });
       }
     } catch (err) {
       console.error('Error al cargar datos del catálogo para exportación:', err);
@@ -505,9 +516,14 @@ export function CatalogBackupExportModule() {
               <span>Fotos en Catálogo</span>
             </div>
             <div className="text-lg font-black text-[#1A1817]">
-              {loading ? '...' : products.filter(p => Boolean(p.imageUrl || p.image_url)).length}
-              <span className="text-[10px] text-[#8C827A] font-medium ml-1">con foto</span>
+              {loading || !photoStats ? '...' : photoStats.fotosReales}
+              <span className="text-[10px] text-[#8C827A] font-medium ml-1">con foto real</span>
             </div>
+            {!loading && photoStats && (
+              <div className="text-[10px] font-semibold text-[#8C827A] mt-0.5">
+                {photoStats.sinFoto} sin foto (en preparación)
+              </div>
+            )}
           </div>
 
           <div className="p-3 bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs">
@@ -560,7 +576,7 @@ export function CatalogBackupExportModule() {
                 </h3>
               </div>
               <p className="text-xs text-[#5C5650] leading-relaxed mb-4">
-                Descarga un paquete ZIP con todas las fotografías de productos del catálogo, índice CSV de correspondencia y manifiesto técnico.
+                Descarga un paquete ZIP con las {photoStats ? `${photoStats.fotosReales} ` : ''}fotografías reales de productos del catálogo (excluyendo plantillas en preparación), índice CSV de correspondencia y manifiesto técnico.
               </p>
             </div>
 

@@ -802,7 +802,9 @@ export function AdminProductsClient() {
               ? {
                 ...p,
                 stock: newStock,
-                stockQuantity: newStock
+                stockQuantity: newStock,
+                is_active: newStock > 0,
+                isActive: newStock > 0
               }
               : p
           ))
@@ -975,6 +977,8 @@ export function AdminProductsClient() {
                 ? {
                     ...p,
                     ...updatedProd,
+                    is_active: Number(updatedProd.stock ?? payload.stock) > 0,
+                    isActive: Number(updatedProd.stock ?? payload.stock) > 0,
                     image_url: updatedProd.imageUrl || updatedProd.image_url || payload.image_url,
                     imageUrl: updatedProd.imageUrl || updatedProd.image_url || payload.image_url,
                     images: [updatedProd.imageUrl || updatedProd.image_url || payload.image_url]

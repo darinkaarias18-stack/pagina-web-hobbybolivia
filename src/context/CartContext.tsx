@@ -53,6 +53,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [cartItems]);
 
   const addToCart = (item: CatalogItem, quantity = 1, selectedOptions?: Record<string, string>) => {
+    const maxStock = Math.max(0, Number(item.stock ?? item.stockQuantity ?? 0));
+    if (maxStock <= 0) return;
+
     setCartItems((prev) => {
       // Check if existing
       const existingIdx = prev.findIndex(
@@ -63,10 +66,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (existingIdx >= 0) {
         const copy = [...prev];
-        copy[existingIdx].quantity += quantity;
+        copy[existingIdx].item = item;
+        copy[existingIdx].quantity = Math.min(maxStock, copy[existingIdx].quantity + quantity);
         return copy;
       } else {
-        return [...prev, { item, quantity, selectedOptions }];
+        return [...prev, { item, quantity: Math.min(maxStock, quantity), selectedOptions }];
       }
     });
     setIsDrawerOpen(true);
@@ -83,7 +87,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
     setCartItems((prev) => {
       const copy = [...prev];
-      copy[index].quantity = quantity;
+      const target = copy[index];
+      if (!target) return prev;
+      const maxStock = Math.max(0, Number(target.item.stock ?? target.item.stockQuantity ?? 0));
+      if (maxStock <= 0) {
+        return prev.filter((_, idx) => idx !== index);
+      }
+      copy[index].quantity = Math.min(maxStock, quantity);
       return copy;
     });
   };

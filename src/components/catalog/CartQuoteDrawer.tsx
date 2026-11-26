@@ -257,6 +257,10 @@ export function CartQuoteDrawer({ config }: CartQuoteDrawerProps) {
       });
 
       const orderData = await res.json();
+      if (!res.ok || !orderData?.success) {
+        alert(orderData?.error || "Stock insuficiente o error al procesar el pedido.");
+        return;
+      }
       const orderCode = orderData?.data?.orderCode || `HB-${Date.now().toString().slice(-6)}`;
 
       // 2. Generar mensaje estructurado para WhatsApp con montos oficiales en USD y Bs.

@@ -178,7 +178,7 @@ const memoryCache = {
 };
 
 const CACHE_TTL = {
-  PRODUCTS: 60 * 1000,       // 60 segundos
+  PRODUCTS: 0,               // 0 segundos (consistencia inmediata en tiempo real)
   CATEGORIES: 5 * 60 * 1000, // 5 minutos
   POLICIES: 10 * 60 * 1000,  // 10 minutos
   EXCHANGE_RATE: 60 * 1000,  // 60 segundos
@@ -924,7 +924,7 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
                  price, price_usd, old_price, stock, badge, image_url, image_size_bytes, is_active, 
                  brand, description, created_at, updated_at 
           FROM products 
-          WHERE is_active = 1 
+          WHERE is_active = 1 AND stock > 0 
           ORDER BY id ASC
         `);
         if (rows && rows.length > 0) {
@@ -939,7 +939,7 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
 
     if (!baseList) {
       const store = getLocalStore();
-      const fallback = store.items.filter(p => p.is_active !== false);
+      const fallback = store.items.filter(p => p.is_active !== false && (p.stock ?? p.stockQuantity ?? 0) > 0);
       baseList = fallback;
       memoryCache.productsActive = { data: fallback, timestamp: getNow() };
     }
@@ -1303,7 +1303,13 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
       if (data.stock !== undefined) { fields.push('stock = ?'); values.push(Number(data.stock)); }
       if (data.badge !== undefined) { fields.push('badge = ?'); values.push(data.badge); }
       if (candidateImage !== undefined) { fields.push('image_url = ?'); values.push(candidateImage); }
-      if (data.is_active !== undefined || data.isActive !== undefined) {
+      if (data.stock !== undefined && Number(data.stock) <= 0) {
+        fields.push('is_active = ?');
+        values.push(0);
+      } else if (data.stock !== undefined && Number(data.stock) > 0 && data.is_active === undefined && data.isActive === undefined) {
+        fields.push('is_active = ?');
+        values.push(1);
+      } else if (data.is_active !== undefined || data.isActive !== undefined) {
         fields.push('is_active = ?');
         values.push(data.is_active !== undefined ? (data.is_active ? 1 : 0) : (data.isActive ? 1 : 0));
       }
@@ -1345,8 +1351,16 @@ export async function updateProduct(id: number, data: Partial<Product>): Promise
       imageUrl: candidateImage || current.imageUrl || current.image_url,
       thumbnail: candidateImage || current.thumbnail || current.imageUrl || current.image_url,
       images: [candidateImage || current.image_url || current.imageUrl || '/placeholder.webp'],
-      is_active: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.is_active),
-      isActive: data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive),
+      is_active: (data.stock !== undefined && Number(data.stock) <= 0)
+        ? false
+        : ((data.stock !== undefined && Number(data.stock) > 0 && data.is_active === undefined && data.isActive === undefined)
+          ? true
+          : (data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.is_active))),
+      isActive: (data.stock !== undefined && Number(data.stock) <= 0)
+        ? false
+        : ((data.stock !== undefined && Number(data.stock) > 0 && data.is_active === undefined && data.isActive === undefined)
+          ? true
+          : (data.is_active !== undefined ? Boolean(data.is_active) : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive))),
       updated_at: new Date().toISOString()
     };
 
@@ -1759,6 +1773,45 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
   const newId = store.quotes.length > 0 ? Math.max(...store.quotes.map(q => q.id || 0)) + 1 : 1;
   const orderCode = `HB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${newId.toString().padStart(3, '0')}`;
 
+  const items = Array.isArray(data.items) ? data.items : [];
+  const requestedTotals: {
+    productId?: number;
+    sku?: string;
+    name: string;
+    qty: number;
+    matchedProductIndex: number;
+  }[] = [];
+
+  for (const it of items) {
+    const rawProd = (it as any)?.item || (it as any);
+    const prodId = rawProd?.id !== undefined && rawProd?.id !== null ? Number(rawProd.id) : undefined;
+    const prodSku = rawProd?.sku ? String(rawProd.sku).trim() : undefined;
+    const prodName = rawProd?.name || rawProd?.title || 'Producto Hobby Bolivia';
+    const qty = Math.max(1, Number((it as any)?.quantity) || 1);
+
+    const pIndex = store.items.findIndex(p =>
+      (prodId !== undefined && p.id === prodId) ||
+      (prodSku && p.sku?.toLowerCase() === prodSku.toLowerCase())
+    );
+
+    const existing = requestedTotals.find(entry =>
+      (prodId !== undefined && entry.productId === prodId) ||
+      (prodSku && entry.sku?.toLowerCase() === prodSku.toLowerCase())
+    );
+
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      requestedTotals.push({
+        productId: prodId,
+        sku: prodSku,
+        name: prodName,
+        qty,
+        matchedProductIndex: pIndex
+      });
+    }
+  }
+
   const newOrder: QuoteOrder = {
     id: newId,
     orderCode,
@@ -1767,19 +1820,87 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
     deliveryCity: data.deliveryCity || "Santa Cruz",
     deliveryAddress: data.deliveryAddress || "",
     customerNotes: data.customerNotes,
-    items: data.items || [],
+    items,
     total: Number(data.total) || 0,
     status: "PENDING",
+    stockDeducted: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
   const pool = getMysqlPool();
   if (pool) {
+    const conn = await pool.getConnection();
     try {
-      await pool.query(
-        `INSERT INTO quote_orders (id, customer_name, customer_phone, customer_city, customer_notes, items_json, total, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      await conn.beginTransaction();
+
+      for (const req of requestedTotals) {
+        let rows: any[] = [];
+        if (req.productId !== undefined && !isNaN(req.productId)) {
+          const [res]: any = await conn.query(
+            'SELECT id, sku, name, stock FROM products WHERE id = ? LIMIT 1 FOR UPDATE',
+            [req.productId]
+          );
+          rows = res || [];
+        } else if (req.sku) {
+          const [res]: any = await conn.query(
+            'SELECT id, sku, name, stock FROM products WHERE LOWER(sku) = LOWER(?) LIMIT 1 FOR UPDATE',
+            [req.sku]
+          );
+          rows = res || [];
+        }
+
+        if (rows.length > 0) {
+          const row = rows[0];
+          const currentStock = Number(row.stock) || 0;
+          if (currentStock < req.qty) {
+            throw new Error(
+              `Stock insuficiente para "${row.name || req.name}" (SKU: ${row.sku || req.sku || 'N/A'}). Solicitado: ${req.qty} unid., disponible: ${currentStock} unid.`
+            );
+          }
+
+          const [updateRes]: any = await conn.query(
+            'UPDATE products SET stock = stock - ?, is_active = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_active END WHERE id = ? AND stock >= ?',
+            [req.qty, req.qty, row.id, req.qty]
+          );
+          if (!updateRes || updateRes.affectedRows === 0) {
+            throw new Error(
+              `Stock insuficiente para "${row.name || req.name}" (SKU: ${row.sku || req.sku || 'N/A'}).`
+            );
+          }
+
+          if (req.matchedProductIndex !== -1) {
+            const newStock = Math.max(0, currentStock - req.qty);
+            store.items[req.matchedProductIndex].stock = newStock;
+            store.items[req.matchedProductIndex].stockQuantity = newStock;
+            if (newStock <= 0) {
+              store.items[req.matchedProductIndex].is_active = false;
+              store.items[req.matchedProductIndex].isActive = false;
+            }
+            store.items[req.matchedProductIndex].updated_at = new Date().toISOString();
+          }
+        } else if (req.matchedProductIndex !== -1) {
+          const prod = store.items[req.matchedProductIndex];
+          const currentStock = prod.stock !== undefined ? Number(prod.stock) : (Number(prod.stockQuantity) || 0);
+          if (currentStock < req.qty) {
+            throw new Error(
+              `Stock insuficiente para "${prod.name || req.name}" (SKU: ${prod.sku || req.sku || 'N/A'}). Solicitado: ${req.qty} unid., disponible: ${currentStock} unid.`
+            );
+          }
+          const newStock = currentStock - req.qty;
+          prod.stock = newStock;
+          prod.stockQuantity = newStock;
+          if (newStock <= 0) {
+            prod.is_active = false;
+            prod.isActive = false;
+          }
+          prod.updated_at = new Date().toISOString();
+        }
+      }
+
+      await conn.query(
+        `INSERT INTO quote_orders (id, customer_name, customer_phone, customer_city, customer_notes, items_json, total, status, stock_deducted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           newOrder.id,
           newOrder.customerName,
@@ -1788,17 +1909,51 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
           newOrder.customerNotes || '',
           JSON.stringify(newOrder.items),
           newOrder.total,
-          newOrder.status
+          newOrder.status,
+          1
         ]
       );
+
+      await conn.commit();
     } catch (e) {
-      console.warn('[MySQL createQuoteOrder Warning]:', e);
+      await conn.rollback().catch(() => {});
+      throw e;
+    } finally {
+      conn.release();
+    }
+  } else {
+    for (const req of requestedTotals) {
+      if (req.matchedProductIndex !== -1) {
+        const prod = store.items[req.matchedProductIndex];
+        const currentStock = prod.stock !== undefined ? Number(prod.stock) : (Number(prod.stockQuantity) || 0);
+        if (currentStock < req.qty) {
+          throw new Error(
+            `Stock insuficiente para "${prod.name || req.name}" (SKU: ${prod.sku || req.sku || 'N/A'}). Solicitado: ${req.qty} unid., disponible: ${currentStock} unid.`
+          );
+        }
+      }
+    }
+
+    for (const req of requestedTotals) {
+      if (req.matchedProductIndex !== -1) {
+        const prod = store.items[req.matchedProductIndex];
+        const oldStock = prod.stock !== undefined ? Number(prod.stock) : (Number(prod.stockQuantity) || 0);
+        const newStock = oldStock - req.qty;
+        prod.stock = newStock;
+        prod.stockQuantity = newStock;
+        if (newStock <= 0) {
+          prod.is_active = false;
+          prod.isActive = false;
+        }
+        prod.updated_at = new Date().toISOString();
+      }
     }
   }
 
   store.quotes.unshift(newOrder);
   saveLocalStore(store);
   invalidateQuotesCache();
+  invalidateProductsCache();
   return newOrder;
 }
 
@@ -2245,11 +2400,19 @@ export async function updateQuoteOrderStatus(idOrCode: number | string, status: 
         const newStock = Math.max(0, oldStock - req.qty);
         prod.stock = newStock;
         prod.stockQuantity = newStock;
+        if (newStock <= 0) {
+          prod.is_active = false;
+          prod.isActive = false;
+        }
         prod.updated_at = new Date().toISOString();
 
         if (pool && prod.id) {
           try {
-            await pool.query('UPDATE products SET stock = ? WHERE id = ?', [newStock, prod.id]);
+            if (newStock <= 0) {
+              await pool.query('UPDATE products SET stock = ?, is_active = 0 WHERE id = ?', [newStock, prod.id]);
+            } else {
+              await pool.query('UPDATE products SET stock = ? WHERE id = ?', [newStock, prod.id]);
+            }
           } catch (e) {
             console.warn('[MySQL deduct stock Warning]:', e);
           }
@@ -2267,11 +2430,18 @@ export async function updateQuoteOrderStatus(idOrCode: number | string, status: 
         const newStock = oldStock + req.qty;
         prod.stock = newStock;
         prod.stockQuantity = newStock;
+        if (newStock > 0) {
+          prod.is_active = true;
+          prod.isActive = true;
+        }
         prod.updated_at = new Date().toISOString();
 
         if (pool && prod.id) {
           try {
-            await pool.query('UPDATE products SET stock = ? WHERE id = ?', [newStock, prod.id]);
+            await pool.query(
+              'UPDATE products SET stock = stock + ?, is_active = CASE WHEN stock + ? > 0 THEN 1 ELSE is_active END WHERE id = ?',
+              [req.qty, req.qty, prod.id]
+            );
           } catch (e) {
             console.warn('[MySQL revert stock Warning]:', e);
           }

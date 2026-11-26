@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { PassThrough, Readable } from 'stream';
 import { ZipArchive } from 'archiver';
 import { getAllProductsAdmin } from '@/lib/db';
@@ -49,10 +50,43 @@ export async function GET(request: NextRequest) {
       products = await getAllProductsAdmin();
     }
 
+    const statsOnly = request.nextUrl.searchParams.get('stats') === '1';
+
     const publicDir = path.join(process.cwd(), 'public');
     const productsDir = path.join(publicDir, 'products');
     const uploadsDir = path.join(publicDir, 'uploads', 'products');
     const directUploadsDir = path.join(process.cwd(), 'uploads', 'products');
+
+    // Calcular hashes SHA-256 y tamaños de la imagen plantilla genérica "Fotografía en Preparación"
+    const placeholderHashes = new Set<string>();
+    const placeholderCandidates = [
+      path.join(publicDir, 'placeholder.webp'),
+      path.join(publicDir, 'images', 'placeholder.webp'),
+    ];
+    for (const ph of placeholderCandidates) {
+      if (fs.existsSync(ph)) {
+        try {
+          const buf = fs.readFileSync(ph);
+          placeholderHashes.add(crypto.createHash('sha256').update(buf).digest('hex'));
+        } catch { }
+      }
+    }
+
+    const isPlaceholderBuffer = (buf: Buffer): boolean => {
+      if (placeholderHashes.size === 0) return false;
+      const hash = crypto.createHash('sha256').update(buf).digest('hex');
+      return placeholderHashes.has(hash);
+    };
+
+    const isPlaceholderDiskFile = (diskPath: string): boolean => {
+      if (placeholderHashes.size === 0) return false;
+      try {
+        const buf = fs.readFileSync(diskPath);
+        return isPlaceholderBuffer(buf);
+      } catch {
+        return false;
+      }
+    };
 
     type ZipFileItem =
       | { type: 'file'; diskPath: string; archivePath: string; size: number }
@@ -69,6 +103,7 @@ export async function GET(request: NextRequest) {
       try {
         const stats = fs.statSync(diskPath);
         if (!stats.isFile()) return false;
+        if (isPlaceholderDiskFile(diskPath)) return false;
         addedArchivePaths.add(archivePath);
         fileItems.push({
           type: 'file',
@@ -86,6 +121,7 @@ export async function GET(request: NextRequest) {
 
     function stageBuffer(buffer: Buffer, archivePath: string): boolean {
       if (addedArchivePaths.has(archivePath)) return false;
+      if (isPlaceholderBuffer(buffer)) return false;
       addedArchivePaths.add(archivePath);
       fileItems.push({
         type: 'buffer',
@@ -98,42 +134,34 @@ export async function GET(request: NextRequest) {
       return true;
     }
 
-    // 2. Empaquetar árbol físico de /public/products/
-    if (fs.existsSync(productsDir)) {
-      const files = fs.readdirSync(productsDir);
-      for (const file of files) {
-        if (file.endsWith('.gitkeep')) continue;
-        const filePath = path.join(productsDir, file);
-        stageDiskFile(filePath, `imagenes/products/${file}`);
-      }
-    }
-
-    // 3. Empaquetar árbol físico de uploads
-    const checkUploadDirs = [uploadsDir, directUploadsDir];
-    for (const uDir of checkUploadDirs) {
-      if (fs.existsSync(uDir)) {
-        const files = fs.readdirSync(uDir);
+    if (!statsOnly) {
+      // 2. Empaquetar árbol físico de /public/products/ (solo fotografías reales)
+      if (fs.existsSync(productsDir)) {
+        const files = fs.readdirSync(productsDir);
         for (const file of files) {
           if (file.endsWith('.gitkeep')) continue;
-          const filePath = path.join(uDir, file);
-          stageDiskFile(filePath, `imagenes/uploads/products/${file}`);
+          const filePath = path.join(productsDir, file);
+          stageDiskFile(filePath, `imagenes/products/${file}`);
+        }
+      }
+
+      // 3. Empaquetar árbol físico de uploads (solo fotografías reales)
+      const checkUploadDirs = [uploadsDir, directUploadsDir];
+      for (const uDir of checkUploadDirs) {
+        if (fs.existsSync(uDir)) {
+          const files = fs.readdirSync(uDir);
+          for (const file of files) {
+            if (file.endsWith('.gitkeep')) continue;
+            const filePath = path.join(uDir, file);
+            stageDiskFile(filePath, `imagenes/uploads/products/${file}`);
+          }
         }
       }
     }
 
-    // 4. Empaquetar placeholder oficial si existe
-    const placeholderCandidates = [
-      path.join(publicDir, 'placeholder.webp'),
-      path.join(publicDir, 'images', 'placeholder.webp'),
-    ];
-    for (const ph of placeholderCandidates) {
-      if (fs.existsSync(ph)) {
-        stageDiskFile(ph, 'imagenes/placeholder.webp');
-        break;
-      }
-    }
-
-    // 5. Rastreo Multiorigen & Renombrado Limpio por SKU (ej. DUBQ0212.webp, F-OM10.webp)
+    // 5. Rastreo Multiorigen & Renombrado Limpio por SKU (solo fotografías reales)
+    let fotosReales = 0;
+    let sinFoto = 0;
     const manifestProducts: any[] = [];
     const csvRows: string[] = [
       'N°,SKU,NOMBRE_PRODUCTO,CATEGORIA,MARCA,PRECIO_USD,STOCK,RUTA_IMAGEN_ORIGINAL,NOMBRE_ARCHIVO_SKU,TAMANO_KB,ORIGEN,ESTADO',
@@ -157,24 +185,40 @@ export async function GET(request: NextRequest) {
       let sizeKb = 0;
       let skuFileName = 'NO_DISPONIBLE';
 
+      const isExplicitPlaceholder =
+        !rawImg ||
+        rawImg.toLowerCase().includes('placeholder') ||
+        rawImg.includes('d0721149ad-dubq3570tn-t');
+
       // Origen a): Cadena Base64 / Data URL
-      if (rawImg.startsWith('data:image/')) {
+      if (!isExplicitPlaceholder && rawImg.startsWith('data:image/')) {
         try {
           const match = rawImg.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
           if (match) {
             const rawExt = match[1].toLowerCase();
             fileExt = rawExt === 'jpeg' ? '.jpg' : `.${rawExt}`;
             const buf = Buffer.from(match[2], 'base64');
-            skuFileName = `${cleanSku}${fileExt}`;
-            stageBuffer(buf, `imagenes_por_sku/${skuFileName}`);
-            originType = 'BASE64_DATA_URL';
-            status = 'CONVERTIDA_A_IMAGEN';
-            sizeKb = Number((buf.length / 1024).toFixed(1));
+            if (isPlaceholderBuffer(buf)) {
+              originType = 'PLACEHOLDER_EN_PREPARACION';
+              status = 'EN_PREPARACION';
+              sinFoto++;
+            } else {
+              skuFileName = `${cleanSku}${fileExt}`;
+              if (!statsOnly) stageBuffer(buf, `imagenes_por_sku/${skuFileName}`);
+              originType = 'BASE64_DATA_URL';
+              status = 'CONVERTIDA_A_IMAGEN';
+              sizeKb = Number((buf.length / 1024).toFixed(1));
+              fotosReales++;
+            }
+          } else {
+            sinFoto++;
           }
-        } catch { }
+        } catch {
+          sinFoto++;
+        }
       }
       // Origen b): Ruta local en public/products/ o public/uploads/
-      else if (rawImg) {
+      else if (!isExplicitPlaceholder) {
         const cleanPath = rawImg.replace(/^\//, '');
         const baseName = path.basename(cleanPath);
         const candidates = [
@@ -195,8 +239,6 @@ export async function GET(request: NextRequest) {
               if (stats.isFile()) {
                 resolvedDiskPath = candidate;
                 fileExt = path.extname(candidate).toLowerCase() || '.webp';
-                originType = candidate.includes('upload') ? 'UPLOADS_PANEL' : 'PRODUCTS_LOCAL';
-                status = 'ENCONTRADA_EN_DISCO';
                 sizeKb = Number((stats.size / 1024).toFixed(1));
                 break;
               }
@@ -205,41 +247,69 @@ export async function GET(request: NextRequest) {
         }
 
         if (resolvedDiskPath) {
-          skuFileName = `${cleanSku}${fileExt}`;
-          stageDiskFile(resolvedDiskPath, `imagenes_por_sku/${skuFileName}`);
+          if (isPlaceholderDiskFile(resolvedDiskPath)) {
+            originType = 'PLACEHOLDER_EN_PREPARACION';
+            status = 'EN_PREPARACION';
+            sizeKb = 0;
+            skuFileName = 'NO_DISPONIBLE';
+            sinFoto++;
+          } else {
+            originType = resolvedDiskPath.includes('upload') ? 'UPLOADS_PANEL' : 'PRODUCTS_LOCAL';
+            status = 'ENCONTRADA_EN_DISCO';
+            skuFileName = `${cleanSku}${fileExt}`;
+            if (!statsOnly) stageDiskFile(resolvedDiskPath, `imagenes_por_sku/${skuFileName}`);
+            fotosReales++;
+          }
         } else {
           // Manejo tolerante: omitir archivo faltante en el ZIP y registrarlo en el manifiesto
           originType = 'ARCHIVO_FALTANTE';
           status = 'NO_ENCONTRADA_EN_DISCO';
           sizeKb = 0;
           skuFileName = 'NO_DISPONIBLE';
+          sinFoto++;
         }
       } else {
-        originType = 'SIN_ASIGNAR';
-        status = 'SIN_IMAGEN';
+        originType = rawImg ? 'PLACEHOLDER_EN_PREPARACION' : 'SIN_ASIGNAR';
+        status = rawImg ? 'EN_PREPARACION' : 'SIN_IMAGEN';
         sizeKb = 0;
         skuFileName = 'NO_DISPONIBLE';
+        sinFoto++;
       }
 
-      csvRows.push(
-        `${idx + 1},"${sku}","${name}","${category}","${brand}",${priceUsd},${stock},"${rawImg}","${skuFileName}",${sizeKb},"${originType}","${status}"`
-      );
+      if (!statsOnly) {
+        csvRows.push(
+          `${idx + 1},"${sku}","${name}","${category}","${brand}",${priceUsd},${stock},"${rawImg}","${skuFileName}",${sizeKb},"${originType}","${status}"`
+        );
 
-      manifestProducts.push({
-        id: p.id,
-        sku,
-        name: p.name || p.title,
-        category,
-        brand,
-        priceUsd: Number(priceUsd),
-        stock,
-        rawImageUrl: rawImg,
-        skuFileName,
-        sizeKb,
-        origin: originType,
-        status,
+        manifestProducts.push({
+          id: p.id,
+          sku,
+          name: p.name || p.title,
+          category,
+          brand,
+          priceUsd: Number(priceUsd),
+          stock,
+          rawImageUrl: rawImg,
+          skuFileName,
+          sizeKb,
+          origin: originType,
+          status,
+        });
+      }
+    }
+
+    if (statsOnly) {
+      return NextResponse.json({
+        success: true,
+        totalProductos: products.length,
+        fotosReales,
+        sinFoto,
       });
     }
+
+    // Totales en CSV de correspondencia
+    csvRows.push('');
+    csvRows.push(`"RESUMEN","fotos_reales",${fotosReales},"pendientes_foto",${sinFoto},"total_productos",${products.length},"","","","",""`);
 
     // 6. Construir índice CSV con UTF-8 BOM
     const csvContent = '\uFEFF' + csvRows.join('\r\n');
@@ -255,6 +325,8 @@ export async function GET(request: NextRequest) {
       tamanoTotalMB: Number((totalBytes / (1024 * 1024)).toFixed(2)),
       limiteMaximoPorImagenKB: 250,
       totalProductosEnCatalogo: products.length,
+      fotos_reales: fotosReales,
+      pendientes_foto: sinFoto,
       productos: manifestProducts,
     };
     const manifestContent = JSON.stringify(manifest, null, 2);
@@ -264,7 +336,9 @@ export async function GET(request: NextRequest) {
 HOBBY BOLIVIA · RESPALDO OFICIAL DE IMÁGENES DEL CATÁLOGO (${products.length} PRODUCTOS)
 ======================================================================
 Fecha de exportación: ${dateFormatted}
-Total de archivos incluidos: ${totalImageCount} imágenes
+Productos con fotografía real: ${fotosReales}
+Productos sin foto (en preparación): ${sinFoto}
+Total de archivos incluidos: ${totalImageCount} imágenes reales
 Tamaño total estimado: ${(totalBytes / (1024 * 1024)).toFixed(2)} MB
 Modo de compresión: STORE (level 0 - streaming directo de alto rendimiento)
 Base de datos: MySQL / MariaDB (Plesk Hosting)

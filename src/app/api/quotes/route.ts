@@ -65,9 +65,11 @@ export async function POST(request: NextRequest) {
       data: order,
       order
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in POST /api/quotes:", error);
-    return NextResponse.json({ success: false, error: "Failed to create quote order" }, { status: 500 });
+    const message = error?.message || "Failed to create quote order";
+    const status = message.includes("Stock insuficiente") ? 400 : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 

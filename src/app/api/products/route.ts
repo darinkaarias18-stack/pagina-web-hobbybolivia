@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       const whereClause: any = {};
       if (!includeInactive) {
         whereClause.isActive = true;
-      }
-      if (inStock) {
+        whereClause.stock = { gt: 0 };
+      } else if (inStock) {
         whereClause.stock = { gt: 0 };
       }
       if (category && category !== 'all') {
