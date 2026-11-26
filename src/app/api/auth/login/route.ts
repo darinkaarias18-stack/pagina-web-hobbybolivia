@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByUsername } from '@/lib/db';
+import bcrypt from 'bcryptjs';
+import { getUserByUsername, getMysqlPool, updateUserRecord } from '@/lib/db';
 import { createSessionToken, setAuthSessionCookies } from '@/lib/auth';
 
 interface FailedAttemptRecord {
@@ -154,10 +155,11 @@ export async function POST(request: NextRequest) {
       dbUser = await getUserByUsername(cleanUsername);
     }
     if (dbUser && dbUser.password) {
-      const storedPass = dbUser.password;
-      const isPasswordValid =
-        storedPass === password ||
-        storedPass.toLowerCase() === inputPasswordHash.toLowerCase();
+      const storedPass = String(dbUser.password);
+      const isBcrypt = storedPass.startsWith('$2a$') || storedPass.startsWith('$2b$') || storedPass.startsWith('$2y$');
+      const isPasswordValid = isBcrypt
+        ? await bcrypt.compare(password, storedPass)
+        : (storedPass === password || storedPass.toLowerCase() === inputPasswordHash.toLowerCase());
 
       if (isPasswordValid) {
         if (dbUser.isActive === false) {
@@ -166,6 +168,21 @@ export async function POST(request: NextRequest) {
             { status: 403 }
           );
         }
+
+        // Migración transparente a bcrypt para usuarios legados (texto plano o SHA-256)
+        if (!isBcrypt) {
+          try {
+            const hashed = await bcrypt.hash(password, 12);
+            const pool = getMysqlPool();
+            if (pool) {
+              await pool.query('UPDATE admin_users SET password_hash = ? WHERE id = ?', [hashed, dbUser.id]);
+            }
+            await updateUserRecord(dbUser.id, { password: hashed }).catch(() => {});
+          } catch (migErr) {
+            console.warn('[Auth bcrypt migration warning]:', migErr);
+          }
+        }
+
         matchedUser = {
           id: dbUser.id,
           username: dbUser.username,
@@ -176,14 +193,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Respaldo estricto de variables de entorno (solo coincidencia exacta de usuario y contraseña)
+    // 2. Respaldo estricto de variables de entorno (solo si están configuradas explícitamente en .env)
     if (!matchedUser) {
-      const superadminUser = (process.env.SUPERADMIN_USER || 'darinka.arias18@gmail.com').trim().toLowerCase();
-      const superadminPass = process.env.SUPERADMIN_PASSWORD || 'superadmin1234*';
-      const envAdminUser = (process.env.ADMIN_USER || 'dariasdigital_hobbybolivia').trim().toLowerCase();
-      const envAdminPass = process.env.ADMIN_PASSWORD || 'Imp6fSMr2%mj0w?v';
+      const superadminUser = process.env.SUPERADMIN_USER?.trim().toLowerCase();
+      const superadminPass = process.env.SUPERADMIN_PASSWORD;
+      const envAdminUser = process.env.ADMIN_USER?.trim().toLowerCase();
+      const envAdminPass = process.env.ADMIN_PASSWORD;
 
-      if (cleanUsername === superadminUser && password === superadminPass) {
+      if (superadminUser && superadminPass && cleanUsername === superadminUser && password === superadminPass) {
         matchedUser = {
           id: 1,
           username: superadminUser,
@@ -191,7 +208,7 @@ export async function POST(request: NextRequest) {
           role: 'SUPERADMIN',
           isActive: true
         };
-      } else if (cleanUsername === envAdminUser && password === envAdminPass) {
+      } else if (envAdminUser && envAdminPass && cleanUsername === envAdminUser && password === envAdminPass) {
         matchedUser = {
           id: 2,
           username: envAdminUser,

@@ -2,24 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
-import { getSessionUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 
-// Límite máximo final tras compresión: 250 KB (256,000 bytes)
-const MAX_COMPRESSED_SIZE = 250 * 1024;
 // Límite máximo de archivo crudo de entrada antes de procesar (10 MB)
 const MAX_RAW_INPUT_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
-const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.svg'];
+const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
+
+function hasValidImageMagicBytes(buf: Buffer): boolean {
+  if (!buf || buf.length < 12) return false;
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  const isPng =
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a;
+  // JPEG: FF D8 FF
+  const isJpeg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  // WEBP: "RIFF" .... "WEBP"
+  const isWebp =
+    buf.toString('ascii', 0, 4) === 'RIFF' &&
+    buf.toString('ascii', 8, 12) === 'WEBP';
+  return isPng || isJpeg || isWebp;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getSessionUser(request);
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Acceso no autorizado' },
-        { status: 401 }
-      );
-    }
+    const authCheck = await requireAdmin(request);
+    if (authCheck instanceof NextResponse) return authCheck;
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -39,25 +47,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Validar formato permitido (.jpg, .jpeg, .png, .webp, .svg)
+    // 2. Validar formato permitido estrictamente (.jpg, .jpeg, .png, .webp) — SVG bloqueado por seguridad
     const originalName = file.name || '';
     const fileExt = originalName.includes('.')
       ? originalName.slice(originalName.lastIndexOf('.')).toLowerCase()
-      : (file.type === 'image/png' ? '.png' : (file.type === 'image/svg+xml' ? '.svg' : (file.type === 'image/webp' ? '.webp' : '.jpg')));
+      : '';
 
     const isMimeValid = ALLOWED_MIME_TYPES.includes(file.type);
     const isExtValid = ALLOWED_EXTENSIONS.includes(fileExt);
 
-    if (!isMimeValid && !isExtValid) {
+    if (!isMimeValid || !isExtValid) {
       return NextResponse.json(
-        { success: false, error: 'Solo se permiten formatos de imagen web (.png, .jpg, .jpeg, .webp, .svg)' },
+        { success: false, error: 'Solo se permiten imágenes reales en formato PNG, JPEG o WebP.' },
         { status: 400 }
       );
     }
 
-    // 3. Convertir archivo a Buffer
+    // 3. Convertir archivo a Buffer y validar magic bytes reales
     const arrayBuffer = await file.arrayBuffer();
     const rawBuffer = Buffer.from(arrayBuffer);
+
+    if (!hasValidImageMagicBytes(rawBuffer)) {
+      return NextResponse.json(
+        { success: false, error: 'El archivo no corresponde a una imagen PNG, JPEG o WebP válida.' },
+        { status: 400 }
+      );
+    }
 
     // 4. Directorios de destino duales (public/uploads/products y uploads/products) para compatibilidad total en Plesk
     const uploadsPublicDir = path.join(process.cwd(), 'public', 'uploads', 'products');
@@ -87,30 +102,9 @@ export async function POST(request: NextRequest) {
       ]);
     };
 
-    // Si es SVG, validar que no supere 250 KB
-    if (fileExt === '.svg' || file.type === 'image/svg+xml') {
-      if (rawBuffer.length > MAX_COMPRESSED_SIZE) {
-        return NextResponse.json(
-          { success: false, error: 'El archivo SVG supera el límite máximo de 250 KB permitido en el catálogo.' },
-          { status: 400 }
-        );
-      }
-      const svgFilename = `${Date.now()}-${baseName}.svg`;
-      await saveToDisk(svgFilename, rawBuffer);
-      const publicUrl = `/uploads/products/${svgFilename}`;
-      return NextResponse.json({
-        success: true,
-        url: publicUrl,
-        filename: svgFilename,
-        originalSize: file.size,
-        optimizedSize: rawBuffer.length,
-        mimeType: 'image/svg+xml'
-      });
-    }
-
     const filename = `${Date.now()}-${baseName}.webp`;
 
-    // 6. Compresión automática con Sharp (ancho máximo 1000px, formato .webp, calidad 80)
+    // 6. Compresión y re-codificación obligatoria con Sharp (ancho máximo 1000px, formato .webp, calidad 80)
     try {
       const optimizedWebpBuffer = await sharp(rawBuffer)
         .rotate()
@@ -133,17 +127,11 @@ export async function POST(request: NextRequest) {
         mimeType: 'image/webp'
       });
     } catch (sharpErr) {
-      console.warn('[Sharp compression error, fallback]:', sharpErr);
-      // Fallback seguro: guardar buffer directo si falla sharp
-      await saveToDisk(filename, rawBuffer);
-      return NextResponse.json({
-        success: true,
-        url: `/uploads/products/${filename}`,
-        filename,
-        originalSize: file.size,
-        optimizedSize: rawBuffer.length,
-        mimeType: 'image/webp'
-      });
+      console.warn('[Sharp compression error]:', sharpErr);
+      return NextResponse.json(
+        { success: false, error: 'La imagen está dañada o no pudo procesarse de forma segura.' },
+        { status: 400 }
+      );
     }
   } catch (error: any) {
     console.error('Error al procesar subida de imagen en /api/upload:', error);

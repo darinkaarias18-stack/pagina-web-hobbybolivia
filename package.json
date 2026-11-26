@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/bcryptjs": "^2.4.6",
     "@types/nodemailer": "^8.0.2",
     "archiver": "^8.0.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.9",

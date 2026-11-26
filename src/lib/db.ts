@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import mysql from 'mysql2/promise';
+import bcrypt from 'bcryptjs';
 import {
   initialSiteConfig,
   initialCategories,
@@ -59,9 +60,9 @@ export const assertCatalogImageUnder1MB = assertCatalogImageUnder250KB;
 export const DEFAULT_SUPERADMIN: User = {
   id: 1,
   name: "Darinka Arias",
-  username: "darinka.arias18@gmail.com",
-  email: "darinka.arias18@gmail.com",
-  password: "superadmin1234*",
+  username: process.env.SUPERADMIN_USER || "darinka.arias18@gmail.com",
+  email: process.env.SUPERADMIN_USER || "darinka.arias18@gmail.com",
+  password: "",
   role: "SUPERADMIN",
   isActive: true,
   createdAt: "2026-01-01T00:00:00.000Z"
@@ -76,11 +77,11 @@ let mysqlUnavailable = false;
 let lastMysqlCheck = 0;
 
 export function getMysqlConfig() {
-  let host = process.env.MYSQL_HOST;
-  let port = Number(process.env.MYSQL_PORT) || 3306;
-  let user = process.env.MYSQL_USER;
-  let password = process.env.MYSQL_PASSWORD || '';
-  let database = process.env.MYSQL_DATABASE;
+  let host = process.env.MYSQL_HOST || process.env.DB_HOST;
+  let port = Number(process.env.MYSQL_PORT || process.env.DB_PORT) || 3306;
+  let user = process.env.MYSQL_USER || process.env.DB_USER;
+  let password = process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || '';
+  let database = process.env.MYSQL_DATABASE || process.env.DB_NAME;
   const ssl = process.env.MYSQL_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
 
   // Fallback a DATABASE_URL si las variables individuales no están definidas
@@ -88,7 +89,7 @@ export function getMysqlConfig() {
     try {
       const parsed = new URL(process.env.DATABASE_URL.replace(/^mysql:\/\//, 'http://'));
       host = host || parsed.hostname;
-      if (parsed.port && !process.env.MYSQL_PORT) port = Number(parsed.port);
+      if (parsed.port && !process.env.MYSQL_PORT && !process.env.DB_PORT) port = Number(parsed.port);
       user = user || decodeURIComponent(parsed.username);
       password = password || decodeURIComponent(parsed.password);
       database = database || parsed.pathname.replace(/^\//, '');
@@ -97,12 +98,8 @@ export function getMysqlConfig() {
     }
   }
 
-  // Fallback por defecto a la base de datos de producción Plesk de Hobby Bolivia
-  if (!host || !user || !database) {
-    host = host || (process.env.NODE_ENV === 'production' ? 'localhost' : '50.30.32.59');
-    user = user || 'dariasdigital_hobbybolivia';
-    password = password || 'Imp6fSMr2%mj0w?v';
-    database = database || 'dariasdigital_hobbybolivia';
+  if ((!host || !user || !database) && process.env.NODE_ENV === 'production') {
+    throw new Error('Configuración de MySQL faltante en variables de entorno (DATABASE_URL o MYSQL_* / DB_*).');
   }
 
   return { host, port, user, password, database, ssl };
@@ -426,13 +423,15 @@ export async function syncMysqlTables(forceSeed = false): Promise<{
       // Ignorar si la versión de MySQL no soporta IF NOT EXISTS en ALTER TABLE o ya existen
     }
 
-    // Asegurar que la tabla admin_users en MySQL tenga siempre las cuentas administradoras base
-    await conn.query(`
-      INSERT INTO admin_users (id, name, username, email, password_hash, role, is_active)
-      VALUES (1, 'Darinka Arias', 'darinka.arias18@gmail.com', 'darinka.arias18@gmail.com', 'superadmin1234*', 'SUPERADMIN', 1),
-             (2, 'Administrador Hobby Bolivia', 'dariasdigital_hobbybolivia', 'admin@hobbybolivia.com', 'Imp6fSMr2%mj0w?v', 'SUPERADMIN', 1)
-      ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), role=VALUES(role);
-    `);
+    // Asegurar que la tabla admin_users en MySQL tenga las cuentas base si están configuradas en .env
+    if (process.env.SUPERADMIN_USER && process.env.SUPERADMIN_PASSWORD) {
+      const saHash = await bcrypt.hash(process.env.SUPERADMIN_PASSWORD, 12);
+      await conn.query(`
+        INSERT INTO admin_users (id, name, username, email, password_hash, role, is_active)
+        VALUES (1, 'Darinka Arias', ?, ?, ?, 'SUPERADMIN', 1)
+        ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), role=VALUES(role);
+      `, [process.env.SUPERADMIN_USER.trim().toLowerCase(), process.env.SUPERADMIN_USER.trim().toLowerCase(), saHash]);
+    }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS quote_orders (
@@ -1821,12 +1820,14 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
     deliveryAddress: data.deliveryAddress || "",
     customerNotes: data.customerNotes,
     items,
-    total: Number(data.total) || 0,
+    total: 0, // Calculado exclusivamente en el servidor desde MySQL
     status: "PENDING",
     stockDeducted: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+
+  let officialTotalBob = 0;
 
   const pool = getMysqlPool();
   if (pool) {
@@ -1834,17 +1835,37 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
     try {
       await conn.beginTransaction();
 
+      // Obtener tasa de cambio vigente en servidor
+      let exchangeRate = 6.96;
+      try {
+        const [rateRows]: any = await conn.query(
+          "SELECT exchange_rate FROM system_settings WHERE setting_key = 'exchange_rate' LIMIT 1"
+        );
+        if (rateRows && rateRows.length > 0 && Number(rateRows[0].exchange_rate) > 0) {
+          exchangeRate = Number(rateRows[0].exchange_rate);
+        } else {
+          const fallbackRate = await getExchangeRateDb().catch(() => null);
+          if (fallbackRate?.exchangeRate && Number(fallbackRate.exchangeRate) > 0) {
+            exchangeRate = Number(fallbackRate.exchangeRate);
+          }
+        }
+      } catch {
+        // Usar tasa por defecto si la tabla no existe aún
+      }
+
+      const resolvedPricesByKey = new Map<string, { priceBob: number; priceUsd: number }>();
+
       for (const req of requestedTotals) {
         let rows: any[] = [];
         if (req.productId !== undefined && !isNaN(req.productId)) {
           const [res]: any = await conn.query(
-            'SELECT id, sku, name, stock FROM products WHERE id = ? LIMIT 1 FOR UPDATE',
+            'SELECT id, sku, name, price, price_usd, stock FROM products WHERE id = ? LIMIT 1 FOR UPDATE',
             [req.productId]
           );
           rows = res || [];
         } else if (req.sku) {
           const [res]: any = await conn.query(
-            'SELECT id, sku, name, stock FROM products WHERE LOWER(sku) = LOWER(?) LIMIT 1 FOR UPDATE',
+            'SELECT id, sku, name, price, price_usd, stock FROM products WHERE LOWER(sku) = LOWER(?) LIMIT 1 FOR UPDATE',
             [req.sku]
           );
           rows = res || [];
@@ -1858,6 +1879,17 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
               `Stock insuficiente para "${row.name || req.name}" (SKU: ${row.sku || req.sku || 'N/A'}). Solicitado: ${req.qty} unid., disponible: ${currentStock} unid.`
             );
           }
+
+          const dbPriceBob = Number(row.price) > 0
+            ? Number(row.price)
+            : (Number(row.price_usd) > 0 ? Number(row.price_usd) * exchangeRate : 0);
+          const dbPriceUsd = Number(row.price_usd) > 0
+            ? Number(row.price_usd)
+            : (exchangeRate > 0 ? dbPriceBob / exchangeRate : 0);
+
+          officialTotalBob += dbPriceBob * req.qty;
+          if (req.productId !== undefined) resolvedPricesByKey.set(`id:${req.productId}`, { priceBob: dbPriceBob, priceUsd: dbPriceUsd });
+          if (row.sku) resolvedPricesByKey.set(`sku:${String(row.sku).toLowerCase()}`, { priceBob: dbPriceBob, priceUsd: dbPriceUsd });
 
           const [updateRes]: any = await conn.query(
             'UPDATE products SET stock = stock - ?, is_active = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_active END WHERE id = ? AND stock >= ?',
@@ -1887,6 +1919,12 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
               `Stock insuficiente para "${prod.name || req.name}" (SKU: ${prod.sku || req.sku || 'N/A'}). Solicitado: ${req.qty} unid., disponible: ${currentStock} unid.`
             );
           }
+          const dbPriceBob = Number(prod.price) > 0 ? Number(prod.price) : (Number(prod.priceUsd || prod.price_usd || 0) * exchangeRate);
+          const dbPriceUsd = Number(prod.priceUsd || prod.price_usd || 0) > 0 ? Number(prod.priceUsd || prod.price_usd) : (exchangeRate > 0 ? dbPriceBob / exchangeRate : 0);
+          officialTotalBob += dbPriceBob * req.qty;
+          if (prod.id !== undefined) resolvedPricesByKey.set(`id:${prod.id}`, { priceBob: dbPriceBob, priceUsd: dbPriceUsd });
+          if (prod.sku) resolvedPricesByKey.set(`sku:${String(prod.sku).toLowerCase()}`, { priceBob: dbPriceBob, priceUsd: dbPriceUsd });
+
           const newStock = currentStock - req.qty;
           prod.stock = newStock;
           prod.stockQuantity = newStock;
@@ -1897,6 +1935,33 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
           prod.updated_at = new Date().toISOString();
         }
       }
+
+      // Sobrescribir precios en items con los precios oficiales calculados en servidor
+      newOrder.items = items.map((it: any) => {
+        const rawProd = it?.item || it;
+        const pid = rawProd?.id !== undefined && rawProd?.id !== null ? `id:${Number(rawProd.id)}` : '';
+        const psku = rawProd?.sku ? `sku:${String(rawProd.sku).trim().toLowerCase()}` : '';
+        const official = (pid && resolvedPricesByKey.get(pid)) || (psku && resolvedPricesByKey.get(psku));
+        if (!official) return it;
+        if (it?.item) {
+          return {
+            ...it,
+            item: {
+              ...it.item,
+              price: official.priceBob,
+              priceUsd: official.priceUsd,
+              price_usd: official.priceUsd,
+            }
+          };
+        }
+        return {
+          ...it,
+          price: official.priceBob,
+          priceUsd: official.priceUsd,
+          price_usd: official.priceUsd,
+        };
+      });
+      newOrder.total = Number(officialTotalBob.toFixed(2));
 
       await conn.query(
         `INSERT INTO quote_orders (id, customer_name, customer_phone, customer_city, customer_notes, items_json, total, status, stock_deducted)
@@ -1922,6 +1987,9 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
       conn.release();
     }
   } else {
+    const rateCfg = await getExchangeRateDb().catch(() => ({ exchangeRate: 6.96 }));
+    const exchangeRate = Number(rateCfg?.exchangeRate) || 6.96;
+
     for (const req of requestedTotals) {
       if (req.matchedProductIndex !== -1) {
         const prod = store.items[req.matchedProductIndex];
@@ -1939,6 +2007,8 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
         const prod = store.items[req.matchedProductIndex];
         const oldStock = prod.stock !== undefined ? Number(prod.stock) : (Number(prod.stockQuantity) || 0);
         const newStock = oldStock - req.qty;
+        const dbPriceBob = Number(prod.price) > 0 ? Number(prod.price) : (Number(prod.priceUsd || prod.price_usd || 0) * exchangeRate);
+        officialTotalBob += dbPriceBob * req.qty;
         prod.stock = newStock;
         prod.stockQuantity = newStock;
         if (newStock <= 0) {
@@ -1948,6 +2018,7 @@ export async function createQuoteOrder(data: Partial<QuoteOrder>): Promise<Quote
         prod.updated_at = new Date().toISOString();
       }
     }
+    newOrder.total = Number(officialTotalBob.toFixed(2));
   }
 
   store.quotes.unshift(newOrder);
@@ -2068,6 +2139,14 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
   const nextId = store.users.length > 0 ? Math.max(...store.users.map(u => u.id), 0) + 1 : 1;
   const now = new Date().toISOString();
 
+  const rawPass = userData.password ? String(userData.password).trim() : '';
+  if (!rawPass) {
+    throw new Error('La contraseña es requerida para crear el usuario.');
+  }
+  const hashedPassword = (rawPass.startsWith('$2a$') || rawPass.startsWith('$2b$') || rawPass.startsWith('$2y$'))
+    ? rawPass
+    : await bcrypt.hash(rawPass, 12);
+
   // Regla estricta: Solo existe un único Superadmin Maestro (Darinka Arias).
   // Todo usuario creado a través del sistema tiene obligatoriamente el rol de ADMIN.
   const newUser: User = {
@@ -2077,7 +2156,7 @@ export async function createUserRecord(userData: Partial<User>): Promise<User> {
     email: (userData.email || userData.username || '').trim().toLowerCase(),
     phone: userData.phone ? String(userData.phone).trim() : '',
     countryCode: userData.countryCode ? String(userData.countryCode).trim() : '+591',
-    password: userData.password || 'admin1234*',
+    password: hashedPassword,
     role: 'ADMIN',
     isActive: userData.isActive !== undefined ? Boolean(userData.isActive) : true,
     createdAt: now,
@@ -2154,6 +2233,14 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
   const role: UserRole = isMasterAccount ? 'SUPERADMIN' : 'ADMIN';
   const isActive = isMasterAccount ? true : (data.isActive !== undefined ? Boolean(data.isActive) : current.isActive);
 
+  let finalPassword = current.password;
+  if (data.password && data.password.trim()) {
+    const rawNewPass = data.password.trim();
+    finalPassword = (rawNewPass.startsWith('$2a$') || rawNewPass.startsWith('$2b$') || rawNewPass.startsWith('$2y$'))
+      ? rawNewPass
+      : await bcrypt.hash(rawNewPass, 12);
+  }
+
   const updated: User = {
     ...current,
     ...data,
@@ -2165,7 +2252,7 @@ export async function updateUserRecord(id: number, data: Partial<User>): Promise
     countryCode: data.countryCode !== undefined ? data.countryCode : current.countryCode,
     role,
     isActive,
-    password: data.password && data.password.trim() ? data.password.trim() : current.password,
+    password: finalPassword,
     updatedAt: now
   };
 

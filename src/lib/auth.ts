@@ -8,10 +8,12 @@ export interface SessionUser {
   exp: number;
 }
 
-const DEFAULT_AUTH_SECRET = 'hobbybolivia_auth_secret_secure_key_2026_98374981';
-
 function getAuthSecret(): string {
-  return process.env.AUTH_SECRET || DEFAULT_AUTH_SECRET;
+  const secret = process.env.AUTH_SECRET;
+  if (!secret || secret.trim().length < 16) {
+    throw new Error('AUTH_SECRET no está configurado en las variables de entorno.');
+  }
+  return secret;
 }
 
 // ============================================================================

@@ -4,6 +4,24 @@ import type { ClaimStatus } from '@/lib/types';
 import { requireAdmin, getSessionUser } from '@/lib/auth';
 import { sanitizeText } from '@/lib/utils';
 
+const claimRateLimitMap = new Map<string, number[]>();
+const CLAIM_RATE_LIMIT_MAX = 10;
+const CLAIM_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+function checkClaimRateLimit(request: NextRequest): boolean {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip')?.trim() || '127.0.0.1');
+  const now = Date.now();
+  const timestamps = (claimRateLimitMap.get(ip) || []).filter(t => now - t < CLAIM_RATE_LIMIT_WINDOW_MS);
+  if (timestamps.length >= CLAIM_RATE_LIMIT_MAX) {
+    claimRateLimitMap.set(ip, timestamps);
+    return false;
+  }
+  timestamps.push(now);
+  claimRateLimitMap.set(ip, timestamps);
+  return true;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,17 +36,11 @@ export async function GET(request: NextRequest) {
 
       const adminUser = await getSessionUser(request);
       if (!adminUser) {
-        // Enmascarar / omitir PII sensible (cédula, teléfono, email) para consultas públicas
+        // Minimizar datos expuestos en consultas públicas por código de seguimiento (sin PII ni notas internas)
         const sanitizedClaim = {
-          id: claim.id,
           trackingCode: claim.trackingCode,
-          fullName: claim.fullName,
-          contractedItem: claim.contractedItem,
-          orderCode: claim.orderCode,
           type: claim.type,
-          detail: claim.detail,
           status: claim.status,
-          adminNotes: claim.adminNotes,
           createdAt: claim.createdAt,
           updatedAt: claim.updatedAt
         };
@@ -52,6 +64,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!checkClaimRateLimit(request)) {
+      return NextResponse.json(
+        { success: false, error: "Demasiadas solicitudes. Por favor, espera un minuto e intenta nuevamente." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       fullName,

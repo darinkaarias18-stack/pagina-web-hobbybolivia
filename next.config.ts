@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /* Security & Hardening */
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+
   /* Performance & Caching */
   compress: true,
 

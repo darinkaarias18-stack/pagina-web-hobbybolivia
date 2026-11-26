@@ -4,6 +4,24 @@ import type { OrderStatus } from '@/lib/types';
 import { requireAdmin } from '@/lib/auth';
 import { sanitizeText } from '@/lib/utils';
 
+const quoteRateLimitMap = new Map<string, number[]>();
+const QUOTE_RATE_LIMIT_MAX = 10;
+const QUOTE_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+function checkPublicRateLimit(request: NextRequest): boolean {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip')?.trim() || '127.0.0.1');
+  const now = Date.now();
+  const timestamps = (quoteRateLimitMap.get(ip) || []).filter(t => now - t < QUOTE_RATE_LIMIT_WINDOW_MS);
+  if (timestamps.length >= QUOTE_RATE_LIMIT_MAX) {
+    quoteRateLimitMap.set(ip, timestamps);
+    return false;
+  }
+  timestamps.push(now);
+  quoteRateLimitMap.set(ip, timestamps);
+  return true;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authCheck = await requireAdmin(request);
@@ -19,6 +37,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!checkPublicRateLimit(request)) {
+      return NextResponse.json(
+        { success: false, error: "Demasiadas solicitudes de pedido. Por favor, espera un minuto e intenta nuevamente." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       customerName,
@@ -30,8 +55,7 @@ export async function POST(request: NextRequest) {
       deliveryAddress,
       cardMessage,
       customerNotes,
-      items,
-      total
+      items
     } = body;
 
     const cleanCustomerName = sanitizeText(customerName, 150);
@@ -55,7 +79,6 @@ export async function POST(request: NextRequest) {
       cardMessage: sanitizeText(cardMessage || "", 1000),
       customerNotes: sanitizeText(customerNotes || cardMessage || "", 1000),
       items,
-      total: Number(total) || 0,
       status: "PEDIDO"
     });
 
